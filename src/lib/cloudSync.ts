@@ -28,14 +28,25 @@ export function isCloudConfigured(): boolean {
   return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 }
 
+function getSupabaseConfig(): { url: string; key: string } | null {
+  const rawUrl = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim()
+  const key = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim()
+  if (!rawUrl || !key) return null
+
+  try {
+    const parsed = new URL(rawUrl)
+    return { url: parsed.origin, key }
+  } catch {
+    throw new Error('Supabase URL 格式不正確')
+  }
+}
+
 export async function getSupabaseClient(): Promise<SupabaseClient | null> {
-  if (!isCloudConfigured()) return null
+  const config = getSupabaseConfig()
+  if (!config) return null
   if (!client) {
     const { createClient } = await import('@supabase/supabase-js')
-    client = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-    )
+    client = createClient(config.url, config.key)
   }
   return client
 }
@@ -61,13 +72,27 @@ export async function getCloudSession(): Promise<{ session: Session | null; user
 }
 
 export async function signInWithEmail(email: string): Promise<void> {
-  const supabase = await requireClient()
-  const redirectTo = window.location.origin
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
+  const config = getSupabaseConfig()
+  if (!config) throw new Error('尚未設定 Supabase')
+
+  const response = await fetch(`${config.url}/auth/v1/otp`, {
+    method: 'POST',
+    headers: {
+      apikey: config.key,
+      authorization: `Bearer ${config.key}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      create_user: true,
+      gotrue_meta_security: {},
+      email_redirect_to: window.location.origin,
+    }),
   })
-  if (error) throw error
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.msg ?? body?.message ?? '登入連結寄送失敗')
+  }
 }
 
 export async function signOutCloud(): Promise<void> {
