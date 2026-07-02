@@ -1,0 +1,188 @@
+# Engineering Log
+
+## 2026-07-03 Security Hardening
+
+### Goal
+
+Reduce the chance that another authenticated user can read or overwrite shared group data.
+
+### Decisions
+
+- Add `group_members`.
+- Restrict group state RLS to group members.
+- Treat group code as an invite secret.
+- Avoid service worker caching cross-origin/API requests.
+
+### Changed Areas
+
+- `docs/supabase-setup.sql`: stricter group sharing policies.
+- `src/lib/cloudSync.ts`: group membership creation before read/write.
+- `src/components/settings/CloudSyncTool.tsx`: stronger group code guidance.
+- `public/service-worker.js`: cache only same-origin app assets.
+
+### Verification
+
+- `npm run build`
+- `npm audit --audit-level=moderate`
+
+### Risks / Follow-up
+
+- Supabase SQL must be re-run after deployment.
+
+## 2026-07-03 Excel Export / Import Format
+
+### Goal
+
+Create an Excel format that is readable by humans and still suitable for future full restore/import.
+
+### Decisions
+
+- Add human-first sheets: `README`, `對局總表`.
+- Preserve machine sheets for round-trip import.
+- Use `_app_state_json` as the safest restore path.
+- Keep normal CSV/Excel mapping import for old files.
+
+### Changed Areas
+
+- `src/lib/excelExport.ts`: workbook generation and sheet structure.
+- `src/components/settings/DataTools.tsx`: export button and OPCG export import detection.
+- `src/lib/storage.ts`: JSON app state import helper.
+- `docs/EXCEL-FORMAT.md`: format documentation.
+
+### Verification
+
+- `npm run build`
+- `npm audit --audit-level=moderate`
+- Runtime inspection confirmed sheet order: `README`, `對局總表`, `_meta`, `matches`.
+
+### Risks / Follow-up
+
+- Future import from normalized sheets can be added if `_app_state_json` is unavailable.
+
+## 2026-07-03 Interaction, I18n, And Documentation
+
+### Goal
+
+Make the app easier to understand and operate by improving visible interaction feedback, adding Chinese/English/Japanese UI support, and moving mixed README content into dedicated docs.
+
+### Decisions
+
+- Use Toast + button loading + inline messages.
+- Replace native file input visuals with a custom upload control.
+- Add language setting to app state.
+- Keep card/leader names as source data rather than translated text.
+- Rewrite `README.md` for users, not developers.
+
+### Changed Areas
+
+- `README.md`: user-facing entry point.
+- `docs/USER-GUIDE.md`: long-form usage guide.
+- `docs/ROADMAP.md`: implementation roadmap.
+- `docs/DEVELOPMENT.md`: local development and project structure.
+- `docs/CLOUD-SYNC.md`: Supabase and group sharing setup.
+- `docs/ENGINEERING-LOG.md`: project log.
+
+### Verification
+
+- `npm run build`
+- `npm audit --audit-level=moderate`
+- Manual UI check: custom file upload control is visible and clickable.
+- Manual UI check: language selector switches visible UI from Chinese to English.
+
+### Risks / Follow-up
+
+- Some deep analytics labels and card data labels can be further refined in future copy passes.
+
+## 2026-07-03 V3 Versioning And Push Summaries
+
+### Goal
+
+Name the large interaction, i18n, Excel, documentation, and security upgrade as V3 and establish a simple push summary format.
+
+### Decisions
+
+- Use `3.0.0` for the V3 release.
+- Keep `package.json` and `src/lib/constants.ts` app version aligned.
+- Add `CHANGELOG.md` as the high-level version history.
+- Use `New / Changed / Fixed / Security / Verify` for push summaries.
+
+### Changed Areas
+
+- `package.json`: app package version bumped to `3.0.0`.
+- `src/lib/constants.ts`: `APP_VERSION` bumped to `3.0.0`.
+- `README.md`: V3 label and links to changelog/workflow docs.
+- `CHANGELOG.md`: V3.0.0 release notes.
+- `docs/GIT-WORKFLOW.md`: push summary and version iteration workflow.
+- `docs/ROADMAP.md`: V3 marked as completed.
+
+### Verification
+
+- `npm run build`
+- `npm audit --audit-level=moderate`
+
+### Risks / Follow-up
+
+- Future pushes should update `CHANGELOG.md` when user-visible behavior changes.
+
+## 2026-07-03 Session And Settings UX Refinement
+
+### Goal
+
+Make session naming simpler, make Settings behave more like a normal app settings screen, and fix the stats tab naming.
+
+### Decisions
+
+- Default session names should be date-only.
+- Current session name should be editable.
+- Settings should use a category list with detail pages rather than repeated large cards.
+- The stats tab should be named `統計 / Stats`, not `今日 / Today`.
+
+### Changed Areas
+
+- `src/lib/sessions.ts`: default session name changed to date-only.
+- `src/stores/appStore.ts`: added `updateSessionName`.
+- `src/pages/SettingsPage.tsx`: refactored settings navigation and added session rename UI.
+- `src/i18n/*.ts`: renamed stats labels and added session/settings keys.
+- `CHANGELOG.md`: recorded the V3 UX refinement.
+
+### Verification
+
+- `npm run build`
+- `npm audit --audit-level=moderate`
+- Manual UI check: stats tab shows `統計`.
+- Manual UI check: Settings home uses category rows.
+- Manual UI check: Session detail page supports editing the current session name.
+
+### Risks / Follow-up
+
+- Existing sessions keep their old names until edited by the user.
+
+## 2026-07-03 First Run Language And Cloud Onboarding
+
+### Goal
+
+Make English the default language and guide users to choose a language before entering the app, while also explaining that they can log in and join a group for cloud sharing.
+
+### Decisions
+
+- New users default to English.
+- First run shows a language selector before the main app.
+- Onboarding explains email login, group code, and Cloud Backup sharing.
+- Onboarding completion is stored in app settings.
+
+### Changed Areas
+
+- `src/lib/constants.ts`: default language changed to `en`.
+- `src/types/index.ts`: added `onboardingCompleted`.
+- `src/stores/appStore.ts`: added `completeOnboarding`.
+- `src/App.tsx`: added first-run onboarding screen.
+- `src/i18n/*.ts`: added onboarding copy.
+- `README.md`: updated first-use instructions.
+
+### Verification
+
+- Pending final build and audit.
+
+### Risks / Follow-up
+
+- Existing local users will see onboarding once because the completion flag is new.

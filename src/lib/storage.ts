@@ -6,7 +6,8 @@ import {
   playerAliasesFromPlayers,
 } from '@/lib/dataModel'
 import { loadIndexedAppState, saveIndexedAppState } from '@/lib/indexedDb'
-import type { AppState, Deck } from '@/types'
+import { getSessionDateLabel } from '@/lib/sessions'
+import type { AppState, Deck, Session } from '@/types'
 
 type Migration = (state: Partial<AppState>) => Partial<AppState>
 
@@ -70,6 +71,14 @@ function mergeSeedDecks(decks: Deck[], seedDecks: Deck[]): Deck[] {
   return merged
 }
 
+function normalizeSessionName(session: Session): Session {
+  const legacyDefaultName = `${getSessionDateLabel(new Date(session.startedAt))} 卡店`
+  if (session.name === legacyDefaultName) {
+    return { ...session, name: getSessionDateLabel(new Date(session.startedAt)) }
+  }
+  return session
+}
+
 function normalizeState(raw: Partial<AppState>): AppState {
   const defaults = createDefaultAppState()
   const leaders = Array.isArray(raw.leaders) && raw.leaders.length ? raw.leaders : defaults.leaders
@@ -93,7 +102,7 @@ function normalizeState(raw: Partial<AppState>): AppState {
       : defaults.sessionPlayers,
     sessionDecks: Array.isArray(raw.sessionDecks) ? raw.sessionDecks : defaults.sessionDecks,
     decks: mergeSeedDecks(decks, defaults.decks),
-    sessions: Array.isArray(raw.sessions) ? raw.sessions : defaults.sessions,
+    sessions: Array.isArray(raw.sessions) ? raw.sessions.map(normalizeSessionName) : defaults.sessions,
     activeMatches: Array.isArray(raw.activeMatches)
       ? raw.activeMatches
       : defaults.activeMatches,
@@ -178,4 +187,9 @@ export async function loadAppState(): Promise<AppState> {
 
 export function exportAppStateJson(state: AppState): string {
   return JSON.stringify(state, null, 2)
+}
+
+export function importAppStateJson(raw: string): AppState {
+  const parsed = JSON.parse(raw) as Partial<AppState>
+  return migrateState(parsed)
 }

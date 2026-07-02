@@ -1,5 +1,6 @@
 export type ResultType = 'normal' | 'draw' | 'forfeit'
 export type MatchSource = 'manual' | 'import' | 'manual_edit'
+export type Language = 'zh' | 'en' | 'ja'
 
 export interface Player {
   id: string
@@ -196,6 +197,8 @@ export interface ImportSummary {
 export interface AppSettings {
   lastBackupReminder: string | null
   backupReminderIntervalDays: number
+  language: Language
+  onboardingCompleted: boolean
 }
 
 export interface AppState {

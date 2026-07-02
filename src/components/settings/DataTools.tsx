@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { useAppStore } from '@/stores/appStore'
-import type { ImportMatchInput } from '@/types'
+import { useToast } from '@/components/ui/Toast'
+import { exportAppStateExcel } from '@/lib/excelExport'
+import { useI18n } from '@/lib/i18n'
+import { importAppStateJson } from '@/lib/storage'
+import { getAppState, useAppStore } from '@/stores/appStore'
+import type { AppState, ImportMatchInput } from '@/types'
 
 type TableRows = string[][]
+
+type ReadFileResult =
+  | { kind: 'tabular'; rows: TableRows; raw: string }
+  | { kind: 'opcg-export'; state: AppState; raw: string }
 
 interface Mapping {
   date: string
@@ -61,20 +69,67 @@ function parseCsv(text: string): TableRows {
   return rows
 }
 
-async function readFileAsRows(file: File): Promise<{ rows: TableRows; raw: string }> {
+function stringifyCell(cell: unknown): string {
+  return String(cell ?? '')
+}
+
+function rowsToTableRows(rows: unknown[][]): TableRows {
+  return rows.filter((row) => row.some(Boolean)).map((row) => row.map(stringifyCell))
+}
+
+async function tryReadOpcgExport(file: File): Promise<ReadFileResult | null> {
+  const { readSheet } = await import('read-excel-file/browser')
+  let metaRows: unknown[][]
+
+  try {
+    metaRows = (await readSheet(file, '_meta')) as unknown[][]
+  } catch {
+    return null
+  }
+
+  const meta = new Map(
+    metaRows
+      .slice(1)
+      .map((row) => [stringifyCell(row[0]), stringifyCell(row[1])] as const)
+      .filter(([key]) => key),
+  )
+  if (meta.get('export_format') !== 'opcg-tracker-excel') return null
+
+  const snapshotRows = (await readSheet(file, '_app_state_json')) as unknown[][]
+  const snapshot = snapshotRows
+    .slice(1)
+    .map((row) => stringifyCell(row[1]))
+    .join('')
+
+  if (!snapshot) {
+    throw new Error('這個 OPCG Excel 缺少完整資料備份')
+  }
+
+  return {
+    kind: 'opcg-export',
+    state: importAppStateJson(snapshot),
+    raw: snapshot,
+  }
+}
+
+async function readFileAsRows(file: File): Promise<ReadFileResult> {
   const buffer = await file.arrayBuffer()
 
   if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
-    const { default: readXlsxFile } = await import('read-excel-file/browser')
-    const rows = (await readXlsxFile(file)) as unknown as unknown[][]
+    const opcgExport = await tryReadOpcgExport(file)
+    if (opcgExport) return opcgExport
+
+    const { readSheet } = await import('read-excel-file/browser')
+    const rows = (await readSheet(file)) as unknown as unknown[][]
     return {
-      rows: rows.filter((row) => row.some(Boolean)).map((row) => row.map((cell) => String(cell ?? ''))),
+      kind: 'tabular',
+      rows: rowsToTableRows(rows),
       raw: JSON.stringify(rows),
     }
   }
 
   const raw = new TextDecoder('utf-8').decode(buffer)
-  return { rows: parseCsv(raw), raw }
+  return { kind: 'tabular', rows: parseCsv(raw), raw }
 }
 
 function guessMapping(headers: string[]): Mapping {
@@ -139,17 +194,19 @@ function MappingSelect({
 }
 
 function PlayerMergeTool() {
+  const { t } = useI18n()
   const players = useAppStore((state) => state.players)
   const mergePlayers = useAppStore((state) => state.mergePlayers)
+  const toast = useToast()
   const [sourceId, setSourceId] = useState('')
   const [targetId, setTargetId] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
   return (
     <section className="rounded-2xl bg-surface-elevated p-4">
-      <h2 className="text-lg font-semibold">玩家合併</h2>
+      <h2 className="text-lg font-semibold">{t('data.mergePlayers')}</h2>
       <p className="mt-1 text-sm text-text-secondary">
-        用來修正 King仔 / B KING仔 這類命名混亂；合併後歷史對局會指向保留玩家。
+        {t('data.mergePlayersDesc')}
       </p>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <label>
@@ -191,10 +248,13 @@ function PlayerMergeTool() {
           try {
             mergePlayers(sourceId, targetId)
             setMessage('玩家已合併')
+            toast.success('玩家已合併')
             setSourceId('')
             setTargetId('')
           } catch (caught) {
-            setMessage(caught instanceof Error ? caught.message : '合併失敗')
+            const nextMessage = caught instanceof Error ? caught.message : '合併失敗'
+            setMessage(nextMessage)
+            toast.error(nextMessage)
           }
         }}
       >
@@ -206,10 +266,15 @@ function PlayerMergeTool() {
 }
 
 function ImportTool() {
+  const { t } = useI18n()
   const importMatches = useAppStore((state) => state.importMatches)
+  const replaceState = useAppStore((state) => state.replaceState)
+  const toast = useToast()
   const [filename, setFilename] = useState('')
   const [raw, setRaw] = useState('')
   const [rows, setRows] = useState<TableRows>([])
+  const [pendingRestore, setPendingRestore] = useState<AppState | null>(null)
+  const [reading, setReading] = useState(false)
   const headers = rows[0] ?? []
   const bodyRows = useMemo(() => rows.slice(1), [rows])
   const [mapping, setMapping] = useState<Mapping>(emptyMapping)
@@ -238,29 +303,93 @@ function ImportTool() {
 
   return (
     <section className="rounded-2xl bg-surface-elevated p-4">
-      <h2 className="text-lg font-semibold">CSV / Excel 匯入</h2>
+      <h2 className="text-lg font-semibold">{t('data.importTitle')}</h2>
       <p className="mt-1 text-sm text-text-secondary">
-        支援欄位 mapping preview；deck 欄可填 OP16 / ST21 / EB04 / leader 名 / 本地 alias。
+        {t('data.importDesc')}
       </p>
-      <input
-        className="mt-4 block w-full text-sm text-text-secondary"
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        onChange={async (event) => {
-          const file = event.target.files?.[0]
-          if (!file) return
-          try {
-            const result = await readFileAsRows(file)
-            setFilename(file.name)
-            setRaw(result.raw)
-            setRows(result.rows)
-            setMapping(guessMapping(result.rows[0] ?? []))
-            setMessage(`已讀取 ${result.rows.length - 1} 行資料`)
-          } catch (caught) {
-            setMessage(caught instanceof Error ? caught.message : '讀取檔案失敗')
-          }
-        }}
-      />
+      <label className="mt-4 block cursor-pointer rounded-2xl border-2 border-dashed border-brand-500/60 bg-brand-500/10 p-4 text-center transition hover:border-brand-500 hover:bg-brand-500/15 active:scale-[0.99]">
+        <span className="block text-base font-semibold text-brand-100">
+          {reading ? t('data.reading') : t('data.chooseFile')}
+        </span>
+        <span className="mt-1 block text-xs text-text-secondary">
+          {filename || t('data.supportedFiles')}
+        </span>
+        <input
+          className="sr-only"
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          disabled={reading}
+          onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            setReading(true)
+            try {
+              const result = await readFileAsRows(file)
+              setFilename(file.name)
+              setRaw(result.raw)
+              if (result.kind === 'opcg-export') {
+                setRows([])
+                setPendingRestore(result.state)
+                const nextMessage = `偵測到 OPCG Tracker 匯出檔：${result.state.matches.length} 場對局，${result.state.players.length} 位玩家`
+                setMessage(nextMessage)
+                toast.info(nextMessage)
+                return
+              }
+
+              setPendingRestore(null)
+              setRows(result.rows)
+              setMapping(guessMapping(result.rows[0] ?? []))
+              const nextMessage = `已讀取 ${result.rows.length - 1} 行資料`
+              setMessage(nextMessage)
+              toast.success(nextMessage)
+            } catch (caught) {
+              const nextMessage = caught instanceof Error ? caught.message : '讀取檔案失敗'
+              setMessage(nextMessage)
+              toast.error(nextMessage)
+            } finally {
+              setReading(false)
+              event.currentTarget.value = ''
+            }
+          }}
+        />
+      </label>
+
+      {pendingRestore ? (
+        <div className="mt-4 rounded-2xl bg-surface p-3">
+          <p className="font-semibold text-text-primary">{t('data.restoreExport')}</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            {t('data.restoreExportDesc')}
+          </p>
+          <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-xs text-text-secondary">
+            <div className="rounded-xl bg-surface-elevated p-2">
+              <dt>對局</dt>
+              <dd className="mt-1 text-base font-semibold text-text-primary">{pendingRestore.matches.length}</dd>
+            </div>
+            <div className="rounded-xl bg-surface-elevated p-2">
+              <dt>玩家</dt>
+              <dd className="mt-1 text-base font-semibold text-text-primary">{pendingRestore.players.length}</dd>
+            </div>
+            <div className="rounded-xl bg-surface-elevated p-2">
+              <dt>牌組</dt>
+              <dd className="mt-1 text-base font-semibold text-text-primary">{pendingRestore.deckVariants.length}</dd>
+            </div>
+          </dl>
+          <Button
+            className="mt-3"
+            fullWidth
+            variant="danger"
+            onClick={() => {
+              replaceState(pendingRestore)
+              setPendingRestore(null)
+              const nextMessage = '已還原 OPCG Tracker Excel 資料'
+              setMessage(nextMessage)
+              toast.success(nextMessage)
+            }}
+          >
+            {t('data.confirmRestore')}
+          </Button>
+        </div>
+      ) : null}
 
       {headers.length ? (
         <>
@@ -276,7 +405,7 @@ function ImportTool() {
           </div>
 
           <div className="mt-4 rounded-2xl bg-surface p-3 text-xs text-text-secondary">
-            <p className="font-semibold text-text-primary">Preview</p>
+            <p className="font-semibold text-text-primary">{t('data.preview')}</p>
             {mappedRows.slice(0, 3).map((row, index) => (
               <p key={index} className="mt-2">
                 {row.player1Name} ({row.deck1Query}) vs {row.player2Name} ({row.deck2Query}) · 勝：
@@ -291,12 +420,12 @@ function ImportTool() {
             disabled={!canImport}
             onClick={() => {
               const result = importMatches(mappedRows, filename || 'import.csv', raw)
-              setMessage(
-                `匯入完成：成功 ${result.importRecord.successCount}，錯誤 ${result.importRecord.errorCount}`,
-              )
+              const nextMessage = `匯入完成：成功 ${result.importRecord.successCount}，錯誤 ${result.importRecord.errorCount}`
+              setMessage(nextMessage)
+              toast.success(nextMessage)
             }}
           >
-            確認匯入
+            {t('data.confirmImport')}
           </Button>
         </>
       ) : null}
@@ -305,9 +434,78 @@ function ImportTool() {
   )
 }
 
+function ExportTool() {
+  const { t } = useI18n()
+  const toast = useToast()
+  const matches = useAppStore((state) => state.matches.length)
+  const players = useAppStore((state) => state.players.length)
+  const leaders = useAppStore((state) => state.leaders.length)
+  const deckVariants = useAppStore((state) => state.deckVariants.length)
+  const sessions = useAppStore((state) => state.sessions.length)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  return (
+    <section className="rounded-2xl bg-surface-elevated p-4">
+      <h2 className="text-lg font-semibold">{t('data.exportTitle')}</h2>
+      <p className="mt-1 text-sm text-text-secondary">
+        {t('data.exportDesc')}
+      </p>
+      <dl className="mt-4 grid grid-cols-5 gap-2 text-center text-xs text-text-secondary">
+        <div className="rounded-xl bg-surface p-2">
+          <dt>對局</dt>
+          <dd className="mt-1 text-base font-semibold text-text-primary">{matches}</dd>
+        </div>
+        <div className="rounded-xl bg-surface p-2">
+          <dt>玩家</dt>
+          <dd className="mt-1 text-base font-semibold text-text-primary">{players}</dd>
+        </div>
+        <div className="rounded-xl bg-surface p-2">
+          <dt>Leader</dt>
+          <dd className="mt-1 text-base font-semibold text-text-primary">{leaders}</dd>
+        </div>
+        <div className="rounded-xl bg-surface p-2">
+          <dt>牌組</dt>
+          <dd className="mt-1 text-base font-semibold text-text-primary">{deckVariants}</dd>
+        </div>
+        <div className="rounded-xl bg-surface p-2">
+          <dt>Session</dt>
+          <dd className="mt-1 text-base font-semibold text-text-primary">{sessions}</dd>
+        </div>
+      </dl>
+      <Button
+        className="mt-4"
+        fullWidth
+        disabled={busy}
+        loading={busy}
+        loadingLabel={t('data.exporting')}
+        onClick={async () => {
+          setBusy(true)
+          setMessage(null)
+          try {
+            await exportAppStateExcel(getAppState())
+            setMessage(t('data.exportSuccess'))
+            toast.success(t('data.exportSuccess'))
+          } catch (caught) {
+            const nextMessage = caught instanceof Error ? caught.message : 'Excel 匯出失敗'
+            setMessage(nextMessage)
+            toast.error(nextMessage)
+          } finally {
+            setBusy(false)
+          }
+        }}
+      >
+        {busy ? t('data.exporting') : t('data.exportButton')}
+      </Button>
+      {message ? <p className="mt-3 text-sm text-text-secondary">{message}</p> : null}
+    </section>
+  )
+}
+
 export function DataTools() {
   return (
     <>
+      <ExportTool />
       <PlayerMergeTool />
       <ImportTool />
     </>

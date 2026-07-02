@@ -1,11 +1,12 @@
 import { type ReactNode } from 'react'
+import { useI18n } from '@/lib/i18n'
 import type { TabId } from '@/types'
 
-const tabs: Array<{ id: TabId; label: string; icon: string }> = [
-  { id: 'record', label: '記錄', icon: '⚔️' },
-  { id: 'stats', label: '今日', icon: '📊' },
-  { id: 'history', label: '歷史', icon: '📜' },
-  { id: 'settings', label: '設定', icon: '⚙️' },
+const tabs: Array<{ id: TabId; labelKey: 'nav.record' | 'nav.stats' | 'nav.history' | 'nav.settings'; icon: string }> = [
+  { id: 'record', labelKey: 'nav.record', icon: '⚔️' },
+  { id: 'stats', labelKey: 'nav.stats', icon: '📊' },
+  { id: 'history', labelKey: 'nav.history', icon: '📜' },
+  { id: 'settings', labelKey: 'nav.settings', icon: '⚙️' },
 ]
 
 interface BottomNavProps {
@@ -14,6 +15,7 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
+  const { t } = useI18n()
   return (
     <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-surface-muted bg-surface/95 backdrop-blur">
       <div className="mx-auto grid max-w-lg grid-cols-4">
@@ -32,7 +34,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               <span className="text-lg" aria-hidden>
                 {tab.icon}
               </span>
-              <span>{tab.label}</span>
+              <span>{t(tab.labelKey)}</span>
             </button>
           )
         })}

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
-import { Toast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { ActiveMatch, ActiveMatchInput, Deck, Match, Player, RecentCombo } from '@/types'
@@ -597,6 +598,8 @@ function RecentComboCard({
 }
 
 export function MatchRecorder() {
+  const { t } = useI18n()
+  const toast = useToast()
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
@@ -608,7 +611,6 @@ export function MatchRecorder() {
   const undoCompletedMatch = useAppStore((state) => state.undoCompletedMatch)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [sheetInput, setSheetInput] = useState<ActiveMatchInput | null>(null)
-  const [lastCompletedMatchId, setLastCompletedMatchId] = useState<string | null>(null)
   const [lastCompletedMatch, setLastCompletedMatch] = useState<Match | null>(null)
 
   const activePlayers = players.filter((player) => !player.archived)
@@ -624,7 +626,7 @@ export function MatchRecorder() {
     <>
       <section className="rounded-2xl bg-surface-elevated p-4">
         <Button fullWidth disabled={!canCreateMatch} onClick={() => setSheetInput(emptyMatchInput)}>
-          ＋ 新對局
+          {t('record.newMatch')}
         </Button>
         {!canCreateMatch ? (
           <div className="mt-3 rounded-xl bg-warning/10 p-3 text-sm text-yellow-100">
@@ -652,7 +654,7 @@ export function MatchRecorder() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">進行中</h2>
+          <h2 className="text-lg font-semibold">{t('record.active')}</h2>
           <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
             {sessionActiveMatches.length} 場
           </span>
@@ -666,10 +668,18 @@ export function MatchRecorder() {
               decks={decks}
               onComplete={(winnerPlayerId) => {
                 const completed = completeActiveMatch(match.id, winnerPlayerId)
-                setLastCompletedMatchId(completed.id)
                 setLastCompletedMatch(completed)
+                toast.showToast({
+                  type: 'success',
+                  message: '已記錄對局',
+                  actionLabel: '復原',
+                  onAction: () => undoCompletedMatch(completed.id),
+                })
               }}
-              onSetFirstPlayer={(firstPlayerId) => setActiveMatchFirstPlayer(match.id, firstPlayerId)}
+              onSetFirstPlayer={(firstPlayerId) => {
+                setActiveMatchFirstPlayer(match.id, firstPlayerId)
+                toast.info(firstPlayerId ? `已設定先攻：${getPlayerName(players, firstPlayerId)}` : '已清除先攻')
+              }}
             />
           ))
         ) : (
@@ -680,7 +690,7 @@ export function MatchRecorder() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">最近組合</h2>
+        <h2 className="text-lg font-semibold">{t('record.recentCombos')}</h2>
         {recentCombos.length ? (
           recentCombos.map((combo) => (
             <RecentComboCard
@@ -721,19 +731,10 @@ export function MatchRecorder() {
           onSave={(input) => {
             createActiveMatch(input)
             setSheetInput(null)
+            toast.success('已建立新對局')
           }}
         />
       </BottomSheet>
-
-      {lastCompletedMatchId ? (
-        <Toast
-          key={lastCompletedMatchId}
-          message="已記錄對局"
-          actionLabel="復原"
-          onAction={() => undoCompletedMatch(lastCompletedMatchId)}
-          onDismiss={() => setLastCompletedMatchId(null)}
-        />
-      ) : null}
     </>
   )
 }

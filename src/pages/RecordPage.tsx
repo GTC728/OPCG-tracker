@@ -1,10 +1,14 @@
 import { MatchRecorder } from '@/components/record/MatchRecorder'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { buildDashboardStats, formatPercent } from '@/lib/stats'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 
 export function RecordPage() {
+  const { t } = useI18n()
+  const toast = useToast()
   const sessions = useAppStore((s) => s.sessions)
   const currentSessionId = useAppStore((s) => s.currentSessionId)
   const players = useAppStore((s) => s.players)
@@ -23,13 +27,13 @@ export function RecordPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">
-              Current Session
+              {t('record.currentSession')}
             </p>
             {currentSession ? (
               <>
                 <h2 className="mt-2 text-xl font-bold">{currentSession.name}</h2>
                 <p className="mt-1 text-sm text-text-secondary">
-                  開始：{formatDateTime(currentSession.startedAt)}
+                  {t('record.start')}：{formatDateTime(currentSession.startedAt)}
                 </p>
               </>
             ) : (
@@ -40,29 +44,32 @@ export function RecordPage() {
             variant="ghost"
             className="min-h-10 shrink-0 py-2 text-sm"
             disabled={!currentSession}
-            onClick={endCurrentSession}
+            onClick={() => {
+              endCurrentSession()
+              toast.success('Session 已結束')
+            }}
           >
-            結束
+            {t('record.end')}
           </Button>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">完成 / 進行中</dt>
+            <dt className="text-text-secondary">{t('record.completedActive')}</dt>
             <dd className="mt-1 text-xl font-bold">
               {dashboard.totalMatches} / {sessionActiveMatches.length}
             </dd>
           </div>
           <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">先攻勝率</dt>
+            <dt className="text-text-secondary">{t('record.firstWinRate')}</dt>
             <dd className="mt-1 text-xl font-bold">{formatPercent(dashboard.firstPlayerWinRate)}</dd>
           </div>
           <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">今日 MVP</dt>
+            <dt className="text-text-secondary">{t('record.mvp')}</dt>
             <dd className="mt-1 truncate text-xl font-bold">{dashboard.topPlayer?.name ?? '—'}</dd>
           </div>
           <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">常用 Deck</dt>
+            <dt className="text-text-secondary">{t('record.usedDeck')}</dt>
             <dd className="mt-1 truncate text-xl font-bold">{dashboard.mostUsedDeck?.name ?? '—'}</dd>
           </div>
         </dl>

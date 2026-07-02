@@ -31,6 +31,32 @@ using (auth.uid() = user_id);
 create index if not exists app_state_snapshots_user_created_idx
 on public.app_state_snapshots (user_id, created_at desc);
 
+create table if not exists public.group_members (
+  group_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (group_key, user_id)
+);
+
+alter table public.group_members enable row level security;
+
+drop policy if exists "Users can read own group memberships" on public.group_members;
+create policy "Users can read own group memberships"
+on public.group_members
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can join groups for themselves" on public.group_members;
+create policy "Users can join groups for themselves"
+on public.group_members
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create index if not exists group_members_user_idx
+on public.group_members (user_id, joined_at desc);
+
 create table if not exists public.group_app_states (
   group_key text primary key,
   state jsonb not null,
@@ -44,26 +70,59 @@ create table if not exists public.group_app_states (
 alter table public.group_app_states enable row level security;
 
 drop policy if exists "Authenticated users can read group states" on public.group_app_states;
-create policy "Authenticated users can read group states"
+drop policy if exists "Group members can read group states" on public.group_app_states;
+create policy "Group members can read group states"
 on public.group_app_states
 for select
 to authenticated
-using (true);
+using (
+  exists (
+    select 1
+    from public.group_members
+    where group_members.group_key = group_app_states.group_key
+      and group_members.user_id = auth.uid()
+  )
+);
 
 drop policy if exists "Authenticated users can insert group states" on public.group_app_states;
-create policy "Authenticated users can insert group states"
+drop policy if exists "Group members can insert group states" on public.group_app_states;
+create policy "Group members can insert group states"
 on public.group_app_states
 for insert
 to authenticated
-with check (auth.uid() = updated_by);
+with check (
+  auth.uid() = updated_by
+  and exists (
+    select 1
+    from public.group_members
+    where group_members.group_key = group_app_states.group_key
+      and group_members.user_id = auth.uid()
+  )
+);
 
 drop policy if exists "Authenticated users can update group states" on public.group_app_states;
-create policy "Authenticated users can update group states"
+drop policy if exists "Group members can update group states" on public.group_app_states;
+create policy "Group members can update group states"
 on public.group_app_states
 for update
 to authenticated
-using (true)
-with check (auth.uid() = updated_by);
+using (
+  exists (
+    select 1
+    from public.group_members
+    where group_members.group_key = group_app_states.group_key
+      and group_members.user_id = auth.uid()
+  )
+)
+with check (
+  auth.uid() = updated_by
+  and exists (
+    select 1
+    from public.group_members
+    where group_members.group_key = group_app_states.group_key
+      and group_members.user_id = auth.uid()
+  )
+);
 
 create index if not exists group_app_states_updated_idx
 on public.group_app_states (updated_at desc);

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { getDeckName, getPlayerName } from '@/lib/entities'
+import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, MatchEditInput, Player } from '@/types'
@@ -183,6 +185,8 @@ function EditMatchForm({
 }
 
 export function HistoryPage() {
+  const { t } = useI18n()
+  const toast = useToast()
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
@@ -224,15 +228,18 @@ export function HistoryPage() {
         notes: match.notes,
       })
       setActiveTab('record')
+      toast.success('已複製到進行中對局')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '複製對局失敗')
+      const nextMessage = error instanceof Error ? error.message : '複製對局失敗'
+      setMessage(nextMessage)
+      toast.error(nextMessage)
     }
   }
 
   return (
     <div className="space-y-4">
       <section className="rounded-2xl bg-surface-elevated p-4">
-        <h2 className="text-lg font-semibold">篩選</h2>
+        <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-text-secondary">日期</span>
@@ -300,7 +307,7 @@ export function HistoryPage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">完成對局</h2>
+          <h2 className="text-lg font-semibold">{t('history.completed')}</h2>
           <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
             {filteredMatches.length} 場
           </span>
@@ -367,7 +374,7 @@ export function HistoryPage() {
                   disabled={match.deletedAt !== null}
                   onClick={() => setEditingMatch(match)}
                 >
-                  編輯
+                  {t('common.edit')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -383,15 +390,21 @@ export function HistoryPage() {
                   <Button
                     variant="ghost"
                     className="min-h-10 py-2 text-sm"
-                    onClick={() => restoreMatch(match.id)}
+                    onClick={() => {
+                      restoreMatch(match.id)
+                      toast.success('對局已還原')
+                    }}
                   >
-                    還原
+                    {t('common.restore')}
                   </Button>
                 ) : (
                   <Button
                     variant="danger"
                     className="min-h-10 py-2 text-sm"
-                    onClick={() => softDeleteMatch(match.id)}
+                    onClick={() => {
+                      softDeleteMatch(match.id)
+                      toast.success('對局已刪除')
+                    }}
                   >
                     軟刪除
                   </Button>
@@ -416,6 +429,7 @@ export function HistoryPage() {
             onSave={(input) => {
               updateMatch(editingMatch.id, input)
               setEditingMatch(null)
+              toast.success('對局已更新')
             }}
           />
         ) : null}

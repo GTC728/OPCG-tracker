@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Player, PlayerInput } from '@/types'
 
@@ -283,6 +284,7 @@ function DeckCard({
 }
 
 export function DataManagers() {
+  const toast = useToast()
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const addPlayer = useAppStore((state) => state.addPlayer)
@@ -320,7 +322,10 @@ export function DataManagers() {
                 key={player.id}
                 player={player}
                 onEdit={() => setEditor({ kind: 'player', item: player })}
-                onArchiveChange={(archived) => setPlayerArchived(player.id, archived)}
+                onArchiveChange={(archived) => {
+                  setPlayerArchived(player.id, archived)
+                  toast.success(archived ? '玩家已封存' : '玩家已還原')
+                }}
               />
             ))
           ) : (
@@ -348,7 +353,10 @@ export function DataManagers() {
                 key={deck.id}
                 deck={deck}
                 onEditAliases={() => setEditor({ kind: 'deckAliases', item: deck })}
-                onArchiveChange={(archived) => setDeckArchived(deck.id, archived)}
+                onArchiveChange={(archived) => {
+                  setDeckArchived(deck.id, archived)
+                  toast.success(archived ? 'Leader 已封存' : 'Leader 已還原')
+                }}
               />
             ))
           ) : (
@@ -375,8 +383,10 @@ export function DataManagers() {
             onSave={(input) => {
               if (editor.item) {
                 updatePlayer(editor.item.id, input)
+                toast.success('玩家已更新')
               } else {
                 addPlayer(input)
+                toast.success('玩家已新增')
               }
               setEditor(null)
             }}
@@ -387,6 +397,7 @@ export function DataManagers() {
             onCancel={() => setEditor(null)}
             onSave={(aliases) => {
               updateDeckAliases(editor.item.id, aliases)
+              toast.success('Leader 別名已更新')
               setEditor(null)
             }}
           />

@@ -10,6 +10,7 @@ import type {
   AppState,
   ImportMatchInput,
   ImportSummary,
+  Language,
   Match,
   MatchEditInput,
   Player,
@@ -27,6 +28,7 @@ interface AppStore extends AppState {
   resetAllData: () => void
   ensureCurrentSession: () => Session
   createNewSession: (name?: string) => Session
+  updateSessionName: (sessionId: string, name: string) => void
   endCurrentSession: () => void
   addPlayer: (input: PlayerInput) => Player
   updatePlayer: (id: string, input: PlayerInput) => void
@@ -42,6 +44,8 @@ interface AppStore extends AppState {
   softDeleteMatch: (matchId: string) => void
   restoreMatch: (matchId: string) => void
   importMatches: (rows: ImportMatchInput[], filename: string, rawData: string) => ImportSummary
+  setLanguage: (language: Language) => void
+  completeOnboarding: () => void
 }
 
 function toPersistedState(store: AppStore): AppState {
@@ -271,6 +275,19 @@ export const useAppStore = create<AppStore>((set) => ({
     })
     set({ ...next })
     return session
+  },
+
+  updateSessionName: (sessionId, name) => {
+    const current = getAppState()
+    const trimmedName = name.trim()
+    if (!trimmedName) throw new Error('Session 名稱不能留空')
+    const next = persist({
+      ...current,
+      sessions: current.sessions.map((session) =>
+        session.id === sessionId ? { ...session, name: trimmedName } : session,
+      ),
+    })
+    set({ ...next })
   },
 
   endCurrentSession: () => {
@@ -772,6 +789,30 @@ export const useAppStore = create<AppStore>((set) => ({
       importRecord,
       createdMatches: createdMatches.length,
     }
+  },
+
+  setLanguage: (language) => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      settings: {
+        ...current.settings,
+        language,
+      },
+    })
+    set({ ...next })
+  },
+
+  completeOnboarding: () => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      settings: {
+        ...current.settings,
+        onboardingCompleted: true,
+      },
+    })
+    set({ ...next })
   },
 }))
 

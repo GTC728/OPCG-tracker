@@ -10,7 +10,7 @@ export function getSessionDateLabel(date = new Date()): string {
 }
 
 export function createSessionName(date = new Date()): string {
-  return `${getSessionDateLabel(date)} 卡店`
+  return getSessionDateLabel(date)
 }
 
 export function createSession(name = createSessionName()): Session {

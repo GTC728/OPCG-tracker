@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import {
   getCloudSession,
   isCloudConfigured,
@@ -20,6 +22,8 @@ function getDefaultDeviceLabel(): string {
 }
 
 export function CloudSyncTool() {
+  const { t } = useI18n()
+  const toast = useToast()
   const replaceState = useAppStore((state) => state.replaceState)
   const [email, setEmail] = useState('')
   const [groupCode, setGroupCode] = useState('')
@@ -42,7 +46,9 @@ export function CloudSyncTool() {
         setLatestBackup(latest?.created_at ?? null)
       }
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : '讀取雲端狀態失敗')
+      const nextMessage = caught instanceof Error ? caught.message : '讀取雲端狀態失敗'
+      setMessage(nextMessage)
+      toast.error(nextMessage)
     }
   }
 
@@ -53,9 +59,9 @@ export function CloudSyncTool() {
   if (!configured) {
     return (
       <section className="rounded-2xl bg-surface-elevated p-4">
-        <h2 className="text-lg font-semibold">Cloud Backup</h2>
+        <h2 className="text-lg font-semibold">{t('cloud.title')}</h2>
         <p className="mt-2 text-sm text-text-secondary">
-          尚未設定 Supabase。完成 `.env.local` 後，這裡會顯示登入、備份和還原。
+          {t('cloud.notConfigured')}
         </p>
       </section>
     )
@@ -65,13 +71,13 @@ export function CloudSyncTool() {
     <section className="rounded-2xl bg-surface-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Cloud Backup</h2>
+          <h2 className="text-lg font-semibold">{t('cloud.title')}</h2>
           <p className="mt-1 text-sm text-text-secondary">
-            先登入，再加入群組；群組內資料可共享。
+            {t('cloud.desc')}
           </p>
         </div>
         <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-secondary">
-          {userEmail ? '已登入' : '未登入'}
+          {userEmail ? t('cloud.loggedIn') : t('cloud.loggedOut')}
         </span>
       </div>
 
@@ -82,7 +88,10 @@ export function CloudSyncTool() {
             <p className="text-sm text-text-secondary">最新備份：{formatDateTime(latestBackup)}</p>
           ) : null}
           <div className="rounded-2xl bg-surface p-3">
-            <p className="text-sm font-semibold">群組共享</p>
+            <p className="text-sm font-semibold">{t('cloud.groupShare')}</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              {t('cloud.groupSecret')}
+            </p>
             {connectedGroup ? (
               <div className="mt-3 space-y-3">
                 <p className="text-sm text-text-secondary">
@@ -92,6 +101,7 @@ export function CloudSyncTool() {
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     disabled={busy}
+                    loading={busy}
                     onClick={async () => {
                       setBusy(true)
                       setMessage(null)
@@ -100,18 +110,22 @@ export function CloudSyncTool() {
                         const latest = await loadGroupCloudState(connectedGroup)
                         setGroupState(latest)
                         setMessage('已上傳到群組')
+                        toast.success('已上傳到群組')
                       } catch (caught) {
-                        setMessage(caught instanceof Error ? caught.message : '群組上傳失敗')
+                        const nextMessage = caught instanceof Error ? caught.message : '群組上傳失敗'
+                        setMessage(nextMessage)
+                        toast.error(nextMessage)
                       } finally {
                         setBusy(false)
                       }
                     }}
                   >
-                    上傳群組
+                    {t('cloud.uploadGroup')}
                   </Button>
                   <Button
                     variant="secondary"
                     disabled={busy}
+                    loading={busy}
                     onClick={async () => {
                       const confirmed = window.confirm('會用群組資料覆蓋本機資料，確定下載？')
                       if (!confirmed) return
@@ -123,14 +137,17 @@ export function CloudSyncTool() {
                         replaceState(latest.state)
                         setGroupState(latest)
                         setMessage('已下載群組資料')
+                        toast.success('已下載群組資料')
                       } catch (caught) {
-                        setMessage(caught instanceof Error ? caught.message : '群組下載失敗')
+                        const nextMessage = caught instanceof Error ? caught.message : '群組下載失敗'
+                        setMessage(nextMessage)
+                        toast.error(nextMessage)
                       } finally {
                         setBusy(false)
                       }
                     }}
                   >
-                    下載群組
+                    {t('cloud.downloadGroup')}
                   </Button>
                 </div>
                 <Button
@@ -141,22 +158,24 @@ export function CloudSyncTool() {
                     setConnectedGroup(null)
                     setGroupState(null)
                     setMessage(null)
+                    toast.info('已離開群組')
                   }}
                 >
-                  離開群組
+                  {t('cloud.leaveGroup')}
                 </Button>
               </div>
             ) : (
               <div className="mt-3 space-y-3">
                 <input
                   className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface-elevated px-3"
-                  placeholder="群組碼，例如 OPCG-HK"
+                  placeholder="群組碼，例如 OPCG-HK-2026"
                   value={groupCode}
                   onChange={(event) => setGroupCode(event.target.value)}
                 />
                 <Button
                   fullWidth
-                  disabled={busy || groupCode.trim().length < 4}
+                  disabled={busy || groupCode.trim().length < 8}
+                  loading={busy}
                   onClick={async () => {
                     setBusy(true)
                     setMessage(null)
@@ -165,15 +184,19 @@ export function CloudSyncTool() {
                       const latest = await loadGroupCloudState(code)
                       setConnectedGroup(code)
                       setGroupState(latest)
-                      setMessage(latest ? '已加入群組' : '新群組，先上傳即可建立資料')
+                      const nextMessage = latest ? '已加入群組' : '新群組，先上傳即可建立資料'
+                      setMessage(nextMessage)
+                      toast.success(nextMessage)
                     } catch (caught) {
-                      setMessage(caught instanceof Error ? caught.message : '加入群組失敗')
+                      const nextMessage = caught instanceof Error ? caught.message : '加入群組失敗'
+                      setMessage(nextMessage)
+                      toast.error(nextMessage)
                     } finally {
                       setBusy(false)
                     }
                   }}
                 >
-                  加入 / 建立群組
+                  {t('cloud.joinGroup')}
                 </Button>
               </div>
             )}
@@ -189,25 +212,30 @@ export function CloudSyncTool() {
           <div className="grid grid-cols-2 gap-3">
             <Button
               disabled={busy}
+              loading={busy}
               onClick={async () => {
                 setBusy(true)
                 setMessage(null)
                 try {
                   await uploadCloudSnapshot(getAppState(), deviceLabel)
                   setMessage('已備份到雲端')
+                  toast.success('已備份到雲端')
                   await refreshCloudStatus()
                 } catch (caught) {
-                  setMessage(caught instanceof Error ? caught.message : '備份失敗')
+                  const nextMessage = caught instanceof Error ? caught.message : '備份失敗'
+                  setMessage(nextMessage)
+                  toast.error(nextMessage)
                 } finally {
                   setBusy(false)
                 }
               }}
             >
-              備份
+              {t('cloud.backup')}
             </Button>
             <Button
               variant="secondary"
               disabled={busy}
+              loading={busy}
               onClick={async () => {
                 const confirmed = window.confirm('會用最新雲端備份覆蓋本機資料，確定還原？')
                 if (!confirmed) return
@@ -218,21 +246,25 @@ export function CloudSyncTool() {
                   if (!latest) throw new Error('沒有雲端備份')
                   replaceState(latest.state)
                   setMessage('已從雲端還原')
+                  toast.success('已從雲端還原')
                   await refreshCloudStatus()
                 } catch (caught) {
-                  setMessage(caught instanceof Error ? caught.message : '還原失敗')
+                  const nextMessage = caught instanceof Error ? caught.message : '還原失敗'
+                  setMessage(nextMessage)
+                  toast.error(nextMessage)
                 } finally {
                   setBusy(false)
                 }
               }}
             >
-              還原
+              {t('cloud.restore')}
             </Button>
           </div>
           <Button
             variant="ghost"
             fullWidth
             disabled={busy}
+            loading={busy}
             onClick={async () => {
               setBusy(true)
               try {
@@ -240,14 +272,17 @@ export function CloudSyncTool() {
                 setUserEmail(null)
                 setLatestBackup(null)
                 setMessage('已登出')
+                toast.info('已登出')
               } catch (caught) {
-                setMessage(caught instanceof Error ? caught.message : '登出失敗')
+                const nextMessage = caught instanceof Error ? caught.message : '登出失敗'
+                setMessage(nextMessage)
+                toast.error(nextMessage)
               } finally {
                 setBusy(false)
               }
             }}
           >
-            登出
+            {t('cloud.signOut')}
           </Button>
         </div>
       ) : (
@@ -262,20 +297,24 @@ export function CloudSyncTool() {
           <Button
             fullWidth
             disabled={busy || !email.trim()}
+            loading={busy}
             onClick={async () => {
               setBusy(true)
               setMessage(null)
               try {
                 await signInWithEmail(email)
                 setMessage('登入連結已寄出，請到 email 開啟')
+                toast.success('登入連結已寄出，請到 email 開啟')
               } catch (caught) {
-                setMessage(caught instanceof Error ? caught.message : '登入失敗')
+                const nextMessage = caught instanceof Error ? caught.message : '登入失敗'
+                setMessage(nextMessage)
+                toast.error(nextMessage)
               } finally {
                 setBusy(false)
               }
             }}
           >
-            寄出登入連結
+            {t('cloud.sendLogin')}
           </Button>
         </div>
       )}

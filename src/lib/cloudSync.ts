@@ -95,6 +95,12 @@ export async function signInWithEmail(email: string): Promise<void> {
   }
 }
 
+async function requireUser() {
+  const { user } = await getCloudSession()
+  if (!user) throw new Error('請先登入')
+  return user
+}
+
 export async function signOutCloud(): Promise<void> {
   const supabase = await requireClient()
   const { error } = await supabase.auth.signOut()
@@ -103,8 +109,8 @@ export async function signOutCloud(): Promise<void> {
 
 async function createGroupKey(groupCode: string): Promise<string> {
   const normalizedCode = groupCode.trim().toLowerCase()
-  if (normalizedCode.length < 4) {
-    throw new Error('群組碼至少需要 4 個字元')
+  if (normalizedCode.length < 8) {
+    throw new Error('群組碼至少需要 8 個字元')
   }
 
   const input = new TextEncoder().encode(`opcg-tracker-group:${normalizedCode}`)
@@ -114,10 +120,21 @@ async function createGroupKey(groupCode: string): Promise<string> {
     .join('')
 }
 
+async function ensureGroupMembership(groupCode: string): Promise<string> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase.from('group_members').insert({
+    group_key: groupKey,
+    user_id: user.id,
+  })
+  if (error && error.code !== '23505') throw error
+  return groupKey
+}
+
 export async function uploadCloudSnapshot(state: AppState, deviceLabel: string): Promise<void> {
   const supabase = await requireClient()
-  const { user } = await getCloudSession()
-  if (!user) throw new Error('請先登入')
+  const user = await requireUser()
 
   const { error } = await supabase.from('app_state_snapshots').insert({
     user_id: user.id,
@@ -131,10 +148,7 @@ export async function uploadCloudSnapshot(state: AppState, deviceLabel: string):
 
 export async function loadGroupCloudState(groupCode: string): Promise<GroupCloudState | null> {
   const supabase = await requireClient()
-  const { user } = await getCloudSession()
-  if (!user) throw new Error('請先登入')
-
-  const groupKey = await createGroupKey(groupCode)
+  const groupKey = await ensureGroupMembership(groupCode)
   const { data, error } = await supabase
     .from('group_app_states')
     .select('*')
@@ -151,10 +165,9 @@ export async function uploadGroupCloudState(
   deviceLabel: string,
 ): Promise<void> {
   const supabase = await requireClient()
-  const { user } = await getCloudSession()
-  if (!user) throw new Error('請先登入')
+  const user = await requireUser()
 
-  const groupKey = await createGroupKey(groupCode)
+  const groupKey = await ensureGroupMembership(groupCode)
   const { error } = await supabase.from('group_app_states').upsert({
     group_key: groupKey,
     state,
@@ -169,8 +182,7 @@ export async function uploadGroupCloudState(
 
 export async function loadLatestCloudSnapshot(): Promise<CloudSnapshotRow | null> {
   const supabase = await requireClient()
-  const { user } = await getCloudSession()
-  if (!user) throw new Error('請先登入')
+  const user = await requireUser()
 
   const { data, error } = await supabase
     .from('app_state_snapshots')

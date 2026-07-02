@@ -25,6 +25,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
   const request = event.request
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+
   const acceptsHtml = request.headers.get('accept')?.includes('text/html')
 
   if (request.mode === 'navigate' || acceptsHtml) {
@@ -39,6 +42,9 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
+
+  const cacheableDestinations = new Set(['style', 'script', 'image', 'manifest', 'font'])
+  if (!cacheableDestinations.has(request.destination)) return
 
   event.respondWith(
     caches.match(request).then((cached) => {
