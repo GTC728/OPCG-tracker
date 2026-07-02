@@ -22,7 +22,8 @@ Mobile-first OPCG 對局記錄與戰績分析工具（V2.1）。
 | **9A** | PWA App Shell | ✅ 完成 | manifest、install metadata、service worker、離線 shell cache |
 | **9B** | IndexedDB | ✅ 完成 | Dexie app-state snapshot、localStorage → IndexedDB 自動遷移、localStorage fallback |
 | **9C** | Cloud Backup / Restore | ✅ Part 1 完成 | Supabase email login、手動備份、最新備份還原、RLS schema |
-| **9D** | Auto Sync | ⏳ 待做 | 自動同步、衝突提示、裝置狀態 |
+| **9D** | Login + Group Sync | ✅ Part 1 完成 | Email login、群組碼加入/建立、群組上傳/下載 |
+| **9E** | Auto Sync | ⏳ 待做 | 自動同步、衝突提示、裝置狀態 |
 
 ## 技術棧
 
@@ -58,7 +59,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 4. 重啟 dev server。
-5. 在 `設定 → App 資料 → Cloud Backup` 輸入 email，使用 magic link 登入後即可備份 / 還原。
+5. 在 `設定 → App 資料 → Cloud Backup` 輸入 email，使用 magic link 登入。
+6. 登入後輸入群組碼；同一群組碼的登入使用者可共享同一份資料。
 
 ## 專案結構
 
@@ -105,10 +107,11 @@ python scripts/generate-leader-decks.py
 - **9A PWA App Shell**：已完成。可部署後在手機加入主畫面，並快取基本 app shell。
 - **9B IndexedDB / Dexie**：已完成。啟動時優先讀 IndexedDB；若只有舊 `localStorage` 資料，會自動遷移到 IndexedDB。
 - **9C Cloud Backup / Restore**：已完成第一階段。使用 Supabase email magic link 登入後，可手動備份本機資料或還原最新雲端備份。
-- **9D Auto Sync**：下一步。每次修改後自動同步，並處理手機和電腦同時修改的衝突。
+- **9D Login + Group Sync**：已完成第一階段。登入後可加入/建立群組，手動上傳本機資料到群組，或下載群組資料覆蓋本機。
+- **9E Auto Sync**：下一步。每次修改後自動同步，並處理手機和電腦同時修改的衝突。
 
 ## 目前進度
 
 **V1.3 Data Foundation + 9A/9B/9C Part 1 長期使用基礎已完成**：資料模型已從單一 `decks` 走向 `Leader + DeckVariant`；PWA manifest 和 service worker 已建立；主要儲存已遷移到 Dexie / IndexedDB；Cloud Backup / Restore 已接 Supabase email login。
 
-下一步（Step 9D）：Auto Sync，讓手機與電腦更接近共用同一份即時資料。
+下一步（Step 9E）：Auto Sync，讓手機與電腦更接近共用同一份即時資料。

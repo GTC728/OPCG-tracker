@@ -12,6 +12,16 @@ export interface CloudSnapshotRow {
   created_at: string
 }
 
+export interface GroupCloudState {
+  group_key: string
+  state: AppState
+  schema_version: number
+  app_version: string
+  device_label: string
+  updated_by: string
+  updated_at: string
+}
+
 let client: SupabaseClient | null = null
 
 export function isCloudConfigured(): boolean {
@@ -66,6 +76,19 @@ export async function signOutCloud(): Promise<void> {
   if (error) throw error
 }
 
+async function createGroupKey(groupCode: string): Promise<string> {
+  const normalizedCode = groupCode.trim().toLowerCase()
+  if (normalizedCode.length < 4) {
+    throw new Error('群組碼至少需要 4 個字元')
+  }
+
+  const input = new TextEncoder().encode(`opcg-tracker-group:${normalizedCode}`)
+  const digest = await crypto.subtle.digest('SHA-256', input)
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export async function uploadCloudSnapshot(state: AppState, deviceLabel: string): Promise<void> {
   const supabase = await requireClient()
   const { user } = await getCloudSession()
@@ -77,6 +100,44 @@ export async function uploadCloudSnapshot(state: AppState, deviceLabel: string):
     schema_version: SCHEMA_VERSION,
     app_version: APP_VERSION,
     device_label: deviceLabel.trim() || 'Unknown device',
+  })
+  if (error) throw error
+}
+
+export async function loadGroupCloudState(groupCode: string): Promise<GroupCloudState | null> {
+  const supabase = await requireClient()
+  const { user } = await getCloudSession()
+  if (!user) throw new Error('請先登入')
+
+  const groupKey = await createGroupKey(groupCode)
+  const { data, error } = await supabase
+    .from('group_app_states')
+    .select('*')
+    .eq('group_key', groupKey)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as GroupCloudState | null
+}
+
+export async function uploadGroupCloudState(
+  groupCode: string,
+  state: AppState,
+  deviceLabel: string,
+): Promise<void> {
+  const supabase = await requireClient()
+  const { user } = await getCloudSession()
+  if (!user) throw new Error('請先登入')
+
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase.from('group_app_states').upsert({
+    group_key: groupKey,
+    state,
+    schema_version: SCHEMA_VERSION,
+    app_version: APP_VERSION,
+    device_label: deviceLabel.trim() || 'Unknown device',
+    updated_by: user.id,
+    updated_at: new Date().toISOString(),
   })
   if (error) throw error
 }

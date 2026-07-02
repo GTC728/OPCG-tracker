@@ -3,10 +3,13 @@ import { Button } from '@/components/ui/Button'
 import {
   getCloudSession,
   isCloudConfigured,
+  loadGroupCloudState,
   loadLatestCloudSnapshot,
   signInWithEmail,
   signOutCloud,
+  type GroupCloudState,
   uploadCloudSnapshot,
+  uploadGroupCloudState,
 } from '@/lib/cloudSync'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
@@ -19,8 +22,11 @@ function getDefaultDeviceLabel(): string {
 export function CloudSyncTool() {
   const replaceState = useAppStore((state) => state.replaceState)
   const [email, setEmail] = useState('')
+  const [groupCode, setGroupCode] = useState('')
+  const [connectedGroup, setConnectedGroup] = useState<string | null>(null)
   const [deviceLabel, setDeviceLabel] = useState(getDefaultDeviceLabel)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [groupState, setGroupState] = useState<GroupCloudState | null>(null)
   const [latestBackup, setLatestBackup] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -61,7 +67,7 @@ export function CloudSyncTool() {
         <div>
           <h2 className="text-lg font-semibold">Cloud Backup</h2>
           <p className="mt-1 text-sm text-text-secondary">
-            使用 email 登入；先做手動備份 / 還原，自動同步下一步再加。
+            先登入，再加入群組；群組內資料可共享。
           </p>
         </div>
         <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-secondary">
@@ -75,6 +81,103 @@ export function CloudSyncTool() {
           {latestBackup ? (
             <p className="text-sm text-text-secondary">最新備份：{formatDateTime(latestBackup)}</p>
           ) : null}
+          <div className="rounded-2xl bg-surface p-3">
+            <p className="text-sm font-semibold">群組共享</p>
+            {connectedGroup ? (
+              <div className="mt-3 space-y-3">
+                <p className="text-sm text-text-secondary">
+                  群組：{connectedGroup}
+                  {groupState ? ` · 更新：${formatDateTime(groupState.updated_at)}` : ''}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true)
+                      setMessage(null)
+                      try {
+                        await uploadGroupCloudState(connectedGroup, getAppState(), deviceLabel)
+                        const latest = await loadGroupCloudState(connectedGroup)
+                        setGroupState(latest)
+                        setMessage('已上傳到群組')
+                      } catch (caught) {
+                        setMessage(caught instanceof Error ? caught.message : '群組上傳失敗')
+                      } finally {
+                        setBusy(false)
+                      }
+                    }}
+                  >
+                    上傳群組
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={async () => {
+                      const confirmed = window.confirm('會用群組資料覆蓋本機資料，確定下載？')
+                      if (!confirmed) return
+                      setBusy(true)
+                      setMessage(null)
+                      try {
+                        const latest = await loadGroupCloudState(connectedGroup)
+                        if (!latest) throw new Error('群組還沒有資料')
+                        replaceState(latest.state)
+                        setGroupState(latest)
+                        setMessage('已下載群組資料')
+                      } catch (caught) {
+                        setMessage(caught instanceof Error ? caught.message : '群組下載失敗')
+                      } finally {
+                        setBusy(false)
+                      }
+                    }}
+                  >
+                    下載群組
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  disabled={busy}
+                  onClick={() => {
+                    setConnectedGroup(null)
+                    setGroupState(null)
+                    setMessage(null)
+                  }}
+                >
+                  離開群組
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <input
+                  className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface-elevated px-3"
+                  placeholder="群組碼，例如 OPCG-HK"
+                  value={groupCode}
+                  onChange={(event) => setGroupCode(event.target.value)}
+                />
+                <Button
+                  fullWidth
+                  disabled={busy || groupCode.trim().length < 4}
+                  onClick={async () => {
+                    setBusy(true)
+                    setMessage(null)
+                    try {
+                      const code = groupCode.trim()
+                      const latest = await loadGroupCloudState(code)
+                      setConnectedGroup(code)
+                      setGroupState(latest)
+                      setMessage(latest ? '已加入群組' : '新群組，先上傳即可建立資料')
+                    } catch (caught) {
+                      setMessage(caught instanceof Error ? caught.message : '加入群組失敗')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  加入 / 建立群組
+                </Button>
+              </div>
+            )}
+          </div>
           <label className="block">
             <span className="text-sm text-text-secondary">裝置名稱</span>
             <input
