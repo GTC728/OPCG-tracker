@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { DeckLabel } from '@/components/deck/DeckLabel'
+import { DeckSearchField } from '@/components/deck/DeckSearchField'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
-import { getDeckName, getPlayerName } from '@/lib/entities'
+import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -124,14 +126,12 @@ function EditMatchForm({
             </option>
           ))}
         </SelectField>
-        <SelectField label="牌組 A" value={input.deck1Id} onChange={(deck1Id) => patchInput({ deck1Id })}>
-          <option value="">選擇牌組 A</option>
-          {decks.map((deck) => (
-            <option key={deck.id} value={deck.id}>
-              {deck.displayName}
-            </option>
-          ))}
-        </SelectField>
+        <DeckSearchField
+          label="牌組 A"
+          value={input.deck1Id}
+          decks={decks}
+          onChange={(deck1Id) => patchInput({ deck1Id })}
+        />
       </section>
       <section className="grid grid-cols-2 gap-3">
         <SelectField label="玩家 B" value={input.player2Id} onChange={(player2Id) => patchInput({ player2Id })}>
@@ -142,14 +142,12 @@ function EditMatchForm({
             </option>
           ))}
         </SelectField>
-        <SelectField label="牌組 B" value={input.deck2Id} onChange={(deck2Id) => patchInput({ deck2Id })}>
-          <option value="">選擇牌組 B</option>
-          {decks.map((deck) => (
-            <option key={deck.id} value={deck.id}>
-              {deck.displayName}
-            </option>
-          ))}
-        </SelectField>
+        <DeckSearchField
+          label="牌組 B"
+          value={input.deck2Id}
+          decks={decks}
+          onChange={(deck2Id) => patchInput({ deck2Id })}
+        />
       </section>
       <SelectField label="勝方" value={input.winnerPlayerId} onChange={(winnerPlayerId) => patchInput({ winnerPlayerId })}>
         <option value="">選擇勝方</option>
@@ -268,21 +266,21 @@ export function HistoryPage() {
               ))}
             </select>
           </label>
-          <label className="block">
-            <span className="text-sm text-text-secondary">牌組</span>
-            <select
-              className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+          <div className="col-span-2">
+            <DeckSearchField
+              label="牌組"
               value={deckFilter}
-              onChange={(event) => setDeckFilter(event.target.value)}
-            >
-              <option value="">全部牌組</option>
-              {decks.map((deck) => (
-                <option key={deck.id} value={deck.id}>
-                  {deck.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
+              decks={decks}
+              onChange={setDeckFilter}
+              placeholder="搜尋要篩選的牌組"
+              showResultsWhenEmpty={false}
+            />
+            {deckFilter ? (
+              <Button className="mt-2 min-h-10 py-2 text-sm" variant="ghost" fullWidth onClick={() => setDeckFilter('')}>
+                清除牌組篩選
+              </Button>
+            ) : null}
+          </div>
           <label className="flex items-end gap-2 pb-3 text-sm text-text-secondary">
             <input
               type="checkbox"
@@ -345,7 +343,7 @@ export function HistoryPage() {
                     {match.winnerPlayerId === match.player1Id ? ' 勝' : ''}
                   </p>
                   <p className="mt-1 text-sm text-text-secondary">
-                    {getDeckName(decks, match.deck1Id)}
+                    <DeckLabel deck={getDeck(decks, match.deck1Id)} />
                   </p>
                 </div>
                 <div className="rounded-xl bg-surface p-3">
@@ -354,7 +352,7 @@ export function HistoryPage() {
                     {match.winnerPlayerId === match.player2Id ? ' 勝' : ''}
                   </p>
                   <p className="mt-1 text-sm text-text-secondary">
-                    {getDeckName(decks, match.deck2Id)}
+                    <DeckLabel deck={getDeck(decks, match.deck2Id)} />
                   </p>
                 </div>
               </div>

@@ -21,20 +21,37 @@ function getDefaultDeviceLabel(): string {
   return `OPCG ${platform}`
 }
 
+const LOGIN_EMAIL_COOLDOWN_SECONDS = 60
+
 export function CloudSyncTool() {
   const { t } = useI18n()
   const toast = useToast()
   const replaceState = useAppStore((state) => state.replaceState)
+  const settings = useAppStore((state) => state.settings)
+  const updateSettings = useAppStore((state) => state.updateSettings)
   const [email, setEmail] = useState('')
-  const [groupCode, setGroupCode] = useState('')
-  const [connectedGroup, setConnectedGroup] = useState<string | null>(null)
-  const [deviceLabel, setDeviceLabel] = useState(getDefaultDeviceLabel)
+  const [groupCode, setGroupCode] = useState(settings.lastGroupCode ?? '')
+  const [connectedGroup, setConnectedGroup] = useState<string | null>(settings.lastGroupCode)
+  const [deviceLabel, setDeviceLabel] = useState(settings.deviceLabel ?? getDefaultDeviceLabel)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [groupState, setGroupState] = useState<GroupCloudState | null>(null)
   const [latestBackup, setLatestBackup] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const configured = isCloudConfigured()
+  const loginCooldownSeconds = settings.lastLoginLinkSentAt
+    ? Math.max(
+        0,
+        LOGIN_EMAIL_COOLDOWN_SECONDS -
+          Math.floor((now - new Date(settings.lastLoginLinkSentAt).getTime()) / 1000),
+      )
+    : 0
+
+  function getFriendlyCloudError(caught: unknown, fallback: string): string {
+    const rawMessage = caught instanceof Error ? caught.message : fallback
+    return rawMessage.toLowerCase().includes('rate limit') ? t('cloud.rateLimited') : rawMessage
+  }
 
   async function refreshCloudStatus() {
     if (!configured) return
@@ -44,6 +61,10 @@ export function CloudSyncTool() {
       if (user) {
         const latest = await loadLatestCloudSnapshot()
         setLatestBackup(latest?.created_at ?? null)
+        if (connectedGroup) {
+          const latestGroup = await loadGroupCloudState(connectedGroup)
+          setGroupState(latestGroup)
+        }
       }
     } catch (caught) {
       const nextMessage = caught instanceof Error ? caught.message : '讀取雲端狀態失敗'
@@ -55,6 +76,12 @@ export function CloudSyncTool() {
   useEffect(() => {
     refreshCloudStatus()
   }, [])
+
+  useEffect(() => {
+    if (!settings.lastLoginLinkSentAt) return
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(intervalId)
+  }, [settings.lastLoginLinkSentAt])
 
   if (!configured) {
     return (
@@ -157,7 +184,9 @@ export function CloudSyncTool() {
                   onClick={() => {
                     setConnectedGroup(null)
                     setGroupState(null)
+                    setGroupCode('')
                     setMessage(null)
+                    updateSettings({ lastGroupCode: null })
                     toast.info('已離開群組')
                   }}
                 >
@@ -184,6 +213,7 @@ export function CloudSyncTool() {
                       const latest = await loadGroupCloudState(code)
                       setConnectedGroup(code)
                       setGroupState(latest)
+                      updateSettings({ lastGroupCode: code })
                       const nextMessage = latest ? '已加入群組' : '新群組，先上傳即可建立資料'
                       setMessage(nextMessage)
                       toast.success(nextMessage)
@@ -206,7 +236,11 @@ export function CloudSyncTool() {
             <input
               className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
               value={deviceLabel}
-              onChange={(event) => setDeviceLabel(event.target.value)}
+              onChange={(event) => {
+                const nextLabel = event.target.value
+                setDeviceLabel(nextLabel)
+                updateSettings({ deviceLabel: nextLabel })
+              }}
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -287,6 +321,9 @@ export function CloudSyncTool() {
         </div>
       ) : (
         <div className="mt-4 space-y-3">
+          <p className="rounded-xl bg-warning/10 p-3 text-sm text-yellow-100">
+            {t('cloud.emailLimitNote')}
+          </p>
           <input
             className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
             placeholder="Email"
@@ -296,17 +333,20 @@ export function CloudSyncTool() {
           />
           <Button
             fullWidth
-            disabled={busy || !email.trim()}
+            disabled={busy || !email.trim() || loginCooldownSeconds > 0}
             loading={busy}
             onClick={async () => {
               setBusy(true)
               setMessage(null)
               try {
                 await signInWithEmail(email)
-                setMessage('登入連結已寄出，請到 email 開啟')
-                toast.success('登入連結已寄出，請到 email 開啟')
+                const sentAt = new Date().toISOString()
+                updateSettings({ lastLoginLinkSentAt: sentAt })
+                setNow(Date.now())
+                setMessage(t('cloud.checkEmail'))
+                toast.success(t('cloud.checkEmail'))
               } catch (caught) {
-                const nextMessage = caught instanceof Error ? caught.message : '登入失敗'
+                const nextMessage = getFriendlyCloudError(caught, '登入失敗')
                 setMessage(nextMessage)
                 toast.error(nextMessage)
               } finally {
@@ -314,7 +354,9 @@ export function CloudSyncTool() {
               }
             }}
           >
-            {t('cloud.sendLogin')}
+            {loginCooldownSeconds > 0
+              ? `${t('cloud.resendIn')} ${loginCooldownSeconds}s`
+              : t('cloud.sendLogin')}
           </Button>
         </div>
       )}

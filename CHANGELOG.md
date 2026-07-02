@@ -9,6 +9,26 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.1.0 - 2026-07-03
+
+### New
+
+- Added reusable compact deck labels with color dots.
+- Added searchable deck picking in History filters and match editing.
+- Added email login rate-limit guidance and resend cooldown.
+- Added persisted group code and device label settings.
+
+### Changed
+
+- Decks now display as compact set code + color dots + leader name in high-scan UI.
+- New Match form now uses clearer Player A / Player B cards and larger first-player controls.
+- Player and deck alias fields now accept comma, Chinese comma, semicolon, slash, and newline separators while preserving normal spaces.
+
+### Fixed
+
+- Fixed History deck editing requiring users to scroll a full deck list.
+- Fixed cloud group/device values resetting every time the Cloud Backup screen reopened.
+
 ## V3.0.0 - 2026-07-03
 
 ### New

@@ -1,6 +1,6 @@
 # OPCG Tracker
 
-**V3.0**：互動反饋、三語系、可讀 Excel 匯入匯出、Cloud group sync 和完整使用者文件。
+**V3.1**：改善雲端登入提示、牌組短格式色點顯示、History 牌組搜尋、別名輸入、群組偏好保存和新對局流程。
 
 OPCG Tracker 是一個手機優先的 One Piece Card Game 對局記錄、匯入匯出、戰績分析和雲端共享工具。
 

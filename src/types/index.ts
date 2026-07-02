@@ -199,6 +199,9 @@ export interface AppSettings {
   backupReminderIntervalDays: number
   language: Language
   onboardingCompleted: boolean
+  lastGroupCode: string | null
+  deviceLabel: string | null
+  lastLoginLinkSentAt: string | null
 }
 
 export interface AppState {

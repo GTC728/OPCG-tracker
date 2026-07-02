@@ -3,7 +3,7 @@ import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/data
 import type { AppState } from '@/types'
 
 export const SCHEMA_VERSION = 4
-export const APP_VERSION = '3.0.0'
+export const APP_VERSION = '3.1.0'
 export const STORAGE_KEY = 'opcg-tracker-state'
 const DEFAULT_LEADERS = buildLeadersFromDecks(SEEDED_LEADER_DECKS)
 const DEFAULT_DECK_VARIANTS = buildDefaultVariantsFromDecks(SEEDED_LEADER_DECKS)
@@ -32,6 +32,9 @@ export function createDefaultAppState(): AppState {
       backupReminderIntervalDays: 7,
       language: 'en',
       onboardingCompleted: false,
+      lastGroupCode: null,
+      deviceLabel: null,
+      lastLoginLinkSentAt: null,
     },
   }
 }

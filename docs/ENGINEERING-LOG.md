@@ -186,3 +186,30 @@ Make English the default language and guide users to choose a language before en
 ### Risks / Follow-up
 
 - Existing local users will see onboarding once because the completion flag is new.
+
+## 2026-07-03 V3.1 Usability Patch
+
+### Goal
+
+Improve high-friction daily-use flows without changing the underlying data model.
+
+### Decisions
+
+- Keep full deck identifiers in the database/search layer, but show compact deck labels in the UI.
+- Use color dots as the primary deck color indicator.
+- Treat Supabase email quota as a server-side limit; only show local resend cooldown and clear guidance.
+- Persist cloud group/device preferences locally for convenience.
+- Preserve normal spaces in aliases, because player names may contain spaces.
+
+### Changed Areas
+
+- `src/components/deck/`: shared deck color, label, and search UI.
+- `src/components/record/MatchRecorder.tsx`: clearer New Match flow and compact deck labels.
+- `src/pages/HistoryPage.tsx`: searchable deck filter/edit controls.
+- `src/components/settings/DataManagers.tsx`: compact deck labels and improved alias parsing.
+- `src/components/settings/CloudSyncTool.tsx`: email cooldown, friendly rate-limit message, persisted group/device settings.
+- `src/types/index.ts`, `src/lib/constants.ts`, `src/stores/appStore.ts`: new persisted settings.
+
+### Verification
+
+- Pending final lint/build/audit.

@@ -46,6 +46,7 @@ interface AppStore extends AppState {
   importMatches: (rows: ImportMatchInput[], filename: string, rawData: string) => ImportSummary
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
+  updateSettings: (settings: Partial<AppState['settings']>) => void
 }
 
 function toPersistedState(store: AppStore): AppState {
@@ -810,6 +811,18 @@ export const useAppStore = create<AppStore>((set) => ({
       settings: {
         ...current.settings,
         onboardingCompleted: true,
+      },
+    })
+    set({ ...next })
+  },
+
+  updateSettings: (settings) => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      settings: {
+        ...current.settings,
+        ...settings,
       },
     })
     set({ ...next })

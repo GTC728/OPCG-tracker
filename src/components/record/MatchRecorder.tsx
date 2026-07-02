@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { DeckLabel } from '@/components/deck/DeckLabel'
+import { DeckSearchField } from '@/components/deck/DeckSearchField'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -26,10 +28,6 @@ function getDeck(decks: Deck[], id: string): Deck | undefined {
 
 function getPlayerName(players: Player[], id: string): string {
   return getPlayer(players, id)?.name ?? '未知玩家'
-}
-
-function getDeckName(decks: Deck[], id: string): string {
-  return getDeck(decks, id)?.displayName ?? '未知牌組'
 }
 
 function getRecentCombos(matches: Match[], players: Player[], decks: Deck[]): RecentCombo[] {
@@ -91,160 +89,6 @@ function getRecentDeckIdsForPlayer(matches: Match[], playerId: string): string[]
   return deckIds
 }
 
-function SelectField({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  children: React.ReactNode
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-text-secondary">{label}</span>
-      <select
-        className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-4 py-3 text-base text-text-primary outline-none transition focus:border-brand-500"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {children}
-      </select>
-    </label>
-  )
-}
-
-function deckMatchesSearch(deck: Deck, query: string): boolean {
-  const normalizedQuery = query.trim().toLowerCase().replace(/[-\s]/g, '')
-  if (!normalizedQuery) return true
-
-  const candidates = [
-    deck.displayName,
-    deck.setCode,
-    deck.leaderCode,
-    deck.leaderName,
-    ...deck.colors,
-    ...deck.aliases,
-  ]
-
-  return candidates.some((candidate) =>
-    candidate.toLowerCase().replace(/[-\s]/g, '').includes(normalizedQuery),
-  )
-}
-
-function DeckSearchField({
-  label,
-  value,
-  decks,
-  preferredDeckIds = [],
-  onChange,
-}: {
-  label: string
-  value: string
-  decks: Deck[]
-  preferredDeckIds?: string[]
-  onChange: (value: string) => void
-}) {
-  const [query, setQuery] = useState('')
-  const selectedDeck = getDeck(decks, value)
-  const preferredDecks = preferredDeckIds
-    .map((deckId) => getDeck(decks, deckId))
-    .filter((deck): deck is Deck => Boolean(deck))
-  const visibleDecks = decks.filter((deck) => deckMatchesSearch(deck, query)).slice(0, 30)
-
-  return (
-    <div>
-      <span className="text-sm font-medium text-text-secondary">{label}</span>
-      <input
-        className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-4 py-3 text-base text-text-primary outline-none transition focus:border-brand-500"
-        placeholder="搜尋 OP / ST / EB / Leader 名稱"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      {selectedDeck ? (
-        <p className="mt-2 rounded-xl bg-brand-500/15 px-3 py-2 text-sm text-brand-100">
-          已選：{selectedDeck.displayName}
-        </p>
-      ) : null}
-      {preferredDecks.length ? (
-        <div className="mt-2">
-          <p className="mb-2 text-xs font-semibold text-text-secondary">推薦 / 最近使用</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-          {preferredDecks.map((deck) => (
-            <button
-              key={deck.id}
-              type="button"
-              className="shrink-0 rounded-full bg-surface-muted px-3 py-2 text-xs text-text-primary"
-              onClick={() => {
-                onChange(deck.id)
-                setQuery(deck.displayName)
-              }}
-            >
-              <span className="mr-2">{deck.displayName}</span>
-              <ColorDots colors={deck.colors} />
-            </button>
-          ))}
-          </div>
-        </div>
-      ) : null}
-      <div className="mt-2 max-h-52 space-y-2 overflow-y-auto rounded-xl border border-surface-muted bg-surface p-2">
-        <p className="px-2 py-1 text-xs font-semibold text-text-secondary">
-          {query.trim() ? '搜尋結果' : '全部 Leader'}
-        </p>
-        {visibleDecks.length ? (
-          visibleDecks.map((deck) => (
-            <button
-              key={deck.id}
-              type="button"
-              className={[
-                'w-full rounded-lg px-3 py-2 text-left text-sm transition',
-                value === deck.id ? 'bg-brand-600 text-white' : 'hover:bg-surface-muted',
-              ].join(' ')}
-              onClick={() => {
-                onChange(deck.id)
-                setQuery(deck.displayName)
-              }}
-            >
-              <span className="block font-semibold">{deck.displayName}</span>
-              <span className="mt-1 flex items-center gap-2 text-xs opacity-75">
-                <ColorDots colors={deck.colors} />
-                <span>{deck.setCode}</span>
-              </span>
-            </button>
-          ))
-        ) : (
-          <p className="px-3 py-2 text-sm text-text-secondary">沒有符合的 Leader</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ColorDots({ colors }: { colors: string[] }) {
-  const colorMap: Record<string, string> = {
-    Red: 'bg-red-500',
-    Green: 'bg-green-500',
-    Blue: 'bg-blue-500',
-    Purple: 'bg-purple-500',
-    Black: 'bg-zinc-800 ring-1 ring-white/30',
-    Yellow: 'bg-yellow-400',
-  }
-
-  return (
-    <span className="inline-flex gap-1 align-middle">
-      {colors.map((color) => (
-        <span
-          key={color}
-          title={color}
-          className={['inline-block h-2.5 w-2.5 rounded-full', colorMap[color] ?? 'bg-slate-400'].join(' ')}
-        />
-      ))}
-    </span>
-  )
-}
-
 function PlayerChip({
   player,
   active,
@@ -268,6 +112,59 @@ function PlayerChip({
   )
 }
 
+function MatchSideCard({
+  label,
+  playerId,
+  deckId,
+  players,
+  decks,
+  preferredDeckIds,
+  onPlayerChange,
+  onDeckChange,
+}: {
+  label: string
+  playerId: string
+  deckId: string
+  players: Player[]
+  decks: Deck[]
+  preferredDeckIds: string[]
+  onPlayerChange: (playerId: string) => void
+  onDeckChange: (deckId: string) => void
+}) {
+  return (
+    <section className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-brand-500">{label}</p>
+        <div className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-secondary">
+          <DeckLabel deck={getDeck(decks, deckId)} />
+        </div>
+      </div>
+      <div className="mt-3">
+        <p className="mb-2 text-sm font-semibold text-text-secondary">玩家</p>
+        <div className="flex flex-wrap gap-2">
+          {players.map((player) => (
+            <PlayerChip
+              key={player.id}
+              player={player}
+              active={playerId === player.id}
+              onClick={() => onPlayerChange(player.id)}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-4">
+        <DeckSearchField
+          label="牌組"
+          value={deckId}
+          decks={decks}
+          preferredDeckIds={preferredDeckIds}
+          onChange={onDeckChange}
+        />
+      </div>
+    </section>
+  )
+}
+
 function MatchForm({
   initial,
   players,
@@ -285,7 +182,7 @@ function MatchForm({
 }) {
   const [input, setInput] = useState<ActiveMatchInput>(initial ?? emptyMatchInput)
   const [error, setError] = useState<string | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
+  const canSubmit = Boolean(input.player1Id && input.player2Id && input.deck1Id && input.deck2Id)
 
   const updateInput = (patch: Partial<ActiveMatchInput>) => {
     setInput((current) => {
@@ -309,6 +206,10 @@ function MatchForm({
       deck2Id: current.deck1Id,
     }))
   }
+  const rollFirstPlayer = () => {
+    if (!input.player1Id || !input.player2Id) return
+    updateInput({ firstPlayerId: Math.random() < 0.5 ? input.player1Id : input.player2Id })
+  }
   const choosePlayer = (slot: 'player1' | 'player2', playerId: string) => {
     const recentDeckId = getRecentDeckIdsForPlayer(matches, playerId)[0] ?? ''
     setInput((current) => ({
@@ -324,6 +225,10 @@ function MatchForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault()
+        if (!canSubmit) {
+          setError('請先選好兩位玩家和兩副牌組')
+          return
+        }
         try {
           onSave(input)
         } catch (caught) {
@@ -331,96 +236,72 @@ function MatchForm({
         }
       }}
     >
+      <div className="rounded-2xl bg-brand-500/10 p-4 ring-1 ring-brand-500/30">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">New Match</p>
+        <p className="mt-1 text-sm text-text-secondary">先選玩家，再選牌組；完成後直接建立進行中對局。</p>
+      </div>
+
+      <MatchSideCard
+        label="Player A"
+        playerId={input.player1Id}
+        deckId={input.deck1Id}
+        players={players}
+        decks={decks}
+        preferredDeckIds={getRecentDeckIdsForPlayer(matches, input.player1Id)}
+        onPlayerChange={(playerId) => choosePlayer('player1', playerId)}
+        onDeckChange={(deck1Id) => updateInput({ deck1Id })}
+      />
+
+      <MatchSideCard
+        label="Player B"
+        playerId={input.player2Id}
+        deckId={input.deck2Id}
+        players={players}
+        decks={decks}
+        preferredDeckIds={getRecentDeckIdsForPlayer(matches, input.player2Id)}
+        onPlayerChange={(playerId) => choosePlayer('player2', playerId)}
+        onDeckChange={(deck2Id) => updateInput({ deck2Id })}
+      />
+
       <section className="rounded-2xl bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Quick Mode</p>
-        <div className="mt-3 space-y-4">
-          <div>
-            <p className="mb-2 text-sm font-semibold text-text-secondary">選玩家 A</p>
-            <div className="flex flex-wrap gap-2">
-              {players.map((player) => (
-                <PlayerChip
-                  key={player.id}
-                  player={player}
-                  active={input.player1Id === player.id}
-                  onClick={() => choosePlayer('player1', player.id)}
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-semibold text-text-secondary">選玩家 B</p>
-            <div className="flex flex-wrap gap-2">
-              {players.map((player) => (
-                <PlayerChip
-                  key={player.id}
-                  player={player}
-                  active={input.player2Id === player.id}
-                  onClick={() => choosePlayer('player2', player.id)}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-xl bg-surface-muted p-3">
-              <p className="text-xs text-text-secondary">A Deck</p>
-              <p className="mt-1 line-clamp-2 font-semibold">{getDeckName(decks, input.deck1Id)}</p>
-            </div>
-            <div className="rounded-xl bg-surface-muted p-3">
-              <p className="text-xs text-text-secondary">B Deck</p>
-              <p className="mt-1 line-clamp-2 font-semibold">{getDeckName(decks, input.deck2Id)}</p>
-            </div>
-          </div>
-          <Button type="button" variant="secondary" fullWidth onClick={() => setShowDetails((value) => !value)}>
-            {showDetails ? '收起詳細' : '改牌組 / 先攻 / 備註'}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-brand-500">先攻</p>
+          <Button type="button" className="min-h-10 py-2 text-sm" variant="ghost" onClick={swapPlayers}>
+            交換 A / B
+          </Button>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Button type="button" variant="secondary" className="min-h-10 py-2 text-sm" onClick={rollFirstPlayer}>
+            隨機
+          </Button>
+          <Button
+            type="button"
+            variant={input.firstPlayerId === null ? 'primary' : 'ghost'}
+            className="min-h-10 py-2 text-sm"
+            onClick={() => updateInput({ firstPlayerId: null })}
+          >
+            稍後決定
+          </Button>
+          <Button
+            type="button"
+            variant={input.firstPlayerId === input.player1Id ? 'primary' : 'ghost'}
+            className="min-h-10 py-2 text-sm"
+            disabled={!input.player1Id}
+            onClick={() => updateInput({ firstPlayerId: input.player1Id })}
+          >
+            A 先攻
+          </Button>
+          <Button
+            type="button"
+            variant={input.firstPlayerId === input.player2Id ? 'primary' : 'ghost'}
+            className="min-h-10 py-2 text-sm"
+            disabled={!input.player2Id}
+            onClick={() => updateInput({ firstPlayerId: input.player2Id })}
+          >
+            B 先攻
           </Button>
         </div>
       </section>
-
-      <Button type="button" variant="secondary" fullWidth onClick={swapPlayers}>
-        交換 A / B
-      </Button>
-
-      {showDetails ? (
-        <>
-      <div className="rounded-2xl bg-surface p-4">
-        <p className="mb-3 text-sm font-semibold text-brand-500">玩家 A 詳細</p>
-        <div className="space-y-3">
-          <DeckSearchField
-            label="牌組"
-            value={input.deck1Id}
-            decks={decks}
-            preferredDeckIds={getRecentDeckIdsForPlayer(matches, input.player1Id)}
-            onChange={(deck1Id) => updateInput({ deck1Id })}
-          />
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-surface p-4">
-        <p className="mb-3 text-sm font-semibold text-brand-500">玩家 B</p>
-        <div className="space-y-3">
-          <DeckSearchField
-            label="牌組"
-            value={input.deck2Id}
-            decks={decks}
-            preferredDeckIds={getRecentDeckIdsForPlayer(matches, input.player2Id)}
-            onChange={(deck2Id) => updateInput({ deck2Id })}
-          />
-        </div>
-      </div>
-
-      <SelectField
-        label="先攻"
-        value={input.firstPlayerId ?? ''}
-        onChange={(firstPlayerId) => updateInput({ firstPlayerId: firstPlayerId || null })}
-      >
-        <option value="">稍後決定</option>
-        {input.player1Id ? (
-          <option value={input.player1Id}>{getPlayerName(players, input.player1Id)}</option>
-        ) : null}
-        {input.player2Id ? (
-          <option value={input.player2Id}>{getPlayerName(players, input.player2Id)}</option>
-        ) : null}
-      </SelectField>
 
       <label className="block">
         <span className="text-sm font-medium text-text-secondary">備註</span>
@@ -431,8 +312,6 @@ function MatchForm({
           onChange={(event) => updateInput({ notes: event.target.value || null })}
         />
       </label>
-      </>
-      ) : null}
 
       {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-red-200">{error}</p> : null}
 
@@ -440,7 +319,9 @@ function MatchForm({
         <Button type="button" variant="ghost" onClick={onCancel}>
           取消
         </Button>
-        <Button type="submit">確認建立</Button>
+        <Button type="submit" disabled={!canSubmit}>
+          確認建立
+        </Button>
       </div>
     </form>
   )
@@ -473,11 +354,15 @@ function LastCompletedCard({
   return (
     <section className="rounded-2xl bg-brand-500/10 p-4 ring-1 ring-brand-500/30">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">剛完成</p>
-      <p className="mt-2 font-semibold">
-        {getPlayerName(players, match.player1Id)} + {getDeckName(decks, match.deck1Id)}
+      <p className="mt-2 flex flex-wrap items-center gap-2 font-semibold">
+        <span>{getPlayerName(players, match.player1Id)}</span>
+        <span>+</span>
+        <DeckLabel deck={getDeck(decks, match.deck1Id)} />
       </p>
-      <p className="mt-1 text-sm text-text-secondary">
-        vs {getPlayerName(players, match.player2Id)} + {getDeckName(decks, match.deck2Id)}
+      <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+        <span>vs {getPlayerName(players, match.player2Id)}</span>
+        <span>+</span>
+        <DeckLabel deck={getDeck(decks, match.deck2Id)} />
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button className="min-h-10 py-2 text-sm" variant="secondary" onClick={onRematch}>
@@ -552,7 +437,9 @@ function ActiveMatchCard({
           onClick={() => onComplete(match.player1Id)}
         >
           <p className="text-xl font-bold">{getPlayerName(players, match.player1Id)}</p>
-          <p className="mt-2 text-sm text-text-secondary">{getDeckName(decks, match.deck1Id)}</p>
+          <p className="mt-2 text-sm text-text-secondary">
+            <DeckLabel deck={getDeck(decks, match.deck1Id)} />
+          </p>
           <p className="mt-8 text-center text-3xl font-black text-success">WIN</p>
         </button>
         <button
@@ -561,7 +448,9 @@ function ActiveMatchCard({
           onClick={() => onComplete(match.player2Id)}
         >
           <p className="text-xl font-bold">{getPlayerName(players, match.player2Id)}</p>
-          <p className="mt-2 text-sm text-text-secondary">{getDeckName(decks, match.deck2Id)}</p>
+          <p className="mt-2 text-sm text-text-secondary">
+            <DeckLabel deck={getDeck(decks, match.deck2Id)} />
+          </p>
           <p className="mt-8 text-center text-3xl font-black text-success">WIN</p>
         </button>
       </div>
@@ -586,11 +475,15 @@ function RecentComboCard({
       className="w-full rounded-2xl bg-surface p-4 text-left ring-1 ring-surface-muted transition hover:bg-surface-muted"
       onClick={onRestart}
     >
-      <p className="font-semibold">
-        {getPlayerName(players, combo.player1Id)} + {getDeckName(decks, combo.deck1Id)}
+      <p className="flex flex-wrap items-center gap-2 font-semibold">
+        <span>{getPlayerName(players, combo.player1Id)}</span>
+        <span>+</span>
+        <DeckLabel deck={getDeck(decks, combo.deck1Id)} />
       </p>
-      <p className="mt-1 text-sm text-text-secondary">
-        vs {getPlayerName(players, combo.player2Id)} + {getDeckName(decks, combo.deck2Id)}
+      <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+        <span>vs {getPlayerName(players, combo.player2Id)}</span>
+        <span>+</span>
+        <DeckLabel deck={getDeck(decks, combo.deck2Id)} />
       </p>
       <p className="mt-2 text-xs text-text-secondary">最近：{formatDateTime(combo.lastUsedAt)}</p>
     </button>

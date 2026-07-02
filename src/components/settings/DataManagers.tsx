@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DeckLabel } from '@/components/deck/DeckLabel'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -17,7 +18,7 @@ const emptyPlayerInput: PlayerInput = {
 
 function parseList(value: string): string[] {
   return value
-    .split(/[\n,，]+/)
+    .split(/[\n,，、;；/]+/)
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -75,7 +76,9 @@ function ListField({
         value={formatList(value)}
         onChange={(event) => onChange(parseList(event.target.value))}
       />
-      <span className="mt-1 block text-xs text-text-secondary">可用逗號或換行分隔</span>
+      <span className="mt-1 block text-xs text-text-secondary">
+        可用逗號、頓號、分號、斜線或換行分隔；一般空格會保留在名稱中。
+      </span>
     </label>
   )
 }
@@ -244,24 +247,14 @@ function DeckCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">{deck.displayName}</h3>
+            <h3 className="font-semibold">
+              <DeckLabel deck={deck} />
+            </h3>
             <ArchiveBadge archived={deck.archived} />
           </div>
           <p className="mt-1 text-sm text-text-secondary">
-            {[deck.setCode, deck.leaderName].filter(Boolean).join(' · ') || '未設定詳細資料'}
+            {deck.leaderCode || '未設定詳細資料'}
           </p>
-          {deck.colors.length ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {deck.colors.map((color) => (
-                <span
-                  key={color}
-                  className="rounded-full bg-brand-500/15 px-2 py-1 text-xs text-brand-100"
-                >
-                  {color}
-                </span>
-              ))}
-            </div>
-          ) : null}
           <p className="mt-2 text-sm text-text-secondary">
             {deck.aliases.length ? `別名：${formatList(deck.aliases)}` : '未設定別名'}
           </p>
