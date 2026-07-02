@@ -1,0 +1,849 @@
+import { useState } from 'react'
+import {
+  buildDashboardStats,
+  buildDeckStats,
+  buildFirstSecondStats,
+  buildMatchupStats,
+  buildPlayerDeckStats,
+  buildPlayerStats,
+  buildRecentForm,
+  formatPercent,
+  type FirstSecondStat,
+  type MatchupStat,
+  type PlayerDeckStat,
+  type RecordStat,
+} from '@/lib/stats'
+import { useAppStore } from '@/stores/appStore'
+import type { Deck, Match, Player } from '@/types'
+
+type StatsSectionId = 'overview' | 'players' | 'decks' | 'matchups'
+type ProfileTarget = { type: 'player' | 'deck'; id: string } | null
+
+function SummaryCard({
+  label,
+  value,
+  detail,
+  featured = false,
+}: {
+  label: string
+  value: string
+  detail?: string
+  featured?: boolean
+}) {
+  return (
+    <article className={['rounded-2xl bg-surface-elevated', featured ? 'p-4' : 'p-3'].join(' ')}>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{label}</p>
+      <p className={['mt-2 font-bold', featured ? 'text-4xl' : 'text-2xl'].join(' ')}>{value}</p>
+      {detail ? <p className="mt-1 text-sm text-text-secondary">{detail}</p> : null}
+    </article>
+  )
+}
+
+function shortLabel(value: string): string {
+  return value.length > 16 ? `${value.slice(0, 15)}…` : value
+}
+
+function getWinRateColor(winRate: number | null): string {
+  if (winRate === null) return 'rgba(71, 85, 105, 0.35)'
+  const opacity = 0.24 + Math.abs(winRate - 0.5) * 1.3
+  return winRate >= 0.5 ? `rgba(59, 130, 246, ${opacity})` : `rgba(248, 113, 113, ${opacity})`
+}
+
+function getSampleLabel(total: number): string {
+  if (total === 0) return ''
+  if (total < 3) return `資料不足 · ${total}場`
+  if (total <= 5) return `初步 · ${total}場`
+  if (total <= 10) return `可參考 · ${total}場`
+  return `可信 · ${total}場`
+}
+
+function getDisplayWinRate(winRate: number | null, total: number): number | null {
+  return total > 0 ? winRate : null
+}
+
+function getMatchupVerdict(winRate: number | null, total: number): string {
+  if (total < 3 || winRate === null) return '資料不足'
+  if (winRate >= 0.6) return '優勢'
+  if (winRate <= 0.4) return '劣勢'
+  return '接近'
+}
+
+function EmptyState({ children }: { children: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
+      {children}
+    </div>
+  )
+}
+
+function SectionTabs({
+  activeSection,
+  onChange,
+}: {
+  activeSection: StatsSectionId
+  onChange: (section: StatsSectionId) => void
+}) {
+  const sections: Array<{ id: StatsSectionId; label: string }> = [
+    { id: 'overview', label: '總覽' },
+    { id: 'players', label: '玩家' },
+    { id: 'decks', label: '牌組' },
+    { id: 'matchups', label: '對位' },
+  ]
+
+  return (
+    <section className="grid grid-cols-4 gap-2 rounded-2xl bg-surface-elevated p-2">
+      {sections.map((section) => (
+        <button
+          key={section.id}
+          type="button"
+          className={[
+            'rounded-xl px-2 py-3 text-sm font-semibold',
+            activeSection === section.id ? 'bg-brand-600 text-white' : 'text-text-secondary',
+          ].join(' ')}
+          onClick={() => onChange(section.id)}
+        >
+          {section.label}
+        </button>
+      ))}
+    </section>
+  )
+}
+
+function StatRow({ stat, onSelect }: { stat: RecordStat; onSelect?: () => void }) {
+  const displayWinRate = getDisplayWinRate(stat.winRate, stat.total)
+  const width = `${Math.round((displayWinRate ?? 0) * 100)}%`
+
+  const content = (
+    <article className="rounded-2xl bg-surface-elevated p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">{stat.name}</h3>
+          <p className="mt-1 text-sm text-text-secondary">
+            {stat.wins}W-{stat.losses}L · {getSampleLabel(stat.total)}
+          </p>
+        </div>
+        <span className="text-lg font-bold">{formatPercent(displayWinRate)}</span>
+      </div>
+      <div className="mt-3 h-3 overflow-hidden rounded-full bg-surface-muted">
+        <div className="h-full rounded-full bg-brand-500" style={{ width }} />
+      </div>
+    </article>
+  )
+
+  if (!onSelect) return content
+
+  return (
+    <button type="button" className="block w-full text-left" onClick={onSelect}>
+      {content}
+    </button>
+  )
+}
+
+function StatSection({
+  title,
+  stats,
+  onSelect,
+}: {
+  title: string
+  stats: RecordStat[]
+  onSelect?: (stat: RecordStat) => void
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          {stats.length} 項
+        </span>
+      </div>
+      {stats.length ? (
+        stats.map((stat) => <StatRow key={stat.id} stat={stat} onSelect={onSelect ? () => onSelect(stat) : undefined} />)
+      ) : (
+        <EmptyState>完成對局後會顯示統計。</EmptyState>
+      )}
+    </section>
+  )
+}
+
+function DonutChart({ stats }: { stats: RecordStat[] }) {
+  const topStats = stats.slice(0, 5)
+  const otherTotal = Math.max(
+    0,
+    stats.slice(5).reduce((sum, stat) => sum + stat.total, 0),
+  )
+  const slices = otherTotal
+    ? [...topStats, { id: 'other', name: '其他', total: otherTotal, wins: 0, losses: 0, winRate: null }]
+    : topStats
+  const total = slices.reduce((sum, stat) => sum + stat.total, 0)
+  const colors = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#eab308', '#64748b']
+  let cursor = 0
+  const gradient = slices.length
+    ? slices
+        .map((slice, index) => {
+          const start = cursor
+          const end = cursor + (slice.total / total) * 100
+          cursor = end
+          return `${colors[index % colors.length]} ${start}% ${end}%`
+        })
+        .join(', ')
+    : '#334155 0% 100%'
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">牌組分佈</h2>
+        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          出場比例
+        </span>
+      </div>
+      <article className="rounded-2xl bg-surface-elevated p-4">
+        {total ? (
+          <div className="flex items-center gap-5">
+            <div
+              className="grid h-32 w-32 shrink-0 place-items-center rounded-full"
+              style={{ background: `conic-gradient(${gradient})` }}
+            >
+              <div className="grid h-20 w-20 place-items-center rounded-full bg-surface-elevated text-center">
+                <span className="text-xs text-text-secondary">
+                  總出場
+                  <strong className="block text-xl text-text-primary">{total}</strong>
+                </span>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              {slices.map((slice, index) => (
+                <div key={slice.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: colors[index % colors.length] }}
+                    />
+                    <span className="truncate">{slice.name}</span>
+                  </span>
+                  <span className="shrink-0 text-text-secondary">
+                    {((slice.total / total) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-text-secondary">完成對局後會顯示環境分佈。</p>
+        )}
+      </article>
+    </section>
+  )
+}
+
+function MatchupRow({ matchup }: { matchup: MatchupStat }) {
+  const displayWinRate = getDisplayWinRate(matchup.deckAWinRate, matchup.total)
+  const verdict = getMatchupVerdict(matchup.deckAWinRate, matchup.total)
+
+  return (
+    <article className="rounded-2xl bg-surface-elevated p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">{matchup.deckAName}</h3>
+          <p className="mt-1 text-sm text-text-secondary">vs {matchup.deckBName}</p>
+        </div>
+        <span className="text-right text-sm font-semibold">
+          {matchup.deckAWins}-{matchup.deckBWins}
+          <span className="block text-text-secondary">{formatPercent(displayWinRate)}</span>
+        </span>
+      </div>
+      <p className="mt-2 text-xs text-text-secondary">{verdict} · {getSampleLabel(matchup.total)}</p>
+    </article>
+  )
+}
+
+function MatchupHeatmap({ matchups }: { matchups: MatchupStat[] }) {
+  const deckTotals = new Map<string, { id: string; name: string; total: number }>()
+  const matchupByPair = new Map(matchups.map((matchup) => [matchup.key, matchup]))
+
+  for (const matchup of matchups) {
+    deckTotals.set(matchup.deckAId, {
+      id: matchup.deckAId,
+      name: matchup.deckAName,
+      total: (deckTotals.get(matchup.deckAId)?.total ?? 0) + matchup.total,
+    })
+    deckTotals.set(matchup.deckBId, {
+      id: matchup.deckBId,
+      name: matchup.deckBName,
+      total: (deckTotals.get(matchup.deckBId)?.total ?? 0) + matchup.total,
+    })
+  }
+
+  const decks = [...deckTotals.values()].sort((left, right) => right.total - left.total).slice(0, 6)
+
+  function getCell(rowId: string, columnId: string) {
+    if (rowId === columnId) return null
+    const [deckAId, deckBId] = [rowId, columnId].sort()
+    const matchup = matchupByPair.get(`${deckAId}:${deckBId}`)
+    if (!matchup || matchup.deckAWinRate === null) return null
+
+    const rowIsDeckA = rowId === matchup.deckAId
+    const winRate = rowIsDeckA ? matchup.deckAWinRate : 1 - matchup.deckAWinRate
+    const wins = rowIsDeckA ? matchup.deckAWins : matchup.deckBWins
+
+    return { winRate, wins, total: matchup.total }
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">對位 Heatmap</h2>
+        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          結論 / 場數
+        </span>
+      </div>
+      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-4">
+        {decks.length >= 2 ? (
+          <div className="min-w-[520px]">
+            <div
+              className="grid gap-1 text-xs"
+              style={{ gridTemplateColumns: `7.5rem repeat(${decks.length}, minmax(3.75rem, 1fr))` }}
+            >
+              <div />
+              {decks.map((deck) => (
+                <div key={deck.id} className="truncate px-1 text-center text-text-secondary">
+                  {shortLabel(deck.name)}
+                </div>
+              ))}
+              {decks.map((rowDeck) => (
+                <div key={rowDeck.id} className="contents">
+                  <div className="truncate py-2 pr-2 font-semibold">{shortLabel(rowDeck.name)}</div>
+                  {decks.map((columnDeck) => {
+                    const cell = getCell(rowDeck.id, columnDeck.id)
+                    const displayWinRate = cell ? getDisplayWinRate(cell.winRate, cell.total) : null
+
+                    return (
+                      <div
+                        key={`${rowDeck.id}:${columnDeck.id}`}
+                        className="grid min-h-14 place-items-center rounded-xl px-1 text-center"
+                        style={{ backgroundColor: getWinRateColor(displayWinRate) }}
+                        title={cell ? `${getSampleLabel(cell.total)} ${formatPercent(displayWinRate)}` : '未有對局'}
+                      >
+                        {cell ? (
+                          <span className="text-[11px] font-semibold">
+                            {displayWinRate === null ? '不足' : formatPercent(displayWinRate)}
+                            <span className="block font-normal text-text-secondary">{cell.total}場</span>
+                          </span>
+                        ) : (
+                          <span className="text-text-secondary">—</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-text-secondary">少於 3 場標示資料不足；藍色優勢，紅色劣勢。</p>
+          </div>
+        ) : (
+          <p className="text-sm text-text-secondary">完成兩種以上牌組對局後會顯示對位矩陣。</p>
+        )}
+      </article>
+    </section>
+  )
+}
+
+function InsightsSection({
+  firstSecondStats,
+  matchupStats,
+  playerDeckStats,
+}: {
+  firstSecondStats: FirstSecondStat[]
+  matchupStats: MatchupStat[]
+  playerDeckStats: PlayerDeckStat[]
+}) {
+  const insights: string[] = []
+  const first = firstSecondStats.find((stat) => stat.label === '先攻')
+  const second = firstSecondStats.find((stat) => stat.label === '後攻')
+  const weakMatchup = matchupStats.find((matchup) => matchup.total >= 3 && (matchup.deckAWinRate ?? 0) <= 0.34)
+  const hotPilot = playerDeckStats.find((stat) => stat.total >= 3 && (stat.winRate ?? 0) >= 0.7)
+
+  if (first && second && first.total >= 3) {
+    insights.push(`先攻 ${formatPercent(first.winRate)}，後攻 ${formatPercent(second.winRate)}，可留意先後攻差距。`)
+  }
+  if (weakMatchup) {
+    insights.push(`${weakMatchup.deckAName} 對 ${weakMatchup.deckBName} 目前 ${weakMatchup.deckAWins}-${weakMatchup.deckBWins}，值得練。`)
+  }
+  if (hotPilot) {
+    insights.push(`${hotPilot.playerName} 使用 ${hotPilot.deckName} 有 ${formatPercent(hotPilot.winRate)}，狀態不錯。`)
+  }
+  if (!insights.length) return null
+
+  return (
+    <section className="rounded-2xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
+      <h2 className="text-lg font-semibold">今晚 Insights</h2>
+      <div className="mt-3 space-y-2">
+        {insights.map((insight) => (
+          <p key={insight} className="rounded-xl bg-surface/70 p-3 text-sm text-text-primary">
+            {insight}
+          </p>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
+  const first = stats.find((stat) => stat.label === '先攻')
+  const second = stats.find((stat) => stat.label === '後攻')
+  const firstWinRate = getDisplayWinRate(first?.winRate ?? null, first?.total ?? 0)
+  const secondWinRate = getDisplayWinRate(second?.winRate ?? null, second?.total ?? 0)
+  const firstPercent = firstWinRate ? firstWinRate * 100 : 0
+  const secondPercent = secondWinRate ? secondWinRate * 100 : 0
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">先後攻拆分</h2>
+      <article className="rounded-2xl bg-surface-elevated p-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-text-secondary">先攻勝率</span>
+          <strong>{formatPercent(firstWinRate)}</strong>
+        </div>
+        <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
+          <div className="h-full rounded-full bg-brand-500" style={{ width: `${firstPercent}%` }} />
+        </div>
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-text-secondary">後攻勝率</span>
+          <strong>{formatPercent(secondWinRate)}</strong>
+        </div>
+        <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
+          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${secondPercent}%` }} />
+        </div>
+      </article>
+      <div className="grid grid-cols-2 gap-3">
+        {stats.map((stat) => {
+          const displayWinRate = getDisplayWinRate(stat.winRate, stat.total)
+          return (
+            <article key={stat.label} className="rounded-2xl bg-surface-elevated p-4">
+              <p className="text-sm text-text-secondary">{stat.label}</p>
+              <p className="mt-2 text-3xl font-bold">{formatPercent(displayWinRate)}</p>
+              <p className="mt-1 text-sm text-text-secondary">
+                {stat.wins}W · {getSampleLabel(stat.total)}
+              </p>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function PlayerDeckSection({ stats }: { stats: PlayerDeckStat[] }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">玩家 × 牌組</h2>
+        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          {stats.length} 組
+        </span>
+      </div>
+      {stats.slice(0, 12).map((stat) => (
+        <article key={stat.id} className="rounded-2xl bg-surface-elevated p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">{stat.playerName}</h3>
+              <p className="mt-1 text-sm text-text-secondary">{stat.deckName}</p>
+            </div>
+            <span className="text-right font-bold">
+              {formatPercent(getDisplayWinRate(stat.winRate, stat.total))}
+              <span className="block text-sm font-normal text-text-secondary">
+                {getSampleLabel(stat.total)}
+              </span>
+            </span>
+          </div>
+        </article>
+      ))}
+      {!stats.length ? (
+        <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
+          完成對局後會顯示每位玩家使用不同牌組的表現。
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function RecentFormSection({ recentForm }: { recentForm: ReturnType<typeof buildRecentForm> }) {
+  const visibleForms = recentForm.filter((form) => form.total > 0 && form.winRate !== null)
+  if (!visibleForms.length) return null
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">近期形態</h2>
+      <article className="rounded-2xl bg-surface-elevated p-4">
+        <div className="space-y-3">
+          {visibleForms.map((form) => {
+            const width = `${Math.round((form.winRate ?? 0) * 100)}%`
+
+            return (
+              <div key={form.label}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">{form.label.replace(' 場', '')}</span>
+                  <strong>{formatPercent(form.winRate)}</strong>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-surface-muted">
+                  <div className="h-full rounded-full bg-brand-500" style={{ width }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function ProfileHeader({
+  title,
+  subtitle,
+  onBack,
+}: {
+  title: string
+  subtitle: string
+  onBack: () => void
+}) {
+  return (
+    <section className="rounded-2xl bg-surface-elevated p-4">
+      <button type="button" className="text-sm font-semibold text-brand-400" onClick={onBack}>
+        ← 返回統計
+      </button>
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">
+        Profile
+      </p>
+      <h2 className="mt-1 text-2xl font-bold">{title}</h2>
+      <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
+    </section>
+  )
+}
+
+function MiniStatGrid({ stat }: { stat: RecordStat | null }) {
+  return (
+    <section className="grid grid-cols-3 gap-3">
+      <SummaryCard
+        label="勝率"
+        value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
+        detail={getSampleLabel(stat?.total ?? 0)}
+      />
+      <SummaryCard label="勝場" value={String(stat?.wins ?? 0)} />
+      <SummaryCard label="場數" value={String(stat?.total ?? 0)} detail={getSampleLabel(stat?.total ?? 0)} />
+    </section>
+  )
+}
+
+function PlayerProfileView({
+  player,
+  matches,
+  players,
+  decks,
+  onBack,
+  onOpenDeck,
+}: {
+  player: Player
+  matches: Match[]
+  players: Player[]
+  decks: Deck[]
+  onBack: () => void
+  onOpenDeck: (deckId: string) => void
+}) {
+  const playerMatches = matches.filter(
+    (match) => match.player1Id === player.id || match.player2Id === player.id,
+  )
+  const stat = buildPlayerStats(players, matches).find((item) => item.id === player.id) ?? null
+  const deckStats = buildPlayerDeckStats(players, decks, matches).filter(
+    (item) => item.playerId === player.id,
+  )
+  const playerDeckIds = new Set(deckStats.map((item) => item.deckId))
+  const relevantMatchups = buildMatchupStats(decks, matches).filter(
+    (matchup) => playerDeckIds.has(matchup.deckAId) || playerDeckIds.has(matchup.deckBId),
+  )
+
+  return (
+    <div className="space-y-4">
+      <ProfileHeader
+        title={player.name}
+        subtitle={`玩家資料 · ${playerMatches.length} 場對局`}
+        onBack={onBack}
+      />
+      <MiniStatGrid stat={stat} />
+      <RecentFormSection recentForm={buildRecentForm(matches, player.id)} />
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">使用牌組</h2>
+        {deckStats.length ? (
+          deckStats.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="block w-full text-left"
+              onClick={() => onOpenDeck(item.deckId)}
+            >
+              <StatRow stat={{ ...item, id: item.deckId, name: item.deckName }} />
+            </button>
+          ))
+        ) : (
+          <EmptyState>此玩家未有牌組數據。</EmptyState>
+        )}
+      </section>
+      <FirstSecondSection stats={buildFirstSecondStats(playerMatches)} />
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">相關對位</h2>
+        {relevantMatchups.length ? (
+          relevantMatchups.slice(0, 8).map((matchup) => <MatchupRow key={matchup.key} matchup={matchup} />)
+        ) : (
+          <EmptyState>此玩家暫時未有可分析對位。</EmptyState>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function DeckProfileView({
+  deck,
+  matches,
+  players,
+  decks,
+  onBack,
+  onOpenPlayer,
+}: {
+  deck: Deck
+  matches: Match[]
+  players: Player[]
+  decks: Deck[]
+  onBack: () => void
+  onOpenPlayer: (playerId: string) => void
+}) {
+  const deckMatches = matches.filter((match) => match.deck1Id === deck.id || match.deck2Id === deck.id)
+  const stat = buildDeckStats(decks, matches).find((item) => item.id === deck.id) ?? null
+  const pilotStats = buildPlayerDeckStats(players, decks, matches).filter((item) => item.deckId === deck.id)
+  const relevantMatchups = buildMatchupStats(decks, matches).filter(
+    (matchup) => matchup.deckAId === deck.id || matchup.deckBId === deck.id,
+  )
+
+  return (
+    <div className="space-y-4">
+      <ProfileHeader
+        title={deck.displayName}
+        subtitle={`${deck.colors.join(' / ') || '未知顏色'} · ${deckMatches.length} 次出場`}
+        onBack={onBack}
+      />
+      <MiniStatGrid stat={stat} />
+      <FirstSecondSection stats={buildFirstSecondStats(deckMatches)} />
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">使用者表現</h2>
+        {pilotStats.length ? (
+          pilotStats.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="block w-full text-left"
+              onClick={() => onOpenPlayer(item.playerId)}
+            >
+              <StatRow stat={{ ...item, id: item.playerId, name: item.playerName }} />
+            </button>
+          ))
+        ) : (
+          <EmptyState>此牌組暫時未有玩家使用數據。</EmptyState>
+        )}
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">牌組對位</h2>
+        {relevantMatchups.length ? (
+          relevantMatchups.map((matchup) => <MatchupRow key={matchup.key} matchup={matchup} />)
+        ) : (
+          <EmptyState>此牌組暫時未有 matchup 數據。</EmptyState>
+        )}
+      </section>
+    </div>
+  )
+}
+
+export function StatsPage() {
+  const [scope, setScope] = useState<'session' | 'all'>('session')
+  const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
+  const [profileTarget, setProfileTarget] = useState<ProfileTarget>(null)
+  const players = useAppStore((state) => state.players)
+  const decks = useAppStore((state) => state.decks)
+  const matches = useAppStore((state) => state.matches)
+  const currentSessionId = useAppStore((state) => state.currentSessionId)
+  const scopedMatches =
+    scope === 'session' && currentSessionId
+      ? matches.filter((match) => match.sessionId === currentSessionId)
+      : matches
+  const dashboard = buildDashboardStats(players, decks, scopedMatches)
+  const playerStats = buildPlayerStats(players, scopedMatches)
+  const deckStats = buildDeckStats(decks, scopedMatches)
+  const matchupStats = buildMatchupStats(decks, scopedMatches)
+  const playerDeckStats = buildPlayerDeckStats(players, decks, scopedMatches)
+  const firstSecondStats = buildFirstSecondStats(scopedMatches)
+  const selectedPlayer =
+    profileTarget?.type === 'player'
+      ? players.find((player) => player.id === profileTarget.id) ?? null
+      : null
+  const selectedDeck =
+    profileTarget?.type === 'deck'
+      ? decks.find((deck) => deck.id === profileTarget.id) ?? null
+      : null
+
+  if (selectedPlayer) {
+    return (
+      <PlayerProfileView
+        player={selectedPlayer}
+        matches={scopedMatches}
+        players={players}
+        decks={decks}
+        onBack={() => setProfileTarget(null)}
+        onOpenDeck={(deckId) => setProfileTarget({ type: 'deck', id: deckId })}
+      />
+    )
+  }
+
+  if (selectedDeck) {
+    return (
+      <DeckProfileView
+        deck={selectedDeck}
+        matches={scopedMatches}
+        players={players}
+        decks={decks}
+        onBack={() => setProfileTarget(null)}
+        onOpenPlayer={(playerId) => setProfileTarget({ type: 'player', id: playerId })}
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <section className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-elevated p-2">
+        <button
+          type="button"
+          className={[
+            'rounded-xl px-3 py-3 text-sm font-semibold',
+            scope === 'session' ? 'bg-brand-600 text-white' : 'text-text-secondary',
+          ].join(' ')}
+          onClick={() => {
+            setScope('session')
+            setProfileTarget(null)
+          }}
+        >
+          目前 Session
+        </button>
+        <button
+          type="button"
+          className={[
+            'rounded-xl px-3 py-3 text-sm font-semibold',
+            scope === 'all' ? 'bg-brand-600 text-white' : 'text-text-secondary',
+          ].join(' ')}
+          onClick={() => {
+            setScope('all')
+            setProfileTarget(null)
+          }}
+        >
+          全部資料
+        </button>
+      </section>
+
+      <SectionTabs activeSection={activeSection} onChange={setActiveSection} />
+
+      {activeSection === 'overview' ? (
+        <>
+          <section className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <SummaryCard label="總場數" value={String(dashboard.totalMatches)} featured />
+            </div>
+            {dashboard.firstPlayerSample > 0 ? (
+              <SummaryCard
+                label="先攻勝率"
+                value={formatPercent(
+                  getDisplayWinRate(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
+                )}
+                detail={getSampleLabel(dashboard.firstPlayerSample)}
+              />
+            ) : null}
+            {dashboard.topPlayer ? (
+              <SummaryCard
+                label="最多勝玩家"
+                value={dashboard.topPlayer.name}
+                detail={`${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
+              />
+            ) : null}
+            {dashboard.mostUsedDeck ? (
+              <SummaryCard
+                label="最常用牌組"
+                value={dashboard.mostUsedDeck.name}
+                detail={`${dashboard.mostUsedDeck.total} 次出場`}
+              />
+            ) : null}
+          </section>
+          <InsightsSection
+            firstSecondStats={firstSecondStats}
+            matchupStats={matchupStats}
+            playerDeckStats={playerDeckStats}
+          />
+          <section className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              className="rounded-2xl bg-surface-elevated p-3 text-left"
+              onClick={() => setActiveSection('players')}
+            >
+              <p className="text-sm text-text-secondary">深入查看</p>
+              <h2 className="mt-1 text-lg font-bold">玩家檔案</h2>
+              <div className="mt-3 h-2 rounded-full bg-brand-500/70" />
+            </button>
+            <button
+              type="button"
+              className="rounded-2xl bg-surface-elevated p-3 text-left"
+              onClick={() => setActiveSection('decks')}
+            >
+              <p className="text-sm text-text-secondary">深入查看</p>
+              <h2 className="mt-1 text-lg font-bold">牌組檔案</h2>
+              <div className="mt-3 h-2 rounded-full bg-emerald-500/70" />
+            </button>
+          </section>
+        </>
+      ) : null}
+
+      {activeSection === 'players' ? (
+        <>
+          <StatSection
+            title="玩家列表"
+            stats={playerStats}
+            onSelect={(stat) => setProfileTarget({ type: 'player', id: stat.id })}
+          />
+          <PlayerDeckSection stats={playerDeckStats.slice(0, 8)} />
+        </>
+      ) : null}
+
+      {activeSection === 'decks' ? (
+        <>
+          <DonutChart stats={deckStats} />
+          <StatSection
+            title="牌組列表"
+            stats={deckStats}
+            onSelect={(stat) => setProfileTarget({ type: 'deck', id: stat.id })}
+          />
+        </>
+      ) : null}
+
+      {activeSection === 'matchups' ? (
+        <>
+          <MatchupHeatmap matchups={matchupStats} />
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">常見對位</h2>
+              <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+                {matchupStats.length} 組
+              </span>
+            </div>
+            {matchupStats.length ? (
+              matchupStats.slice(0, 16).map((matchup) => <MatchupRow key={matchup.key} matchup={matchup} />)
+            ) : (
+              <EmptyState>完成不同牌組之間的對局後會顯示 matchup。</EmptyState>
+            )}
+          </section>
+          <FirstSecondSection stats={firstSecondStats} />
+        </>
+      ) : null}
+    </div>
+  )
+}
