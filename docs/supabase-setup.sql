@@ -1,35 +1,32 @@
-create table if not exists public.shared_app_states (
-  group_key text primary key,
+create table if not exists public.app_state_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   state jsonb not null,
   schema_version integer not null,
   app_version text not null,
   device_label text not null,
-  updated_at timestamptz not null default now()
+  created_at timestamptz not null default now()
 );
 
-alter table public.shared_app_states enable row level security;
+alter table public.app_state_snapshots enable row level security;
 
-drop policy if exists "Anyone with group key can read shared state" on public.shared_app_states;
-create policy "Anyone with group key can read shared state"
-on public.shared_app_states
+drop policy if exists "Users can read own app snapshots" on public.app_state_snapshots;
+create policy "Users can read own app snapshots"
+on public.app_state_snapshots
 for select
-to anon
-using (true);
+using (auth.uid() = user_id);
 
-drop policy if exists "Anyone with group key can insert shared state" on public.shared_app_states;
-create policy "Anyone with group key can insert shared state"
-on public.shared_app_states
+drop policy if exists "Users can insert own app snapshots" on public.app_state_snapshots;
+create policy "Users can insert own app snapshots"
+on public.app_state_snapshots
 for insert
-to anon
-with check (true);
+with check (auth.uid() = user_id);
 
-drop policy if exists "Anyone with group key can update shared state" on public.shared_app_states;
-create policy "Anyone with group key can update shared state"
-on public.shared_app_states
-for update
-to anon
-using (true)
-with check (true);
+drop policy if exists "Users can delete own app snapshots" on public.app_state_snapshots;
+create policy "Users can delete own app snapshots"
+on public.app_state_snapshots
+for delete
+using (auth.uid() = user_id);
 
-create index if not exists shared_app_states_updated_idx
-on public.shared_app_states (updated_at desc);
+create index if not exists app_state_snapshots_user_created_idx
+on public.app_state_snapshots (user_id, created_at desc);

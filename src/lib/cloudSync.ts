@@ -1,14 +1,15 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import type { AppState } from '@/types'
 
-export interface SharedCloudState {
-  group_key: string
+export interface CloudSnapshotRow {
+  id: string
+  user_id: string
   state: AppState
   schema_version: number
   app_version: string
   device_label: string
-  updated_at: string
+  created_at: string
 }
 
 let client: SupabaseClient | null = null
@@ -37,54 +38,62 @@ async function requireClient(): Promise<SupabaseClient> {
   return supabase
 }
 
-async function createGroupKey(pin: string): Promise<string> {
-  const normalizedPin = pin.trim()
-  if (normalizedPin.length < 4) {
-    throw new Error('PIN 至少需要 4 個字元')
-  }
+export async function getCloudSession(): Promise<{ session: Session | null; user: User | null }> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return { session: null, user: null }
 
-  const input = new TextEncoder().encode(`opcg-tracker:${normalizedPin}`)
-  const digest = await crypto.subtle.digest('SHA-256', input)
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-export async function getSharedCloudState(pin: string): Promise<SharedCloudState | null> {
-  const supabase = await requireClient()
-  const groupKey = await createGroupKey(pin)
-
-  const { data, error } = await supabase
-    .from('shared_app_states')
-    .select('*')
-    .eq('group_key', groupKey)
-    .maybeSingle()
-
+  const { data, error } = await supabase.auth.getSession()
   if (error) throw error
-  return data as SharedCloudState | null
+  return {
+    session: data.session,
+    user: data.session?.user ?? null,
+  }
 }
 
-export async function uploadSharedCloudState(
-  pin: string,
-  state: AppState,
-  deviceLabel: string,
-): Promise<void> {
+export async function signInWithEmail(email: string): Promise<void> {
   const supabase = await requireClient()
-  const groupKey = await createGroupKey(pin)
-
-  const { error } = await supabase.from('shared_app_states').upsert({
-    group_key: groupKey,
-    state,
-    schema_version: SCHEMA_VERSION,
-    app_version: APP_VERSION,
-    device_label: deviceLabel.trim() || 'Unknown device',
-    updated_at: new Date().toISOString(),
+  const redirectTo = window.location.origin
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
   })
   if (error) throw error
 }
 
-export function maskPin(pin: string): string {
-  const trimmed = pin.trim()
-  if (trimmed.length <= 2) return '*'.repeat(trimmed.length)
-  return `${trimmed.slice(0, 1)}${'*'.repeat(Math.max(2, trimmed.length - 2))}${trimmed.slice(-1)}`
+export async function signOutCloud(): Promise<void> {
+  const supabase = await requireClient()
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export async function uploadCloudSnapshot(state: AppState, deviceLabel: string): Promise<void> {
+  const supabase = await requireClient()
+  const { user } = await getCloudSession()
+  if (!user) throw new Error('請先登入')
+
+  const { error } = await supabase.from('app_state_snapshots').insert({
+    user_id: user.id,
+    state,
+    schema_version: SCHEMA_VERSION,
+    app_version: APP_VERSION,
+    device_label: deviceLabel.trim() || 'Unknown device',
+  })
+  if (error) throw error
+}
+
+export async function loadLatestCloudSnapshot(): Promise<CloudSnapshotRow | null> {
+  const supabase = await requireClient()
+  const { user } = await getCloudSession()
+  if (!user) throw new Error('請先登入')
+
+  const { data, error } = await supabase
+    .from('app_state_snapshots')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as CloudSnapshotRow | null
 }
