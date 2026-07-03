@@ -12,6 +12,33 @@ export interface CloudSnapshotRow {
   created_at: string
 }
 
+export interface CloudSnapshotMeta {
+  id: string
+  schema_version: number
+  app_version: string
+  device_label: string
+  created_at: string
+}
+
+export interface GroupCloudSnapshotRow {
+  id: string
+  group_key: string
+  state: AppState
+  schema_version: number
+  app_version: string
+  device_label: string
+  updated_by: string
+  created_at: string
+}
+
+export interface GroupCloudSnapshotMeta {
+  id: string
+  schema_version: number
+  app_version: string
+  device_label: string
+  created_at: string
+}
+
 export interface GroupCloudState {
   group_key: string
   state: AppState
@@ -182,6 +209,16 @@ export async function uploadGroupCloudState(
     updated_at: new Date().toISOString(),
   })
   if (error) throw error
+
+  const { error: snapshotError } = await supabase.from('group_app_state_snapshots').insert({
+    group_key: groupKey,
+    state,
+    schema_version: SCHEMA_VERSION,
+    app_version: APP_VERSION,
+    device_label: deviceLabel.trim() || 'Unknown device',
+    updated_by: user.id,
+  })
+  if (snapshotError && snapshotError.code !== '42P01') throw snapshotError
 }
 
 export async function loadLatestCloudSnapshot(): Promise<CloudSnapshotRow | null> {
@@ -198,4 +235,76 @@ export async function loadLatestCloudSnapshot(): Promise<CloudSnapshotRow | null
 
   if (error) throw error
   return data as CloudSnapshotRow | null
+}
+
+export async function listCloudSnapshots(limit = 20): Promise<CloudSnapshotMeta[]> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+
+  const { data, error } = await supabase
+    .from('app_state_snapshots')
+    .select('id, schema_version, app_version, device_label, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data ?? []) as CloudSnapshotMeta[]
+}
+
+export async function loadCloudSnapshotById(id: string): Promise<CloudSnapshotRow | null> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+
+  const { data, error } = await supabase
+    .from('app_state_snapshots')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) throw error
+  return data as CloudSnapshotRow | null
+}
+
+export async function listGroupCloudSnapshots(
+  groupCode: string,
+  limit = 20,
+): Promise<GroupCloudSnapshotMeta[]> {
+  const supabase = await requireClient()
+  const groupKey = await ensureGroupMembership(groupCode)
+
+  const { data, error } = await supabase
+    .from('group_app_state_snapshots')
+    .select('id, schema_version, app_version, device_label, created_at')
+    .eq('group_key', groupKey)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    if (error.code === '42P01') return []
+    throw error
+  }
+  return (data ?? []) as GroupCloudSnapshotMeta[]
+}
+
+export async function loadGroupCloudSnapshotById(
+  groupCode: string,
+  id: string,
+): Promise<GroupCloudSnapshotRow | null> {
+  const supabase = await requireClient()
+  const groupKey = await ensureGroupMembership(groupCode)
+
+  const { data, error } = await supabase
+    .from('group_app_state_snapshots')
+    .select('*')
+    .eq('group_key', groupKey)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    if (error.code === '42P01') return null
+    throw error
+  }
+  return data as GroupCloudSnapshotRow | null
 }

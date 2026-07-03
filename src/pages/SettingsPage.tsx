@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { useToast } from '@/components/ui/Toast'
 import { CloudSyncTool } from '@/components/settings/CloudSyncTool'
 import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
+import { SessionManager } from '@/components/session/SessionManager'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import { languageLabels, useI18n } from '@/lib/i18n'
-import { formatDateTime } from '@/lib/utils'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
@@ -51,7 +50,6 @@ function BackButton({ onClick, label }: { onClick: () => void; label: string }) 
 
 export function SettingsPage() {
   const { t, language, setLanguage } = useI18n()
-  const toast = useToast()
   const [section, setSection] = useState<SettingsSection>('home')
   const players = useAppStore((s) => s.players.length)
   const decks = useAppStore((s) => s.decks.length)
@@ -61,19 +59,7 @@ export function SettingsPage() {
   const activeMatches = useAppStore(
     (s) => s.activeMatches.filter((match) => match.sessionId === s.currentSessionId).length,
   )
-  const createNewSession = useAppStore((s) => s.createNewSession)
-  const updateSessionName = useAppStore((s) => s.updateSessionName)
-  const switchSession = useAppStore((s) => s.switchSession)
-  const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
-  const sortedSessions = [...sessions].sort(
-    (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
-  )
-  const [sessionName, setSessionName] = useState(currentSession?.name ?? '')
-
-  useEffect(() => {
-    setSessionName(currentSession?.name ?? '')
-  }, [currentSession?.id, currentSession?.name])
 
   return (
     <div className="space-y-4">
@@ -148,97 +134,7 @@ export function SettingsPage() {
       {section === 'session' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <section className="rounded-2xl bg-surface-elevated p-4">
-            <h2 className="text-lg font-semibold">{t('settings.session')}</h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              {currentSession ? `${t('record.start')}：${formatDateTime(currentSession.startedAt)}` : t('settings.noActiveSession')}
-            </p>
-            <label className="mt-4 block">
-              <span className="text-sm text-text-secondary">{t('settings.sessionName')}</span>
-              <input
-                className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-                disabled={!currentSession}
-                value={sessionName}
-                onChange={(event) => setSessionName(event.target.value)}
-              />
-            </label>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button
-                disabled={!currentSession || !sessionName.trim()}
-                onClick={() => {
-                  if (!currentSession) return
-                  try {
-                    updateSessionName(currentSession.id, sessionName)
-                    toast.success(t('settings.sessionRenamed'))
-                  } catch (caught) {
-                    toast.error(caught instanceof Error ? caught.message : t('settings.renameSessionFailed'))
-                  }
-                }}
-              >
-                {t('settings.renameSession')}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  const session = createNewSession()
-                  setSessionName(session.name)
-                  toast.success(t('settings.sessionCreated'))
-                }}
-              >
-                {t('settings.newSession')}
-              </Button>
-            </div>
-            <Button
-              className="mt-3"
-              variant="ghost"
-              fullWidth
-              disabled={!currentSession}
-              onClick={() => {
-                endCurrentSession()
-                toast.success(t('settings.sessionEnded'))
-              }}
-            >
-              {t('settings.endCurrent')}
-            </Button>
-            <p className="mt-3 text-xs text-text-secondary">
-              {t('settings.totalSessions')}：{sessions.length}
-            </p>
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold text-text-secondary">{t('settings.switchSession')}</h3>
-              {sortedSessions.map((session) => (
-                <button
-                  key={session.id}
-                  type="button"
-                  className={[
-                    'flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left text-sm ring-1 ring-surface-muted',
-                    session.id === currentSessionId ? 'bg-brand-600 text-white' : 'bg-surface hover:bg-surface-muted',
-                  ].join(' ')}
-                  onClick={() => {
-                    try {
-                      switchSession(session.id)
-                      toast.success(`${t('settings.switchedTo')} ${session.name}`)
-                    } catch (caught) {
-                      toast.error(caught instanceof Error ? caught.message : t('settings.switchSessionFailed'))
-                    }
-                  }}
-                >
-                  <span>
-                    <span className="block font-semibold">{session.name}</span>
-                    <span className="mt-1 block text-xs opacity-75">
-                      {formatDateTime(session.startedAt)}
-                    </span>
-                  </span>
-                  <span className="text-xs opacity-75">
-                    {session.id === currentSessionId
-                      ? t('settings.currentLabel')
-                      : session.endedAt
-                        ? t('settings.endedLabel')
-                        : t('settings.openLabel')}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+          <SessionManager onBackup={() => setSection('cloud')} />
         </>
       ) : null}
 

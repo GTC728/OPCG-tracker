@@ -366,17 +366,8 @@ export function TableBoard({
   }
 
   return (
-    <div className="space-y-2">
-      <AssignmentDock
-        sessionId={sessionId}
-        players={players}
-        decks={decks}
-        matches={matches}
-        pendingAssignment={pendingAssignment}
-        onSelectAssignment={setPendingAssignment}
-        onClearAssignment={() => setPendingAssignment(null)}
-      />
-
+    <div className="flex flex-col gap-2">
+      <div className="order-1 space-y-2 md:order-2">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{t('table.title')}</h2>
         <div className="flex items-center gap-1">
@@ -438,6 +429,19 @@ export function TableBoard({
           {t('table.empty')}
         </div>
       ) : null}
+      </div>
+
+      <div className="order-2 md:order-1">
+        <AssignmentDock
+          sessionId={sessionId}
+          players={players}
+          decks={decks}
+          matches={matches}
+          pendingAssignment={pendingAssignment}
+          onSelectAssignment={setPendingAssignment}
+          onClearAssignment={() => setPendingAssignment(null)}
+        />
+      </div>
     </div>
   )
 }

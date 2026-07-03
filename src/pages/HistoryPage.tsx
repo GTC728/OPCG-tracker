@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DeckSearchField } from '@/components/deck/DeckSearchField'
 import { MatchResultRow } from '@/components/match/MatchResultRow'
+import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -188,6 +189,7 @@ function HistoryMatchCard({
   onCopy,
   onDelete,
   onRestore,
+  onPermanentDelete,
 }: {
   match: Match
   players: Player[]
@@ -196,6 +198,7 @@ function HistoryMatchCard({
   onCopy: () => void
   onDelete: () => void
   onRestore: () => void
+  onPermanentDelete: () => void
 }) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
@@ -256,12 +259,17 @@ function HistoryMatchCard({
           </div>
           <div className="mt-2">
             {match.deletedAt ? (
-              <Button variant="ghost" className="min-h-9 w-full py-1.5 text-xs" onClick={onRestore}>
-                {t('common.restore')}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="ghost" className="min-h-9 py-1.5 text-xs" onClick={onRestore}>
+                  {t('common.restore')}
+                </Button>
+                <Button variant="danger" className="min-h-9 py-1.5 text-xs" onClick={onPermanentDelete}>
+                  {t('delete.permanent')}
+                </Button>
+              </div>
             ) : (
               <Button variant="danger" className="min-h-9 w-full py-1.5 text-xs" onClick={onDelete}>
-                軟刪除
+                {t('delete.soft')}
               </Button>
             )}
           </div>
@@ -281,6 +289,7 @@ export function HistoryPage() {
   const updateMatch = useAppStore((state) => state.updateMatch)
   const softDeleteMatch = useAppStore((state) => state.softDeleteMatch)
   const restoreMatch = useAppStore((state) => state.restoreMatch)
+  const permanentlyDeleteMatch = useAppStore((state) => state.permanentlyDeleteMatch)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [playerFilter, setPlayerFilter] = useState('')
@@ -288,6 +297,7 @@ export function HistoryPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
+  const [purgeTarget, setPurgeTarget] = useState<Match | null>(null)
 
   const filteredMatches = useMemo(() => {
     return matches
@@ -417,6 +427,7 @@ export function HistoryPage() {
                 restoreMatch(match.id)
                 toast.success('對局已還原')
               }}
+              onPermanentDelete={() => setPurgeTarget(match)}
             />
           ))
         ) : (
@@ -441,6 +452,27 @@ export function HistoryPage() {
           />
         ) : null}
       </BottomSheet>
+
+      <PermanentDeletePrompt
+        open={purgeTarget !== null}
+        title={t('delete.matchTitle')}
+        description={t('delete.matchDesc')}
+        detail={purgeTarget ? `#${purgeTarget.matchNumber}` : undefined}
+        onClose={() => setPurgeTarget(null)}
+        onBackup={() => {
+          setPurgeTarget(null)
+          setActiveTab('settings')
+        }}
+        onConfirm={() => {
+          if (!purgeTarget) return
+          try {
+            permanentlyDeleteMatch(purgeTarget.id)
+            toast.success(t('delete.matchDone'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
+          }
+        }}
+      />
     </div>
   )
 }

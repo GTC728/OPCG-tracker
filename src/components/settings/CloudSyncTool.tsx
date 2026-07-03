@@ -16,6 +16,7 @@ import {
 import { stopGroupCollabRealtime } from '@/lib/groupSync'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
+import { BackupVersionList } from '@/components/settings/BackupVersionList'
 
 function getDefaultDeviceLabel(): string {
   const platform = navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'
@@ -37,6 +38,7 @@ export function CloudSyncTool() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [groupState, setGroupState] = useState<GroupCloudState | null>(null)
   const [latestBackup, setLatestBackup] = useState<string | null>(null)
+  const [versionRefreshKey, setVersionRefreshKey] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(() => Date.now())
@@ -162,6 +164,7 @@ export function CloudSyncTool() {
                           await uploadGroupCloudState(connectedGroup, getAppState(), deviceLabel)
                           const latest = await loadGroupCloudState(connectedGroup)
                           setGroupState(latest)
+                          setVersionRefreshKey((value) => value + 1)
                           setMessage(t('cloud.uploadGroupDone'))
                           toast.success(t('cloud.uploadGroupDone'))
                         } catch (caught) {
@@ -204,6 +207,16 @@ export function CloudSyncTool() {
                     </Button>
                   </div>
                 )}
+                {!settings.groupCollabEnabled ? (
+                  <div className="rounded-2xl bg-surface-elevated p-3">
+                    <BackupVersionList
+                      key={`group-${connectedGroup}-${versionRefreshKey}`}
+                      mode="group"
+                      groupCode={connectedGroup}
+                      onRestored={refreshCloudStatus}
+                    />
+                  </div>
+                ) : null}
                 <Button
                   variant="ghost"
                   fullWidth
@@ -290,6 +303,7 @@ export function CloudSyncTool() {
                   await uploadCloudSnapshot(getAppState(), deviceLabel)
                   setMessage('已備份到雲端')
                   toast.success('已備份到雲端')
+                  setVersionRefreshKey((value) => value + 1)
                   await refreshCloudStatus()
                 } catch (caught) {
                   const nextMessage = caught instanceof Error ? caught.message : '備份失敗'
@@ -329,6 +343,13 @@ export function CloudSyncTool() {
             >
               {t('cloud.restore')}
             </Button>
+          </div>
+          <div className="mt-4 rounded-2xl bg-surface p-3">
+            <BackupVersionList
+              key={`personal-${versionRefreshKey}`}
+              mode="personal"
+              onRestored={refreshCloudStatus}
+            />
           </div>
           <Button
             variant="ghost"

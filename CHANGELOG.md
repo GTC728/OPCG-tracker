@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.6.0 - 2026-07-04
+
+### New
+
+- **Mobile record layout**: tables appear above the assignment dock on phone; recent decks collapse to a horizontal strip (6 items) with expand.
+- **Session management**: rename, switch, create, end, and permanently delete sessions from Record page sheet and Settings.
+- **Permanent delete**: after soft-delete/archive, permanently remove matches, players, and decks with backup reminder prompt.
+- **Backup versions**: pick and restore older personal cloud snapshots; group upload history when collab is off (requires `docs/supabase-group-snapshots-v3.6.sql`).
+
+### Changed
+
+- Assignment dock starts collapsed on mobile to reduce scroll distance to tables.
+
 ## V3.5.4 - 2026-07-04
 
 ### Fixed

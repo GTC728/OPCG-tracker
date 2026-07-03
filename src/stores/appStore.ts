@@ -37,6 +37,7 @@ interface AppStore extends AppState {
   updateSessionName: (sessionId: string, name: string) => void
   switchSession: (sessionId: string) => void
   endCurrentSession: () => void
+  deleteSession: (sessionId: string) => void
   addPlayer: (input: PlayerInput) => Player
   updatePlayer: (id: string, input: PlayerInput) => void
   setPlayerArchived: (id: string, archived: boolean) => void
@@ -51,6 +52,9 @@ interface AppStore extends AppState {
   undoCompletedMatch: (matchId: string) => void
   softDeleteMatch: (matchId: string) => void
   restoreMatch: (matchId: string) => void
+  permanentlyDeleteMatch: (matchId: string) => void
+  permanentlyDeletePlayer: (playerId: string) => void
+  permanentlyDeleteDeck: (deckId: string) => void
   importMatches: (rows: ImportMatchInput[], filename: string, rawData: string) => ImportSummary
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
@@ -380,6 +384,37 @@ export const useAppStore = create<AppStore>((set, get) => ({
           ? { ...session, endedAt: nowIso() }
           : session,
       ),
+    })
+    set({ ...next })
+  },
+
+  deleteSession: (sessionId) => {
+    const current = getAppState()
+    const target = current.sessions.find((session) => session.id === sessionId)
+    if (!target) throw new Error('找不到 Session')
+
+    const remainingSessions = current.sessions.filter((session) => session.id !== sessionId)
+    const wasCurrent = current.currentSessionId === sessionId
+    let nextCurrentId = wasCurrent ? null : current.currentSessionId
+
+    if (wasCurrent) {
+      const fallback =
+        remainingSessions.find((session) => session.endedAt === null) ?? remainingSessions[0] ?? null
+      nextCurrentId = fallback?.id ?? null
+    }
+
+    const next = persist({
+      ...current,
+      currentSessionId: nextCurrentId,
+      sessions: remainingSessions,
+      matches: current.matches.filter((match) => match.sessionId !== sessionId),
+      activeMatches: current.activeMatches.filter((match) => match.sessionId !== sessionId),
+      sessionPlayers: current.sessionPlayers.filter((item) => item.sessionId !== sessionId),
+      sessionDecks: current.sessionDecks.filter((item) => item.sessionId !== sessionId),
+      matchRevisions: current.matchRevisions.filter((revision) => {
+        const match = current.matches.find((item) => item.id === revision.matchId)
+        return match ? match.sessionId !== sessionId : true
+      }),
     })
     set({ ...next })
   },
@@ -753,6 +788,49 @@ export const useAppStore = create<AppStore>((set, get) => ({
       matches: current.matches.map((match) =>
         match.id === matchId ? { ...match, deletedAt: null, source: 'manual_edit' } : match,
       ),
+    })
+    set({ ...next })
+  },
+
+  permanentlyDeleteMatch: (matchId) => {
+    const current = getAppState()
+    const match = current.matches.find((item) => item.id === matchId)
+    if (!match) throw new Error('找不到對局')
+    if (match.deletedAt === null) throw new Error('請先軟刪除對局')
+
+    const next = persist({
+      ...current,
+      matches: current.matches.filter((item) => item.id !== matchId),
+      matchRevisions: current.matchRevisions.filter((revision) => revision.matchId !== matchId),
+    })
+    set({ ...next })
+  },
+
+  permanentlyDeletePlayer: (playerId) => {
+    const current = getAppState()
+    const player = current.players.find((item) => item.id === playerId)
+    if (!player) throw new Error('找不到玩家')
+    if (!player.archived) throw new Error('請先封存玩家')
+
+    const next = persist({
+      ...current,
+      players: current.players.filter((item) => item.id !== playerId),
+      playerAliases: current.playerAliases.filter((alias) => alias.playerId !== playerId),
+      sessionPlayers: current.sessionPlayers.filter((item) => item.playerId !== playerId),
+    })
+    set({ ...next })
+  },
+
+  permanentlyDeleteDeck: (deckId) => {
+    const current = getAppState()
+    const deck = current.decks.find((item) => item.id === deckId)
+    if (!deck) throw new Error('找不到牌組')
+    if (!deck.archived) throw new Error('請先封存牌組')
+
+    const next = persist({
+      ...current,
+      decks: current.decks.filter((item) => item.id !== deckId),
+      sessionDecks: current.sessionDecks.filter((item) => item.deckVariantId !== deckId),
     })
     set({ ...next })
   },

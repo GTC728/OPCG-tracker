@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
+import { SessionManager } from '@/components/session/SessionManager'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
@@ -11,6 +12,7 @@ import { useAppStore } from '@/stores/appStore'
 export function RecordPage() {
   const { t, language } = useI18n()
   const toast = useToast()
+  const setActiveTab = useAppStore((s) => s.setActiveTab)
   const sessions = useAppStore((s) => s.sessions)
   const currentSessionId = useAppStore((s) => s.currentSessionId)
   const players = useAppStore((s) => s.players)
@@ -21,6 +23,7 @@ export function RecordPage() {
   const createNewSession = useAppStore((s) => s.createNewSession)
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
   const [expanded, setExpanded] = useState(false)
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionMatches = matches.filter((match) => match.sessionId === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
@@ -50,13 +53,20 @@ export function RecordPage() {
         </div>
 
         {currentSession ? (
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-3 gap-2">
             <Button
               variant="secondary"
               className="min-h-10 text-xs"
               onClick={() => openSessionRosterPrompt(currentSession.id)}
             >
               {t('record.players')}
+            </Button>
+            <Button
+              variant="secondary"
+              className="min-h-10 text-xs"
+              onClick={() => setSessionSheetOpen(true)}
+            >
+              {t('record.manageSession')}
             </Button>
             <Button
               variant="ghost"
@@ -70,15 +80,24 @@ export function RecordPage() {
             </Button>
           </div>
         ) : (
-          <Button
-            className="mt-2 min-h-10 w-full text-xs"
-            onClick={() => {
-              createNewSession()
-              toast.success(t('record.sessionStarted'))
-            }}
-          >
-            {t('record.newSession')}
-          </Button>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button
+              className="min-h-10 text-xs"
+              onClick={() => {
+                createNewSession()
+                toast.success(t('record.sessionStarted'))
+              }}
+            >
+              {t('record.newSession')}
+            </Button>
+            <Button
+              variant="secondary"
+              className="min-h-10 text-xs"
+              onClick={() => setSessionSheetOpen(true)}
+            >
+              {t('record.manageSession')}
+            </Button>
+          </div>
         )}
 
         {currentSession ? (
@@ -125,6 +144,16 @@ export function RecordPage() {
       </section>
 
       <MatchRecorder />
+
+      <SessionManager
+        compact
+        open={sessionSheetOpen}
+        onClose={() => setSessionSheetOpen(false)}
+        onBackup={() => {
+          setSessionSheetOpen(false)
+          setActiveTab('settings')
+        }}
+      />
     </div>
   )
 }

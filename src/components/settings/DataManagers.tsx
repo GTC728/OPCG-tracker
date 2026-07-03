@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -314,10 +315,12 @@ function PlayerCard({
   player,
   onEdit,
   onArchiveChange,
+  onPermanentDelete,
 }: {
   player: Player
   onEdit: () => void
   onArchiveChange: (archived: boolean) => void
+  onPermanentDelete: () => void
 }) {
   return (
     <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
@@ -344,6 +347,11 @@ function PlayerCard({
           {player.archived ? '還原' : '封存'}
         </Button>
       </div>
+      {player.archived ? (
+        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onPermanentDelete}>
+          永久刪除
+        </Button>
+      ) : null}
     </article>
   )
 }
@@ -352,10 +360,12 @@ function DeckCard({
   deck,
   onEditAliases,
   onArchiveChange,
+  onPermanentDelete,
 }: {
   deck: Deck
   onEditAliases: () => void
   onArchiveChange: (archived: boolean) => void
+  onPermanentDelete: () => void
 }) {
   return (
     <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
@@ -384,6 +394,11 @@ function DeckCard({
           {deck.archived ? '還原' : '封存'}
         </Button>
       </div>
+      {deck.archived ? (
+        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onPermanentDelete}>
+          永久刪除
+        </Button>
+      ) : null}
     </article>
   )
 }
@@ -396,9 +411,14 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
   const setPlayerArchived = useAppStore((state) => state.setPlayerArchived)
+  const permanentlyDeletePlayer = useAppStore((state) => state.permanentlyDeletePlayer)
+  const permanentlyDeleteDeck = useAppStore((state) => state.permanentlyDeleteDeck)
   const setDeckArchived = useAppStore((state) => state.setDeckArchived)
   const updateDeckAliases = useAppStore((state) => state.updateDeckAliases)
+  const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [editor, setEditor] = useState<EditorState>(null)
+  const [purgePlayer, setPurgePlayer] = useState<Player | null>(null)
+  const [purgeDeck, setPurgeDeck] = useState<Deck | null>(null)
 
   const sortedPlayers = [...players].sort((left, right) => {
     if (left.archived !== right.archived) return left.archived ? 1 : -1
@@ -433,6 +453,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                   setPlayerArchived(player.id, archived)
                   toast.success(archived ? '玩家已封存' : '玩家已還原')
                 }}
+                onPermanentDelete={() => setPurgePlayer(player)}
               />
             ))
           ) : (
@@ -466,6 +487,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                   setDeckArchived(deck.id, archived)
                   toast.success(archived ? t('settings.leaderArchived') : t('settings.leaderRestored'))
                 }}
+                onPermanentDelete={() => setPurgeDeck(deck)}
               />
             ))
           ) : (
@@ -513,6 +535,48 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
           />
         ) : null}
       </BottomSheet>
+
+      <PermanentDeletePrompt
+        open={purgePlayer !== null}
+        title={t('delete.playerTitle')}
+        description={t('delete.playerDesc')}
+        detail={purgePlayer?.name}
+        onClose={() => setPurgePlayer(null)}
+        onBackup={() => {
+          setPurgePlayer(null)
+          setActiveTab('settings')
+        }}
+        onConfirm={() => {
+          if (!purgePlayer) return
+          try {
+            permanentlyDeletePlayer(purgePlayer.id)
+            toast.success(t('delete.playerDone'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
+          }
+        }}
+      />
+
+      <PermanentDeletePrompt
+        open={purgeDeck !== null}
+        title={t('delete.deckTitle')}
+        description={t('delete.deckDesc')}
+        detail={purgeDeck?.displayName}
+        onClose={() => setPurgeDeck(null)}
+        onBackup={() => {
+          setPurgeDeck(null)
+          setActiveTab('settings')
+        }}
+        onConfirm={() => {
+          if (!purgeDeck) return
+          try {
+            permanentlyDeleteDeck(purgeDeck.id)
+            toast.success(t('delete.deckDone'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
+          }
+        }}
+      />
     </>
   )
 }
