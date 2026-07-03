@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.5.3 - 2026-07-04
+
+### Fixed
+
+- Prevent stale group sync rollback on Record page by pushing only changed active/player/match rows instead of rewriting all local rows during every flush.
+- Remove mobile `focus` pull loop; remote state now pulls on startup and when returning from hidden tab only.
+- Player management now syncs through `sync_players` Realtime; SQL adds `sync_players` to `supabase_realtime`.
+
 ## V3.5.2 - 2026-07-04
 
 ### Fixed

@@ -42,24 +42,18 @@ export function useGroupCollab() {
 
     void init()
 
-    const pullLatest = () => {
-      if (!groupCode) return
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !groupCode) return
       void pullGroupCollabState(groupCode).catch((error) => {
         console.error('Group collab pull failed', error)
       })
     }
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') pullLatest()
-    }
-
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('focus', pullLatest)
 
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('focus', pullLatest)
       stopGroupCollabRealtime()
     }
   }, [groupCode, groupCollabBootstrapped, groupCollabEnabled, hydrated, updateSettings])

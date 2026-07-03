@@ -43,6 +43,73 @@ type SyncMatchRow = {
 
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 let realtimeUnsubscribe: (() => void) | null = null
+let flushRunning = false
+let flushQueued = false
+/** Local edit timestamp per active match id — blocks stale remote overwrites. */
+const localActiveTouch = new Map<string, number>()
+/** Local edit timestamp per completed match id. */
+const localMatchTouch = new Map<string, number>()
+/** Local edit timestamp per player id. */
+const localPlayerTouch = new Map<string, number>()
+
+function touchLocalActive(ids: Iterable<string>): void {
+  const now = Date.now()
+  for (const id of ids) localActiveTouch.set(id, now)
+}
+
+function touchLocalPlayers(ids: Iterable<string>): void {
+  const now = Date.now()
+  for (const id of ids) localPlayerTouch.set(id, now)
+}
+
+function touchLocalMatches(ids: Iterable<string>): void {
+  const now = Date.now()
+  for (const id of ids) localMatchTouch.set(id, now)
+}
+
+function activePayloadChanged(before: ActiveMatch, after: ActiveMatch): boolean {
+  return (
+    before.sessionId !== after.sessionId ||
+    before.player1Id !== after.player1Id ||
+    before.player2Id !== after.player2Id ||
+    before.deck1Id !== after.deck1Id ||
+    before.deck2Id !== after.deck2Id ||
+    before.firstPlayerId !== after.firstPlayerId ||
+    before.tableSlot !== after.tableSlot ||
+    before.notes !== after.notes
+  )
+}
+
+function playerPayloadChanged(before: Player, after: Player): boolean {
+  return before.name !== after.name || before.archived !== after.archived
+}
+
+function shouldApplyRemoteActive(row: SyncActiveRow): boolean {
+  const localTouch = localActiveTouch.get(row.id) ?? 0
+  const remoteAt = new Date(row.updated_at).getTime()
+  return remoteAt >= localTouch
+}
+
+function shouldApplyRemoteMatch(existing: Match | undefined, row: SyncMatchRow): boolean {
+  if (!existing) return true
+  const localTouch = localMatchTouch.get(row.id) ?? 0
+  const remoteAt = new Date(row.updated_at).getTime()
+  if (remoteAt < localTouch) return false
+  const remote = rowToMatch(row)
+  if (remote.deletedAt !== existing.deletedAt) return true
+  return remoteAt >= localTouch
+}
+
+function shouldApplyRemotePlayer(
+  existing: Player | undefined,
+  remote: { id: string; name: string; archived: boolean; updated_at?: string },
+): boolean {
+  const localTouch = localPlayerTouch.get(remote.id) ?? 0
+  if (remote.updated_at) {
+    return new Date(remote.updated_at).getTime() >= localTouch
+  }
+  return !existing
+}
 
 export function isGroupCollabActive(state: AppState): boolean {
   return Boolean(state.settings.groupCollabEnabled && state.settings.lastGroupCode)
@@ -149,27 +216,6 @@ export async function flushGroupCollabSync(groupCode: string, state: AppState): 
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
 
-  const activeRows = state.activeMatches.map((match) => toActiveRow(groupKey, match, userId))
-  if (activeRows.length) {
-    const { error } = await supabase.from('sync_active_matches').upsert(activeRows)
-    if (error) throw error
-  }
-
-  const remoteActive = await supabase
-    .from('sync_active_matches')
-    .select('id')
-    .eq('group_key', groupKey)
-  if (remoteActive.error) throw remoteActive.error
-
-  const localActiveIds = new Set(state.activeMatches.map((match) => match.id))
-  const staleIds = (remoteActive.data ?? [])
-    .map((row) => row.id as string)
-    .filter((id) => !localActiveIds.has(id))
-
-  if (staleIds.length) {
-    await supabase.from('sync_active_matches').delete().eq('group_key', groupKey).in('id', staleIds)
-  }
-
   if (state.currentSessionId) {
     const session = state.sessions.find((item) => item.id === state.currentSessionId)
     if (session) {
@@ -187,23 +233,40 @@ export async function flushGroupCollabSync(groupCode: string, state: AppState): 
     }
   }
 
-  const rosterIds = state.sessionPlayers
-    .filter((item) => item.sessionId === state.currentSessionId)
-    .map((item) => item.playerId)
-  const rosterPlayers = state.players.filter((player) => rosterIds.includes(player.id))
-  if (rosterPlayers.length) {
-    const { error } = await supabase.from('sync_players').upsert(
-      rosterPlayers.map((player) => ({
-        id: player.id,
-        group_key: groupKey,
-        name: player.name,
-        archived: player.archived,
-        updated_at: new Date().toISOString(),
-        updated_by: userId,
-      })),
-    )
-    if (error) throw error
-  }
+  // Row-level entity changes are pushed by notifyGroupCollabChange().
+  // Keep this flush scoped to session metadata so a stale tab cannot rewrite
+  // active tables or players with a fresh updated_at.
+}
+
+export async function pushSyncedActiveMatches(groupCode: string, matches: ActiveMatch[]): Promise<void> {
+  if (!matches.length) return
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+  const { error } = await supabase.from('sync_active_matches').upsert(
+    matches.map((match) => toActiveRow(groupKey, match, userId)),
+  )
+  if (error) throw error
+}
+
+export async function pushSyncedPlayers(groupCode: string, players: Player[]): Promise<void> {
+  if (!players.length) return
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+  const { error } = await supabase.from('sync_players').upsert(
+    players.map((player) => ({
+      id: player.id,
+      group_key: groupKey,
+      name: player.name,
+      archived: player.archived,
+      updated_at: new Date().toISOString(),
+      updated_by: userId,
+    })),
+  )
+  if (error) throw error
 }
 
 export async function pushSyncedMatch(groupCode: string, match: Match): Promise<void> {
@@ -251,13 +314,6 @@ function matchPayloadChanged(before: Match, after: Match): boolean {
   )
 }
 
-function shouldApplyRemoteMatch(existing: Match | undefined, row: SyncMatchRow): boolean {
-  if (!existing) return true
-  const remote = rowToMatch(row)
-  if (remote.deletedAt !== existing.deletedAt) return true
-  return new Date(row.updated_at).getTime() >= new Date(existing.finishedAt).getTime()
-}
-
 let groupCollabNotifyPaused = false
 
 export function pauseGroupCollabNotify(): void {
@@ -274,11 +330,25 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
   const groupCode = next.settings.lastGroupCode
   if (!groupCode) return
 
-  const nextActiveIds = new Set(next.activeMatches.map((match) => match.id))
+  const touchedActive = new Set<string>()
+  const changedActive: ActiveMatch[] = []
+  const prevActiveById = new Map(prev.activeMatches.map((match) => [match.id, match]))
+  for (const match of next.activeMatches) {
+    const before = prevActiveById.get(match.id)
+    if (!before || activePayloadChanged(before, match)) {
+      touchedActive.add(match.id)
+      changedActive.push(match)
+    }
+  }
   for (const match of prev.activeMatches) {
-    if (!nextActiveIds.has(match.id)) {
+    if (!next.activeMatches.some((item) => item.id === match.id)) {
+      touchedActive.add(match.id)
       void deleteRemoteActiveMatch(groupCode, match.id)
     }
+  }
+  if (touchedActive.size) {
+    touchLocalActive(touchedActive)
+    void pushSyncedActiveMatches(groupCode, changedActive)
   }
 
   const prevMatches = new Map(prev.matches.map((match) => [match.id, match]))
@@ -291,12 +361,27 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
   }
 
   if (changedMatches.length) {
+    touchLocalMatches(changedMatches.map((match) => match.id))
     void pushSyncedMatches(groupCode, changedMatches)
     for (const match of changedMatches) {
       if (prev.activeMatches.some((item) => item.id === match.id)) {
         void deleteRemoteActiveMatch(groupCode, match.id)
       }
     }
+  }
+
+  const touchedPlayers = new Set<string>()
+  const prevPlayers = new Map(prev.players.map((player) => [player.id, player]))
+  for (const player of next.players) {
+    const before = prevPlayers.get(player.id)
+    if (!before || playerPayloadChanged(before, player)) {
+      touchedPlayers.add(player.id)
+    }
+  }
+  if (touchedPlayers.size) touchLocalPlayers(touchedPlayers)
+  if (touchedPlayers.size) {
+    const changedPlayers = next.players.filter((player) => touchedPlayers.has(player.id))
+    void pushSyncedPlayers(groupCode, changedPlayers)
   }
 
   flushGroupCollabSyncNow(groupCode)
@@ -319,11 +404,28 @@ export function flushGroupCollabSyncNow(groupCode: string): void {
     clearTimeout(flushTimer)
     flushTimer = null
   }
-  const state = getAppState()
-  if (!isGroupCollabActive(state)) return
-  void flushGroupCollabSync(groupCode, state).catch((error) => {
+  flushQueued = true
+  if (flushRunning) return
+  void runFlushQueue(groupCode)
+}
+
+async function runFlushQueue(groupCode: string): Promise<void> {
+  flushRunning = true
+  try {
+    while (flushQueued) {
+      flushQueued = false
+      const state = getAppState()
+      if (!isGroupCollabActive(state)) break
+      await flushGroupCollabSync(groupCode, state)
+    }
+  } catch (error) {
     console.error('Group collab sync failed', error)
-  })
+  } finally {
+    flushRunning = false
+    if (flushQueued && isGroupCollabActive(getAppState())) {
+      void runFlushQueue(groupCode)
+    }
+  }
 }
 
 export async function bootstrapGroupCollab(groupCode: string, state: AppState): Promise<void> {
@@ -369,6 +471,7 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
     if (error) throw error
   }
 
+  await pushSyncedActiveMatches(groupCode, state.activeMatches)
   await flushGroupCollabSync(groupCode, state)
 }
 
@@ -392,7 +495,12 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
   updateAppState((current) => {
     const remoteActive = activeRes.data as SyncActiveRow[]
     const remoteMatches = matchRes.data as SyncMatchRow[]
-    const remotePlayers = playerRes.data as { id: string; name: string; archived: boolean }[]
+    const remotePlayers = playerRes.data as {
+      id: string
+      name: string
+      archived: boolean
+      updated_at: string
+    }[]
     const remoteSessions = sessionRes.data as {
       id: string
       name: string
@@ -401,8 +509,23 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
     }[]
 
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
+    const remoteActiveIds = new Set(remoteActive.map((row) => row.id))
     for (const row of remoteActive) {
+      if (!shouldApplyRemoteActive(row)) continue
       activeById.set(row.id, rowToActiveMatch(row))
+    }
+    for (const [id, match] of activeById) {
+      if (!remoteActiveIds.has(id)) {
+        const localTouch = localActiveTouch.get(id) ?? 0
+        if (Date.now() - localTouch > 5000) {
+          activeById.delete(id)
+        }
+        continue
+      }
+      const row = remoteActive.find((item) => item.id === id)
+      if (row && !shouldApplyRemoteActive(row)) {
+        activeById.set(id, current.activeMatches.find((item) => item.id === id) ?? match)
+      }
     }
 
     const matchesById = new Map(current.matches.map((match) => [match.id, match]))
@@ -417,6 +540,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
     const playersById = new Map(current.players.map((player) => [player.id, player]))
     for (const remote of remotePlayers) {
       const existing = playersById.get(remote.id)
+      if (!shouldApplyRemotePlayer(existing, remote)) continue
       if (existing) {
         playersById.set(remote.id, { ...existing, name: remote.name, archived: remote.archived })
       } else {
@@ -469,6 +593,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 }
 
 function applyRemoteActiveRow(row: SyncActiveRow): void {
+  if (!shouldApplyRemoteActive(row)) return
   const match = rowToActiveMatch(row)
   updateAppState((current) => {
     const without = current.activeMatches.filter((item) => item.id !== match.id)
@@ -477,10 +602,37 @@ function applyRemoteActiveRow(row: SyncActiveRow): void {
 }
 
 function removeRemoteActiveMatch(matchId: string): void {
+  const localTouch = localActiveTouch.get(matchId) ?? 0
+  if (Date.now() - localTouch < 500) return
   updateAppState((current) => ({
     ...current,
     activeMatches: current.activeMatches.filter((match) => match.id !== matchId),
   }))
+}
+
+function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean; updated_at: string }): void {
+  updateAppState((current) => {
+    const existing = current.players.find((player) => player.id === row.id)
+    if (!shouldApplyRemotePlayer(existing, row)) return current
+    if (existing) {
+      return {
+        ...current,
+        players: current.players.map((player) =>
+          player.id === row.id ? { ...player, name: row.name, archived: row.archived } : player,
+        ),
+      }
+    }
+    const now = new Date().toISOString()
+    const player: Player = {
+      id: row.id,
+      name: row.name,
+      aliases: [],
+      archived: row.archived,
+      createdAt: now,
+      updatedAt: now,
+    }
+    return { ...current, players: [player, ...current.players] }
+  })
 }
 
 function applyRemoteMatchRow(row: SyncMatchRow): void {
@@ -543,12 +695,20 @@ export async function startGroupCollabRealtime(groupCode: string): Promise<void>
         })
       },
     )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'sync_players', filter: `group_key=eq.${groupKey}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') return
+        if (payload.new) {
+          applyRemotePlayerRow(payload.new as { id: string; name: string; archived: boolean; updated_at: string })
+        }
+      },
+    )
     .subscribe((status, error) => {
       if (error) console.error('Group collab realtime error', error)
       if (status === 'SUBSCRIBED') {
-        void pullGroupCollabState(groupCode).catch((pullError) => {
-          console.error('Group collab pull after subscribe failed', pullError)
-        })
+        console.debug('Group collab realtime subscribed')
       }
     })
 
