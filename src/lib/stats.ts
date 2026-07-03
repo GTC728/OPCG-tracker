@@ -66,6 +66,21 @@ export function getWinRate(wins: number, total: number): number | null {
   return wins / total
 }
 
+/** Bayesian-style win rate: regresses small samples toward 50% (priorGames virtual games). */
+export function getWeightedWinRate(wins: number, total: number, priorGames = 3, priorWinRate = 0.5): number {
+  const priorWins = priorGames * priorWinRate
+  return (wins + priorWins) / (total + priorGames)
+}
+
+export function sortStatsByWeightedWinRate(stats: RecordStat[]): RecordStat[] {
+  return [...stats].sort((left, right) => {
+    const leftScore = getWeightedWinRate(left.wins, left.total)
+    const rightScore = getWeightedWinRate(right.wins, right.total)
+    if (rightScore !== leftScore) return rightScore - leftScore
+    return right.total - left.total
+  })
+}
+
 function localizedDeckName(deck: Deck, language: Language): string {
   return getDeckDisplayName(deck, language)
 }
@@ -152,9 +167,9 @@ export function buildDeckStats(decks: Deck[], matches: Match[], language: Langua
     })
     .filter((stat) => stat.total > 0)
     .sort((left, right) => {
-      if ((right.winRate ?? 0) !== (left.winRate ?? 0)) {
-        return (right.winRate ?? 0) - (left.winRate ?? 0)
-      }
+      const leftScore = getWeightedWinRate(left.wins, left.total)
+      const rightScore = getWeightedWinRate(right.wins, right.total)
+      if (rightScore !== leftScore) return rightScore - leftScore
       return right.total - left.total
     })
 }

@@ -115,9 +115,9 @@ export function SessionRosterSheet({
       ) : (
         <p className="text-sm text-text-secondary">{t('roster.empty')}</p>
       )}
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2">
         <input
-          className="min-h-11 flex-1 rounded-xl border border-surface-muted bg-surface px-3 text-sm text-text-primary outline-none focus:border-brand-500"
+          className="min-h-11 w-full min-w-0 rounded-xl border border-surface-muted bg-surface px-3 text-sm text-text-primary outline-none focus:border-brand-500"
           placeholder={t('roster.addPlaceholder')}
           value={newPlayerName}
           onChange={(event) => setNewPlayerName(event.target.value)}
@@ -125,7 +125,13 @@ export function SessionRosterSheet({
             if (event.key === 'Enter') handleAddPlayer()
           }}
         />
-        <Button type="button" variant="secondary" disabled={!newPlayerName.trim()} onClick={handleAddPlayer}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="min-h-11 shrink-0 whitespace-nowrap px-4"
+          disabled={!newPlayerName.trim()}
+          onClick={handleAddPlayer}
+        >
           {t('roster.addPlayer')}
         </Button>
       </div>

@@ -58,9 +58,13 @@ function CompactSideDrop({
     <button
       type="button"
       className={[
-        'min-h-11 rounded-lg border border-dashed p-1.5 text-left transition outline-none',
-        highlight ? 'border-brand-500 bg-brand-500/15 border-solid border-2 border-brand-400' : '',
-        over ? 'border-brand-500 bg-brand-500/10' : 'border-surface-muted bg-surface/60',
+        'min-h-11 rounded-lg p-1.5 text-left transition outline-none',
+        highlight
+          ? 'border-2 border-brand-400 bg-brand-600/25 shadow-[0_0_0_1px_rgba(96,165,250,0.35)]'
+          : filled
+            ? 'border-2 border-brand-400/80 bg-brand-500/10 border-solid'
+            : 'border border-dashed border-surface-muted bg-surface/60',
+        over && !highlight ? 'border-brand-500 bg-brand-500/10' : '',
       ].join(' ')}
       onClick={onTap}
       onDragOver={(event) => {

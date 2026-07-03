@@ -29,66 +29,67 @@ export function RecordPage() {
   return (
     <div className="space-y-3">
       <section className="rounded-xl bg-surface-elevated px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-500">
-              {t('record.currentSession')}
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-500">
+            {t('record.currentSession')}
+          </p>
+          {currentSession ? (
+            <p className="mt-0.5 text-sm font-semibold leading-snug">
+              {currentSession.name}
+              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
+                {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
+                {dashboard.firstPlayerSample > 0
+                  ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
+                  : ''}
+                {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
+              </span>
             </p>
-            {currentSession ? (
-              <p className="mt-0.5 truncate text-sm font-semibold">
-                {currentSession.name}
-                <span className="ml-2 font-normal text-text-secondary">
-                  {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
-                  {dashboard.firstPlayerSample > 0
-                    ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
-                    : ''}
-                  {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
-                </span>
-              </p>
-            ) : (
-              <p className="mt-0.5 text-sm text-text-secondary">{t('settings.noActiveSession')}</p>
-            )}
-          </div>
-          {currentSession ? (
-            <Button
-              variant="ghost"
-              className="min-h-9 shrink-0 px-2 py-1 text-xs"
-              onClick={() => setExpanded((value) => !value)}
-            >
-              {expanded ? '▲' : '▼'}
-            </Button>
           ) : (
-            <Button
-              className="min-h-9 shrink-0 px-3 py-1 text-xs"
-              onClick={() => {
-                createNewSession()
-                toast.success(t('record.sessionStarted'))
-              }}
-            >
-              {t('record.newSession')}
-            </Button>
+            <p className="mt-0.5 text-sm text-text-secondary">{t('settings.noActiveSession')}</p>
           )}
-          {currentSession ? (
+        </div>
+
+        {currentSession ? (
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <Button
-              variant="ghost"
-              className="min-h-9 shrink-0 px-2 py-1 text-xs"
+              variant="secondary"
+              className="min-h-10 text-xs"
               onClick={() => openSessionRosterPrompt(currentSession.id)}
             >
               {t('record.players')}
             </Button>
-          ) : null}
+            <Button
+              variant="ghost"
+              className="min-h-10 text-xs"
+              onClick={() => {
+                endCurrentSession()
+                toast.success(t('record.sessionEnded'))
+              }}
+            >
+              {t('record.end')}
+            </Button>
+          </div>
+        ) : (
           <Button
-            variant="ghost"
-            className="min-h-9 shrink-0 px-2 py-1 text-xs"
-            disabled={!currentSession}
+            className="mt-2 min-h-10 w-full text-xs"
             onClick={() => {
-              endCurrentSession()
-              toast.success(t('record.sessionEnded'))
+              createNewSession()
+              toast.success(t('record.sessionStarted'))
             }}
           >
-            {t('record.end')}
+            {t('record.newSession')}
           </Button>
-        </div>
+        )}
+
+        {currentSession ? (
+          <button
+            type="button"
+            className="mt-2 w-full text-center text-[11px] text-brand-400 outline-none"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? '收起詳情 ▲' : '展開詳情 ▼'}
+          </button>
+        ) : null}
 
         {expanded && currentSession ? (
           <dl className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-muted pt-2 text-xs">

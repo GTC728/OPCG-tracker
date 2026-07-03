@@ -5,6 +5,7 @@ import { createSession, findOpenSessionForToday } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
   deleteRemoteActiveMatch,
+  flushGroupCollabSyncNow,
   pushCompletedMatch,
   scheduleGroupCollabSync,
 } from '@/lib/groupSync'
@@ -240,7 +241,11 @@ function afterGroupCollabChange(state: AppState, options?: { completedMatch?: Ma
   if (options?.deletedActiveId) {
     void deleteRemoteActiveMatch(groupCode, options.deletedActiveId)
   }
-  scheduleGroupCollabSync(groupCode, state)
+  if (options?.completedMatch || options?.deletedActiveId) {
+    flushGroupCollabSyncNow(groupCode)
+  } else {
+    scheduleGroupCollabSync(groupCode)
+  }
 }
 
 function findOrCreatePlayer(state: AppState, name: string): { state: AppState; player: Player } {

@@ -1,6 +1,6 @@
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
 import type { ActiveMatch, AppState, Match, Player, Session } from '@/types'
-import { updateAppState } from '@/stores/appStore'
+import { getAppState, updateAppState } from '@/stores/appStore'
 
 type SyncActiveRow = {
   id: string
@@ -43,7 +43,6 @@ type SyncMatchRow = {
 
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 let realtimeUnsubscribe: (() => void) | null = null
-let currentUserId: string | null = null
 
 export function isGroupCollabActive(state: AppState): boolean {
   return Boolean(state.settings.groupCollabEnabled && state.settings.lastGroupCode)
@@ -132,7 +131,6 @@ function rowToMatch(row: SyncMatchRow): Match {
 async function requireUserId(): Promise<string> {
   const { user } = await getCloudSession()
   if (!user) throw new Error('請先登入雲端帳號')
-  currentUserId = user.id
   return user.id
 }
 
@@ -218,14 +216,28 @@ export async function pushCompletedMatch(groupCode: string, match: Match): Promi
   await supabase.from('sync_active_matches').delete().eq('group_key', groupKey).eq('id', match.id)
 }
 
-export function scheduleGroupCollabSync(groupCode: string, state: AppState): void {
-  if (!isGroupCollabActive(state)) return
+export function scheduleGroupCollabSync(groupCode: string, _state?: AppState): void {
+  if (!isGroupCollabActive(getAppState())) return
   if (flushTimer) clearTimeout(flushTimer)
   flushTimer = setTimeout(() => {
-    flushGroupCollabSync(groupCode, state).catch((error) => {
+    const latest = getAppState()
+    if (!isGroupCollabActive(latest) || !latest.settings.lastGroupCode) return
+    flushGroupCollabSync(groupCode, latest).catch((error) => {
       console.error('Group collab sync failed', error)
     })
   }, 400)
+}
+
+export function flushGroupCollabSyncNow(groupCode: string): void {
+  if (flushTimer) {
+    clearTimeout(flushTimer)
+    flushTimer = null
+  }
+  const state = getAppState()
+  if (!isGroupCollabActive(state)) return
+  void flushGroupCollabSync(groupCode, state).catch((error) => {
+    console.error('Group collab sync failed', error)
+  })
 }
 
 export async function bootstrapGroupCollab(groupCode: string, state: AppState): Promise<void> {
@@ -304,7 +316,6 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
     for (const row of remoteActive) {
-      if (row.updated_by === currentUserId) continue
       activeById.set(row.id, rowToActiveMatch(row))
     }
 
@@ -372,7 +383,6 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 }
 
 function applyRemoteActiveRow(row: SyncActiveRow): void {
-  if (row.updated_by === currentUserId) return
   const match = rowToActiveMatch(row)
   updateAppState((current) => {
     const without = current.activeMatches.filter((item) => item.id !== match.id)
@@ -388,20 +398,38 @@ function removeRemoteActiveMatch(matchId: string): void {
 }
 
 function applyRemoteMatchRow(row: SyncMatchRow): void {
-  if (row.updated_by === currentUserId) return
-  const match = rowToMatch(row)
+  const remote = rowToMatch(row)
   updateAppState((current) => {
-    const without = current.matches.filter((item) => item.id !== match.id)
-    return { ...current, matches: [match, ...without] }
+    const existing = current.matches.find((item) => item.id === remote.id)
+    if (existing && new Date(remote.finishedAt).getTime() < new Date(existing.finishedAt).getTime()) {
+      return current
+    }
+    const without = current.matches.filter((item) => item.id !== remote.id)
+    const matches = [remote, ...without].sort(
+      (left, right) => new Date(right.finishedAt).getTime() - new Date(left.finishedAt).getTime(),
+    )
+    return { ...current, matches }
   })
+}
+
+function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow | null; old: { id?: string } | null }): void {
+  if (payload.eventType === 'DELETE') {
+    const matchId = payload.old?.id
+    if (!matchId) return
+    updateAppState((current) => ({
+      ...current,
+      matches: current.matches.filter((match) => match.id !== matchId),
+    }))
+    return
+  }
+  if (payload.new) applyRemoteMatchRow(payload.new)
 }
 
 export async function startGroupCollabRealtime(groupCode: string): Promise<void> {
   stopGroupCollabRealtime()
   const supabase = await getSupabaseClient()
   if (!supabase) return
-  const { user } = await getCloudSession()
-  currentUserId = user?.id ?? null
+  await getCloudSession()
   const groupKey = await resolveGroupKey(groupCode)
 
   const channel = supabase
@@ -420,12 +448,23 @@ export async function startGroupCollabRealtime(groupCode: string): Promise<void>
     )
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'sync_matches', filter: `group_key=eq.${groupKey}` },
+      { event: '*', schema: 'public', table: 'sync_matches', filter: `group_key=eq.${groupKey}` },
       (payload) => {
-        if (payload.new) applyRemoteMatchRow(payload.new as SyncMatchRow)
+        handleRemoteMatchChange({
+          eventType: payload.eventType,
+          new: (payload.new as SyncMatchRow | null) ?? null,
+          old: (payload.old as { id?: string } | null) ?? null,
+        })
       },
     )
-    .subscribe()
+    .subscribe((status, error) => {
+      if (error) console.error('Group collab realtime error', error)
+      if (status === 'SUBSCRIBED') {
+        void pullGroupCollabState(groupCode).catch((pullError) => {
+          console.error('Group collab pull after subscribe failed', pullError)
+        })
+      }
+    })
 
   realtimeUnsubscribe = () => {
     void supabase.removeChannel(channel)

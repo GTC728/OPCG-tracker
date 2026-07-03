@@ -209,14 +209,14 @@ function HistoryMatchCard({
     >
       <button
         type="button"
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none"
         onClick={() => setExpanded((value) => !value)}
       >
         <span className="shrink-0 text-xs font-semibold text-brand-500">#{match.matchNumber}</span>
-        <span className="min-w-0 flex-1">
-          <MatchResultRow match={match} players={players} decks={decks} compact bare />
-        </span>
-        <span className="shrink-0 text-xs text-text-secondary">
+        <div className="min-w-0 flex-1">
+          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors />
+        </div>
+        <span className="shrink-0 text-xs tabular-nums text-text-secondary">
           {formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
         </span>
         {match.deletedAt ? (

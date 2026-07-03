@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
-import { MatchResultRow } from '@/components/match/MatchResultRow'
+import { MatchListItem } from '@/components/match/MatchResultRow'
 import { MatchForm } from '@/components/record/MatchForm'
 import { TableBoard } from '@/components/record/TableBoard'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -156,16 +156,14 @@ function RecentMatchRow({
   }
 
   return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-2 rounded-xl bg-surface-elevated px-3 py-2 text-left ring-1 ring-surface-muted transition outline-none hover:bg-surface-muted/40 active:bg-surface-muted/60"
+    <MatchListItem
+      match={match}
+      players={players}
+      decks={decks}
+      meta={timeLabel}
+      showResultColors
       onClick={onRematch}
-    >
-      <div className="min-w-0 flex-1">
-        <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors />
-      </div>
-      <span className="shrink-0 text-xs tabular-nums text-text-secondary">{timeLabel}</span>
-    </button>
+    />
   )
 }
 

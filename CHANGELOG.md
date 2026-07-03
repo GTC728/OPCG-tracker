@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.5.1 - 2026-07-04
+
+### Fixed
+
+- Group collab Realtime now applies **completed matches** on INSERT and UPDATE (upsert no longer missed).
+- Removed same-account skip on remote events — multi-device sync under one login works without manual refresh.
+- Pull on tab focus / Realtime subscribe as fallback; run new Realtime SQL block in `supabase-sync-v3.5.sql` if live sync still silent.
+
+### Changed
+
+- Record page: removed add-player from assignment dock (roster sheet only); session bar buttons re-layout for mobile.
+- Table slots use chip-style border when filled or awaiting tap-assign.
+- History + 最近對局 share stacked `match-result-row` layout (player + deck per side).
+- Deck Top 5 ranked by **weighted win rate** (3-game prior toward 50%).
+
 ## V3.5.0 - 2026-07-04
 
 ### New

@@ -133,3 +133,18 @@ with check (auth.uid() = updated_by);
 drop policy if exists "Group members delete sync_active_matches" on public.sync_active_matches;
 create policy "Group members delete sync_active_matches" on public.sync_active_matches for delete to authenticated
 using (exists (select 1 from public.group_members gm where gm.group_key = sync_active_matches.group_key and gm.user_id = auth.uid()));
+
+-- Enable Realtime (required for live sync; safe to re-run)
+do $$
+begin
+  alter publication supabase_realtime add table public.sync_active_matches;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.sync_matches;
+exception
+  when duplicate_object then null;
+end $$;

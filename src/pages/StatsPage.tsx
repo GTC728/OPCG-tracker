@@ -12,6 +12,7 @@ import {
   buildRecentForm,
   formatPercent,
   sortStatsByUsage,
+  sortStatsByWeightedWinRate,
   type FirstSecondStat,
   type MatchupStat,
   type PlayerDeckStat,
@@ -875,8 +876,8 @@ export function StatsPage() {
               onSelect={(stat) => setProfileTarget({ type: 'player', id: stat.id })}
             />
             <MiniLeaderboard
-              title="牌組 Top 5（出場）"
-              stats={sortStatsByUsage(deckStats)}
+              title="牌組 Top 5（勝率）"
+              stats={sortStatsByWeightedWinRate(deckStats)}
               decks={decks}
               variant="deck"
               onSelect={(stat) => setProfileTarget({ type: 'deck', id: stat.id })}
@@ -922,7 +923,7 @@ export function StatsPage() {
           <DonutChart stats={deckStats} decks={decks} />
           <StatSection
             title="牌組列表"
-            stats={sortStatsByUsage(deckStats)}
+            stats={sortStatsByWeightedWinRate(deckStats)}
             decks={decks}
             variant="deck"
             onSelect={(stat) => setProfileTarget({ type: 'deck', id: stat.id })}
