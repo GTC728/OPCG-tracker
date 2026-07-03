@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { DeckLabel } from '@/components/deck/DeckLabel'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -7,7 +9,7 @@ import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 
 export function RecordPage() {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const toast = useToast()
   const sessions = useAppStore((s) => s.sessions)
   const currentSessionId = useAppStore((s) => s.currentSessionId)
@@ -16,63 +18,109 @@ export function RecordPage() {
   const matches = useAppStore((s) => s.matches)
   const activeMatches = useAppStore((s) => s.activeMatches)
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
+  const createNewSession = useAppStore((s) => s.createNewSession)
+  const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
+  const [expanded, setExpanded] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionMatches = matches.filter((match) => match.sessionId === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
-  const dashboard = buildDashboardStats(players, decks, sessionMatches)
+  const dashboard = buildDashboardStats(players, decks, sessionMatches, language)
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl bg-surface-elevated p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">
+    <div className="space-y-3">
+      <section className="rounded-xl bg-surface-elevated px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-500">
               {t('record.currentSession')}
             </p>
             {currentSession ? (
-              <>
-                <h2 className="mt-2 text-xl font-bold">{currentSession.name}</h2>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {t('record.start')}：{formatDateTime(currentSession.startedAt)}
-                </p>
-              </>
+              <p className="mt-0.5 truncate text-sm font-semibold">
+                {currentSession.name}
+                <span className="ml-2 font-normal text-text-secondary">
+                  {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
+                  {dashboard.firstPlayerSample > 0
+                    ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
+                    : ''}
+                  {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
+                </span>
+              </p>
             ) : (
-              <p className="mt-2 text-sm text-text-secondary">未有進行中的 session</p>
+              <p className="mt-0.5 text-sm text-text-secondary">{t('settings.noActiveSession')}</p>
             )}
           </div>
+          {currentSession ? (
+            <Button
+              variant="ghost"
+              className="min-h-9 shrink-0 px-2 py-1 text-xs"
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? '▲' : '▼'}
+            </Button>
+          ) : (
+            <Button
+              className="min-h-9 shrink-0 px-3 py-1 text-xs"
+              onClick={() => {
+                createNewSession()
+                toast.success(t('record.sessionStarted'))
+              }}
+            >
+              {t('record.newSession')}
+            </Button>
+          )}
+          {currentSession ? (
+            <Button
+              variant="ghost"
+              className="min-h-9 shrink-0 px-2 py-1 text-xs"
+              onClick={() => openSessionRosterPrompt(currentSession.id)}
+            >
+              {t('record.players')}
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
-            className="min-h-10 shrink-0 py-2 text-sm"
+            className="min-h-9 shrink-0 px-2 py-1 text-xs"
             disabled={!currentSession}
             onClick={() => {
               endCurrentSession()
-              toast.success('Session 已結束')
+              toast.success(t('record.sessionEnded'))
             }}
           >
             {t('record.end')}
           </Button>
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">{t('record.completedActive')}</dt>
-            <dd className="mt-1 text-xl font-bold">
-              {dashboard.totalMatches} / {sessionActiveMatches.length}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">{t('record.firstWinRate')}</dt>
-            <dd className="mt-1 text-xl font-bold">{formatPercent(dashboard.firstPlayerWinRate)}</dd>
-          </div>
-          <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">{t('record.mvp')}</dt>
-            <dd className="mt-1 truncate text-xl font-bold">{dashboard.topPlayer?.name ?? '—'}</dd>
-          </div>
-          <div className="rounded-xl bg-surface p-3">
-            <dt className="text-text-secondary">{t('record.usedDeck')}</dt>
-            <dd className="mt-1 truncate text-xl font-bold">{dashboard.mostUsedDeck?.name ?? '—'}</dd>
-          </div>
-        </dl>
+        {expanded && currentSession ? (
+          <dl className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-muted pt-2 text-xs">
+            <div className="rounded-lg bg-surface px-2 py-1.5">
+              <dt className="text-text-secondary">{t('record.start')}</dt>
+              <dd className="font-semibold">{formatDateTime(currentSession.startedAt)}</dd>
+            </div>
+            <div className="rounded-lg bg-surface px-2 py-1.5">
+              <dt className="text-text-secondary">{t('record.completedActive')}</dt>
+              <dd className="font-semibold">
+                {dashboard.totalMatches} / {sessionActiveMatches.length}
+              </dd>
+            </div>
+            <div className="rounded-lg bg-surface px-2 py-1.5">
+              <dt className="text-text-secondary">{t('record.mvp')}</dt>
+              <dd className="truncate font-semibold">{dashboard.topPlayer?.name ?? '—'}</dd>
+            </div>
+            <div className="rounded-lg bg-surface px-2 py-1.5">
+              <dt className="text-text-secondary">{t('record.usedDeck')}</dt>
+              <dd className="truncate font-semibold">
+                {dashboard.mostUsedDeck ? (
+                  <DeckLabel
+                    deck={decks.find((deck) => deck.id === dashboard.mostUsedDeck?.id)}
+                    showCode
+                  />
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
       </section>
 
       <MatchRecorder />

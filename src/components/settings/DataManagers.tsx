@@ -3,6 +3,7 @@ import { DeckLabel } from '@/components/deck/DeckLabel'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Player, PlayerInput } from '@/types'
 
@@ -56,30 +57,74 @@ function Field({
   )
 }
 
-function ListField({
+function AliasChipsField({
   label,
   value,
   onChange,
-  placeholder,
+  placeholder = '新增別名',
 }: {
   label: string
   value: string[]
   onChange: (value: string[]) => void
   placeholder?: string
 }) {
+  const [draft, setDraft] = useState('')
+
+  const addAlias = () => {
+    const trimmed = draft.trim()
+    if (!trimmed) return
+    const next = [...value]
+    for (const part of parseList(trimmed)) {
+      if (!next.some((item) => item.toLowerCase() === part.toLowerCase())) {
+        next.push(part)
+      }
+    }
+    onChange(next)
+    setDraft('')
+  }
+
   return (
-    <label className="block">
+    <div>
       <span className="text-sm font-medium text-text-secondary">{label}</span>
-      <textarea
-        className="mt-2 min-h-24 w-full rounded-xl border border-surface-muted bg-surface px-4 py-3 text-base text-text-primary outline-none transition focus:border-brand-500"
-        placeholder={placeholder}
-        value={formatList(value)}
-        onChange={(event) => onChange(parseList(event.target.value))}
-      />
+      <div className="mt-2 flex flex-wrap gap-2">
+        {value.map((alias) => (
+          <span
+            key={alias}
+            className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1.5 text-sm"
+          >
+            {alias}
+            <button
+              type="button"
+              className="text-text-secondary hover:text-danger"
+              onClick={() => onChange(value.filter((item) => item !== alias))}
+              aria-label={`移除 ${alias}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <input
+          className="min-h-11 flex-1 rounded-xl border border-surface-muted bg-surface px-4 py-2 text-base text-text-primary outline-none transition focus:border-brand-500"
+          placeholder={placeholder}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              addAlias()
+            }
+          }}
+        />
+        <Button type="button" variant="secondary" className="min-h-11 shrink-0 px-4" onClick={addAlias}>
+          + 新增
+        </Button>
+      </div>
       <span className="mt-1 block text-xs text-text-secondary">
-        可用逗號、頓號、分號、斜線或換行分隔；一般空格會保留在名稱中。
+        按 Enter 或「+ 新增」加入別名；也可一次貼上逗號分隔的多個名稱。
       </span>
-    </label>
+    </div>
   )
 }
 
@@ -116,9 +161,9 @@ function PlayerForm({
         value={input.name}
         onChange={(name) => setInput((current) => ({ ...current, name }))}
       />
-      <ListField
+      <AliasChipsField
         label="別名"
-        placeholder="例如 Bob, B"
+        placeholder="例如 Bob"
         value={input.aliases}
         onChange={(aliases) => setInput((current) => ({ ...current, aliases }))}
       />
@@ -160,9 +205,9 @@ function DeckAliasForm({
           可以加入本地叫法，例如：黑胡、紅髮、紫路、藍多佛。
         </p>
       </section>
-      <ListField
-        label="搜尋別名"
-        placeholder="黑胡, BB, Blackbeard"
+      <AliasChipsField
+        label="自訂別名"
+        placeholder="黑胡, 沙佬"
         value={aliases}
         onChange={setAliases}
       />
@@ -344,6 +389,7 @@ function DeckCard({
 }
 
 export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'leaders' }) {
+  const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
@@ -402,10 +448,8 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
       <section className="rounded-2xl bg-surface-elevated p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Leader 牌組資料庫</h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              已內建 OPCG Leader。新對局可搜尋 OP / ST / EB / leader 名稱。
-            </p>
+            <h2 className="text-lg font-semibold">{t('settings.leadersDatabase')}</h2>
+            <p className="mt-1 text-sm text-text-secondary">{t('settings.leadersDatabaseDesc')}</p>
           </div>
           <span className="shrink-0 rounded-full bg-surface-muted px-3 py-1 text-xs text-text-secondary">
             {decks.length} 張
@@ -420,7 +464,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                 onEditAliases={() => setEditor({ kind: 'deckAliases', item: deck })}
                 onArchiveChange={(archived) => {
                   setDeckArchived(deck.id, archived)
-                  toast.success(archived ? 'Leader 已封存' : 'Leader 已還原')
+                  toast.success(archived ? t('settings.leaderArchived') : t('settings.leaderRestored'))
                 }}
               />
             ))
@@ -435,7 +479,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
         open={editor !== null}
         title={
           editor?.kind === 'deckAliases'
-            ? '編輯 Leader 別名'
+            ? t('settings.editLeaderAliases')
             : editor?.item
               ? '編輯玩家'
               : '新增玩家'
@@ -463,7 +507,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
             onCancel={() => setEditor(null)}
             onSave={(aliases) => {
               updateDeckAliases(editor.item.id, aliases)
-              toast.success('Leader 別名已更新')
+              toast.success(t('settings.leaderAliasesUpdated'))
               setEditor(null)
             }}
           />

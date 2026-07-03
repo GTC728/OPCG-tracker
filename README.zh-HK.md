@@ -1,6 +1,8 @@
 # OPCG Tracker
 
-**V3.2**：改善新對局彈窗高度、牌組搜尋顯示、設定頁分類、全站短格式 Leader 顯示，並支援切換舊 Session。
+**線上版：** [https://opcg-tracker-v2.pages.dev](https://opcg-tracker-v2.pages.dev)
+
+**V3.3**：Session 參與者選擇、記錄頁緊湊排版、Deck 選擇 combobox、完成後備註、統計微排行榜、Leader 中日粵別名。
 
 OPCG Tracker 是一個手機優先的 One Piece Card Game 對局記錄、匯入匯出、戰績分析和雲端共享工具。
 

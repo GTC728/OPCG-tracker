@@ -1,6 +1,8 @@
 # OPCG Tracker
 
-**V3.2**: a mobile-first One Piece Card Game match tracker with faster match entry, compact Leader display, searchable history, cloud/group sharing, Excel import/export, and long-term session history.
+**Live Demo:** [https://opcg-tracker-v2.pages.dev](https://opcg-tracker-v2.pages.dev)
+
+**V3.3**: match-flow polish — session roster, compact Record layout, combobox deck picker, post-match notes, stats micro-leaderboards, and locale Leader aliases.
 
 Language versions:
 

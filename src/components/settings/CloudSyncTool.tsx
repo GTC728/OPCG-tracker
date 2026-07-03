@@ -13,6 +13,7 @@ import {
   uploadCloudSnapshot,
   uploadGroupCloudState,
 } from '@/lib/cloudSync'
+import { stopGroupCollabRealtime } from '@/lib/groupSync'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
 
@@ -122,72 +123,103 @@ export function CloudSyncTool() {
             {connectedGroup ? (
               <div className="mt-3 space-y-3">
                 <p className="text-sm text-text-secondary">
-                  群組：{connectedGroup}
-                  {groupState ? ` · 更新：${formatDateTime(groupState.updated_at)}` : ''}
+                  {t('cloud.groupLabel')}：{connectedGroup}
+                  {groupState ? ` · ${t('cloud.updatedAt')}${formatDateTime(groupState.updated_at)}` : ''}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    disabled={busy}
-                    loading={busy}
-                    onClick={async () => {
-                      setBusy(true)
-                      setMessage(null)
-                      try {
-                        await uploadGroupCloudState(connectedGroup, getAppState(), deviceLabel)
-                        const latest = await loadGroupCloudState(connectedGroup)
-                        setGroupState(latest)
-                        setMessage('已上傳到群組')
-                        toast.success('已上傳到群組')
-                      } catch (caught) {
-                        const nextMessage = caught instanceof Error ? caught.message : '群組上傳失敗'
-                        setMessage(nextMessage)
-                        toast.error(nextMessage)
-                      } finally {
-                        setBusy(false)
+                <label className="flex items-start gap-3 rounded-xl bg-surface-elevated p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={settings.groupCollabEnabled}
+                    onChange={async (event) => {
+                      const enabled = event.target.checked
+                      if (!enabled) {
+                        stopGroupCollabRealtime()
                       }
+                      updateSettings({
+                        groupCollabEnabled: enabled,
+                        groupCollabBootstrapped: enabled ? settings.groupCollabBootstrapped : false,
+                      })
+                      setMessage(enabled ? t('cloud.collabEnabled') : t('cloud.collabDisabled'))
                     }}
-                  >
-                    {t('cloud.uploadGroup')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    loading={busy}
-                    onClick={async () => {
-                      const confirmed = window.confirm('會用群組資料覆蓋本機資料，確定下載？')
-                      if (!confirmed) return
-                      setBusy(true)
-                      setMessage(null)
-                      try {
-                        const latest = await loadGroupCloudState(connectedGroup)
-                        if (!latest) throw new Error('群組還沒有資料')
-                        replaceState(latest.state)
-                        setGroupState(latest)
-                        setMessage('已下載群組資料')
-                        toast.success('已下載群組資料')
-                      } catch (caught) {
-                        const nextMessage = caught instanceof Error ? caught.message : '群組下載失敗'
-                        setMessage(nextMessage)
-                        toast.error(nextMessage)
-                      } finally {
-                        setBusy(false)
-                      }
-                    }}
-                  >
-                    {t('cloud.downloadGroup')}
-                  </Button>
-                </div>
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold">{t('cloud.collabTitle')}</span>
+                    <span className="mt-1 block text-xs text-text-secondary">{t('cloud.collabDesc')}</span>
+                  </span>
+                </label>
+                {settings.groupCollabEnabled ? (
+                  <p className="text-xs text-text-secondary">{t('cloud.collabActiveNote')}</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      disabled={busy}
+                      loading={busy}
+                      onClick={async () => {
+                        setBusy(true)
+                        setMessage(null)
+                        try {
+                          await uploadGroupCloudState(connectedGroup, getAppState(), deviceLabel)
+                          const latest = await loadGroupCloudState(connectedGroup)
+                          setGroupState(latest)
+                          setMessage(t('cloud.uploadGroupDone'))
+                          toast.success(t('cloud.uploadGroupDone'))
+                        } catch (caught) {
+                          const nextMessage = caught instanceof Error ? caught.message : t('cloud.uploadGroupFailed')
+                          setMessage(nextMessage)
+                          toast.error(nextMessage)
+                        } finally {
+                          setBusy(false)
+                        }
+                      }}
+                    >
+                      {t('cloud.uploadGroup')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      loading={busy}
+                      onClick={async () => {
+                        const confirmed = window.confirm(t('cloud.downloadGroupConfirm'))
+                        if (!confirmed) return
+                        setBusy(true)
+                        setMessage(null)
+                        try {
+                          const latest = await loadGroupCloudState(connectedGroup)
+                          if (!latest) throw new Error(t('cloud.groupEmpty'))
+                          replaceState(latest.state)
+                          setGroupState(latest)
+                          setMessage(t('cloud.downloadGroupDone'))
+                          toast.success(t('cloud.downloadGroupDone'))
+                        } catch (caught) {
+                          const nextMessage = caught instanceof Error ? caught.message : t('cloud.downloadGroupFailed')
+                          setMessage(nextMessage)
+                          toast.error(nextMessage)
+                        } finally {
+                          setBusy(false)
+                        }
+                      }}
+                    >
+                      {t('cloud.downloadGroup')}
+                    </Button>
+                  </div>
+                )}
                 <Button
                   variant="ghost"
                   fullWidth
                   disabled={busy}
                   onClick={() => {
+                    stopGroupCollabRealtime()
                     setConnectedGroup(null)
                     setGroupState(null)
                     setGroupCode('')
                     setMessage(null)
-                    updateSettings({ lastGroupCode: null })
-                    toast.info('已離開群組')
+                    updateSettings({
+                      lastGroupCode: null,
+                      groupCollabEnabled: false,
+                      groupCollabBootstrapped: false,
+                    })
+                    toast.info(t('cloud.leftGroup'))
                   }}
                 >
                   {t('cloud.leaveGroup')}
@@ -213,7 +245,11 @@ export function CloudSyncTool() {
                       const latest = await loadGroupCloudState(code)
                       setConnectedGroup(code)
                       setGroupState(latest)
-                      updateSettings({ lastGroupCode: code })
+                      updateSettings({
+                        lastGroupCode: code,
+                        groupCollabEnabled: false,
+                        groupCollabBootstrapped: false,
+                      })
                       const nextMessage = latest ? '已加入群組' : '新群組，先上傳即可建立資料'
                       setMessage(nextMessage)
                       toast.success(nextMessage)

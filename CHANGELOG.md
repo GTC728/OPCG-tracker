@@ -9,6 +9,113 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.5.0 - 2026-07-04
+
+### New
+
+- **Group realtime collab (Plan B)**: optional entity sync via Supabase (`sync_active_matches`, `sync_matches`, etc.) with Realtime subscriptions.
+- Settings → Cloud: toggle **即時協作** when joined to a group; legacy JSON upload/download hidden while collab is on.
+- Run [`docs/supabase-sync-v3.5.sql`](docs/supabase-sync-v3.5.sql) on Supabase after base setup.
+
+### Changed
+
+- Table slots show assigned **deck first** — player optional until filled.
+- **本輪參與玩家** lists all active players; inline **新增** without going to Settings.
+- Assignment dock also supports quick-add player (auto-adds to explicit session roster).
+
+## V3.4.2 - 2026-07-04
+
+### Fixed
+
+- Assignment dock no longer auto-collapses after each drag/tap assign.
+- Session roster without explicit list now keeps **all active players** visible (was shrinking to match participants only).
+- Player and deck assign **independently** — dragging a player no longer auto-fills their recent deck.
+- Recent decks in assignment dock include session matches, active tables, and per-player history.
+- Player/deck chip selection uses border instead of ring (fixes wrong-size white focus box).
+- Recent section renamed **最近對局**; single-row layout with green winner + time; tap row to rematch.
+
+## V3.4.1 - 2026-07-04
+
+### Changed
+
+- **Compact table cards**: filled tables hide drop zones; smaller WIN buttons (~2 tables per mobile screen).
+- **AssignmentDock** replaces「新對局」: players + deck search/recent chips; drag or tap-to-assign.
+- Assignment dock auto-collapses after a successful assign; expandable summary bar.
+- **Recent combos only**: removed duplicate「最近完成」; shows last winner + rematch → empty table (auto +1 table if needed).
+
+## V3.4.0 - 2026-07-04
+
+### New
+
+- **Table Mode** on Record page: configurable table count (+/−), drag-and-drop players and decks to left/right sides.
+- Partial table assignments persist as draft active matches until both sides are filled.
+- Recent deck chips draggable separately from player chips.
+
+### Changed
+
+- Active matches section replaced by table board; overflow matches without table slot shown below.
+- Loser side no longer uses red styling in match rows (winner green only).
+
+## V3.3.2 - 2026-07-04
+
+### Changed
+
+- All deck/leader name displays use `DeckLabel` (color dots + localized names) across stats, history, record, and settings.
+- Leader names localize by UI language: zh / ja / en, with alias fallback for full database coverage.
+- Match rows order by **first-player left** (not player A/B); winner green, other side neutral.
+- Matchup heatmap and win-rate indicators use **green/red** (advantage / disadvantage).
+- Settings menu reordered: language → players → session → cloud → leaders → import/export → about.
+- Chinese UI translations: 場次 (session), 主將 (leader), 牌組 (deck), and related strings unified.
+
+## V3.3.1 - 2026-07-04
+
+### New
+
+- Record page **新 Session** button when no session is active.
+- Global session roster prompt: appears on any tab after creating or switching sessions.
+- Active match editing (players and decks) from expanded in-progress cards.
+- Leader display names for zh / ja via centralized `leaderDisplay` map.
+- History match list uses compact expandable rows (tap to show details).
+
+### Changed
+
+- Deck search: focus shows player's recent decks first; typing switches to full search; re-tap selected deck to search again.
+- Recent combo rows no longer show duplicate borders.
+- Stats deck Top 5 shows color dots and localized leader names via `DeckLabel`.
+- Session roster prompt moved to app level (`rosterPromptSessionId` in settings).
+
+### Fixed
+
+- Creating a session in Settings no longer requires switching to Record tab to see roster picker.
+- Deck search could not re-open after selecting a deck without clearing first.
+- Duplicate box styling on recent match / combo rows.
+
+## V3.3.0 - 2026-07-03
+
+### New
+
+- Session roster picker: choose tonight's participants when starting or editing a session.
+- Post-match notes sheet after recording a winner.
+- Stats overview mini-leaderboards for top players and decks by usage.
+- Built-in Leader locale aliases (zh-Hant, ja, Cantonese) for search.
+- Player and deck alias chip UI with add/remove buttons.
+- Live demo link in all README files.
+
+### Changed
+
+- Record page uses compact single-line session summary and collapsible active matches.
+- Deck picker uses combobox mode: selected deck fills the input, results close after pick.
+- Deck recommendations show 2–3 recent distinct decks per player.
+- History winner display uses color-coded result rows.
+- History edit form uses vertical layout.
+- Pie chart and deck list sorted by usage (appearances), not win rate.
+- Expanded rule-based insights (streaks, upsets, diversity, MVP margin).
+- Added `docs/V3.3-DESIGN-DISCUSSION.md` and roadmap entries for V3.3 / V3.4.
+
+### Fixed
+
+- Removed pre-match notes field; notes are captured after match completion instead.
+
 ## V3.2.1 - 2026-07-03
 
 ### New

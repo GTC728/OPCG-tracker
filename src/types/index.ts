@@ -90,6 +90,7 @@ export interface ActiveMatch {
   id: string
   sessionId: string
   matchNumber: number
+  tableSlot: number | null
   player1Id: string
   deck1Id: string
   player2Id: string
@@ -106,6 +107,7 @@ export interface ActiveMatchInput {
   deck2Id: string
   firstPlayerId: string | null
   notes: string | null
+  tableSlot?: number | null
 }
 
 export interface Match {
@@ -202,6 +204,10 @@ export interface AppSettings {
   lastGroupCode: string | null
   deviceLabel: string | null
   lastLoginLinkSentAt: string | null
+  rosterPromptSessionId: string | null
+  sessionTableCounts: Record<string, number>
+  groupCollabEnabled: boolean
+  groupCollabBootstrapped: boolean
 }
 
 export interface AppState {

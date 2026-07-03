@@ -1,3 +1,4 @@
+import { getLocaleAliasesForLeader } from '@/data/leaderLocaleAliases'
 import { createDefaultAppState, SCHEMA_VERSION, STORAGE_KEY } from '@/lib/constants'
 import {
   buildDefaultVariantsFromDecks,
@@ -47,15 +48,25 @@ const migrations: Record<number, Migration> = {
   },
 }
 
+function withLocaleAliases(deck: Deck): Deck {
+  const localeAliases = getLocaleAliasesForLeader(deck.leaderName)
+  if (!localeAliases.length) return deck
+  return {
+    ...deck,
+    aliases: Array.from(new Set([...deck.aliases, ...localeAliases])),
+  }
+}
+
 function mergeSeedDecks(decks: Deck[], seedDecks: Deck[]): Deck[] {
   const existingById = new Map(decks.map((deck) => [deck.id, deck]))
   const merged = [...decks]
 
-  for (const seedDeck of seedDecks) {
+  for (const seedDeck of seedDecks.map(withLocaleAliases)) {
     const existing = existingById.get(seedDeck.id)
 
     if (existing) {
-      const aliases = Array.from(new Set([...seedDeck.aliases, ...existing.aliases]))
+      const localeAliases = getLocaleAliasesForLeader(seedDeck.leaderName)
+      const aliases = Array.from(new Set([...seedDeck.aliases, ...localeAliases, ...existing.aliases]))
       Object.assign(existing, {
         ...seedDeck,
         aliases,
@@ -104,7 +115,10 @@ function normalizeState(raw: Partial<AppState>): AppState {
     decks: mergeSeedDecks(decks, defaults.decks),
     sessions: Array.isArray(raw.sessions) ? raw.sessions.map(normalizeSessionName) : defaults.sessions,
     activeMatches: Array.isArray(raw.activeMatches)
-      ? raw.activeMatches
+      ? raw.activeMatches.map((match) => ({
+          ...match,
+          tableSlot: typeof match.tableSlot === 'number' ? match.tableSlot : null,
+        }))
       : defaults.activeMatches,
     matches: Array.isArray(raw.matches) ? raw.matches : defaults.matches,
     matchRevisions: Array.isArray(raw.matchRevisions)
@@ -118,6 +132,10 @@ function normalizeState(raw: Partial<AppState>): AppState {
     settings: {
       ...defaults.settings,
       ...raw.settings,
+      sessionTableCounts:
+        raw.settings && typeof raw.settings === 'object' && raw.settings.sessionTableCounts
+          ? raw.settings.sessionTableCounts
+          : defaults.settings.sessionTableCounts,
     },
   }
 }

@@ -120,6 +120,10 @@ async function createGroupKey(groupCode: string): Promise<string> {
     .join('')
 }
 
+export async function resolveGroupKey(groupCode: string): Promise<string> {
+  return createGroupKey(groupCode)
+}
+
 async function ensureGroupMembership(groupCode: string): Promise<string> {
   const supabase = await requireClient()
   const user = await requireUser()

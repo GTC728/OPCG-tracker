@@ -101,12 +101,6 @@ export function SettingsPage() {
 
           <section className="space-y-2">
             <SettingsRow
-              title={t('settings.session')}
-              description={t('settings.sessionDesc')}
-              meta={currentSession?.name ?? t('settings.noActiveSession')}
-              onClick={() => setSection('session')}
-            />
-            <SettingsRow
               title={t('settings.language')}
               description={t('settings.languageDesc')}
               meta={languageLabels.find((item) => item.value === language)?.label}
@@ -119,8 +113,19 @@ export function SettingsPage() {
               onClick={() => setSection('players')}
             />
             <SettingsRow
-              title="Leader 管理"
-              description="Leader database, aliases, and archive"
+              title={t('settings.session')}
+              description={t('settings.sessionDesc')}
+              meta={currentSession?.name ?? t('settings.noActiveSession')}
+              onClick={() => setSection('session')}
+            />
+            <SettingsRow
+              title={t('settings.cloud')}
+              description={t('settings.cloudDesc')}
+              onClick={() => setSection('cloud')}
+            />
+            <SettingsRow
+              title={t('settings.leaders')}
+              description={t('settings.leadersDesc')}
               meta={`${decks}`}
               onClick={() => setSection('leaders')}
             />
@@ -128,11 +133,6 @@ export function SettingsPage() {
               title={t('settings.dataTools')}
               description={t('settings.dataToolsDesc')}
               onClick={() => setSection('data')}
-            />
-            <SettingsRow
-              title={t('settings.cloud')}
-              description={t('settings.cloudDesc')}
-              onClick={() => setSection('cloud')}
             />
           </section>
           <section className="rounded-2xl bg-surface-elevated p-4 text-sm text-text-secondary">
@@ -167,9 +167,9 @@ export function SettingsPage() {
                   if (!currentSession) return
                   try {
                     updateSessionName(currentSession.id, sessionName)
-                    toast.success('Session 名稱已更新')
+                    toast.success(t('settings.sessionRenamed'))
                   } catch (caught) {
-                    toast.error(caught instanceof Error ? caught.message : 'Session 改名失敗')
+                    toast.error(caught instanceof Error ? caught.message : t('settings.renameSessionFailed'))
                   }
                 }}
               >
@@ -180,7 +180,7 @@ export function SettingsPage() {
                 onClick={() => {
                   const session = createNewSession()
                   setSessionName(session.name)
-                  toast.success('已建立新 Session')
+                  toast.success(t('settings.sessionCreated'))
                 }}
               >
                 {t('settings.newSession')}
@@ -193,7 +193,7 @@ export function SettingsPage() {
               disabled={!currentSession}
               onClick={() => {
                 endCurrentSession()
-                toast.success('Session 已結束')
+                toast.success(t('settings.sessionEnded'))
               }}
             >
               {t('settings.endCurrent')}
@@ -202,7 +202,7 @@ export function SettingsPage() {
               {t('settings.totalSessions')}：{sessions.length}
             </p>
             <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold text-text-secondary">切換 Session</h3>
+              <h3 className="text-sm font-semibold text-text-secondary">{t('settings.switchSession')}</h3>
               {sortedSessions.map((session) => (
                 <button
                   key={session.id}
@@ -214,9 +214,9 @@ export function SettingsPage() {
                   onClick={() => {
                     try {
                       switchSession(session.id)
-                      toast.success(`已切換到 ${session.name}`)
+                      toast.success(`${t('settings.switchedTo')} ${session.name}`)
                     } catch (caught) {
-                      toast.error(caught instanceof Error ? caught.message : '切換 Session 失敗')
+                      toast.error(caught instanceof Error ? caught.message : t('settings.switchSessionFailed'))
                     }
                   }}
                 >
@@ -227,7 +227,11 @@ export function SettingsPage() {
                     </span>
                   </span>
                   <span className="text-xs opacity-75">
-                    {session.id === currentSessionId ? '目前' : session.endedAt ? '已結束' : '開啟中'}
+                    {session.id === currentSessionId
+                      ? t('settings.currentLabel')
+                      : session.endedAt
+                        ? t('settings.endedLabel')
+                        : t('settings.openLabel')}
                   </span>
                 </button>
               ))}

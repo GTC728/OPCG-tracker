@@ -1,6 +1,8 @@
 # OPCG Tracker
 
-**V3.2**: モバイル優先の One Piece Card Game 対戦記録アプリです。高速な対戦入力、短い Leader 表示、履歴検索、クラウド/グループ共有、Excel インポート/エクスポート、長期セッション管理に対応します。
+**Live Demo:** [https://opcg-tracker-v2.pages.dev](https://opcg-tracker-v2.pages.dev)
+
+**V3.3**: セッション参加者選択、記録画面のコンパクト化、Deck combobox、試合後メモ、統計ミニランキング、Leader 多言語別名に対応。
 
 言語:
 

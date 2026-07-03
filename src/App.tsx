@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
+import { useGroupCollab } from '@/hooks/useGroupCollab'
 import { HistoryPage } from '@/pages/HistoryPage'
 import { RecordPage } from '@/pages/RecordPage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -62,6 +64,21 @@ function OnboardingScreen() {
   )
 }
 
+function GlobalSessionRosterPrompt() {
+  const rosterPromptSessionId = useAppStore((s) => s.settings.rosterPromptSessionId)
+  const dismissSessionRosterPrompt = useAppStore((s) => s.dismissSessionRosterPrompt)
+
+  if (!rosterPromptSessionId) return null
+
+  return (
+    <SessionRosterSheet
+      sessionId={rosterPromptSessionId}
+      open
+      onClose={dismissSessionRosterPrompt}
+    />
+  )
+}
+
 export default function App() {
   const { t } = useI18n()
   const hydrated = useAppStore((s) => s.hydrated)
@@ -69,6 +86,8 @@ export default function App() {
   const onboardingCompleted = useAppStore((s) => s.settings.onboardingCompleted)
   const hydrate = useAppStore((s) => s.hydrate)
   const setActiveTab = useAppStore((s) => s.setActiveTab)
+
+  useGroupCollab()
 
   useEffect(() => {
     hydrate()
@@ -100,6 +119,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <GlobalSessionRosterPrompt />
       <AppShell
         title={meta.title}
         subtitle={meta.subtitle}

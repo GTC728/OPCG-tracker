@@ -21,6 +21,10 @@
 | V3.0 | Interaction + I18n + Docs | 完成 | 互動反饋、三語系、文件拆分、使用者 README、可讀 Excel 匯入匯出 |
 | V3.1 | Usability Patch | 完成 | Email rate-limit 提示、短格式 Leader 顯示、History 牌組搜尋、別名分隔、Cloud 偏好保存、新對局重排 |
 | V3.2 | Mobile + Settings Refinement | 完成 | 新對局彈窗高度、設定頁分類、玩家/Leader 分離、Session 切換、全站短格式 deck 名稱 |
+| V3.3 | Match Flow & Density Patch | 完成 | Session roster、Record 緊湊排版、Deck combobox、完成後備註、History 勝方色、Stats 微排行榜、Leader locale aliases |
+| V3.4 | Table Mode | 完成 | Slot-based 多桌對局、拖曳分配、± 調整桌數 |
+| V3.4.1 | Record UX Patch | 完成 | 緊湊桌卡、AssignmentDock、移除新對局、最近組合→空桌 rematch |
+| V3.5 | Group Realtime Collab | 完成 | Plan B：Supabase 拆表、entity sync、Realtime、offline queue |
 | V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
 | V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
 | V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |
@@ -28,7 +32,7 @@
 
 ## Next
 
-- 做 Auto Sync 和衝突處理。
+- **V4.0**：Event / League foundation（見下方規劃）。
 - 補完整三語文件和深層 UI 文案。
 - 先設計 Event / League foundation，不急於做完整 tournament software。
 - Store Tournament 和 League Ruleset 應作為獨立模組整合入 app，不應污染普通 Session 和 Match database。

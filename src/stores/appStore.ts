@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 import { APP_VERSION, createDefaultAppState } from '@/lib/constants'
-import { resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
+import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
 import { createSession, findOpenSessionForToday } from '@/lib/sessions'
+import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
+import {
+  deleteRemoteActiveMatch,
+  pushCompletedMatch,
+  scheduleGroupCollabSync,
+} from '@/lib/groupSync'
 import { loadAppState, saveAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
 import type {
@@ -38,6 +44,7 @@ interface AppStore extends AppState {
   setDeckArchived: (id: string, archived: boolean) => void
   updateDeckAliases: (id: string, aliases: string[]) => void
   createActiveMatch: (input: ActiveMatchInput) => ActiveMatch
+  createActiveMatchOnEmptyTable: (input: ActiveMatchInput) => ActiveMatch
   setActiveMatchFirstPlayer: (id: string, firstPlayerId: string | null) => void
   completeActiveMatch: (id: string, winnerPlayerId: string) => Match
   updateMatch: (id: string, input: MatchEditInput) => void
@@ -48,6 +55,19 @@ interface AppStore extends AppState {
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
+  setSessionRoster: (sessionId: string, playerIds: string[]) => void
+  setMatchNotes: (matchId: string, notes: string | null) => void
+  openSessionRosterPrompt: (sessionId: string) => void
+  dismissSessionRosterPrompt: () => void
+  updateActiveMatch: (id: string, input: Partial<ActiveMatchInput>) => void
+  setSessionTableCount: (sessionId: string, count: number) => void
+  assignTableSide: (
+    sessionId: string,
+    tableSlot: number,
+    side: 'left' | 'right',
+    assignment: { playerId?: string; deckId?: string },
+  ) => ActiveMatch
+  clearActiveMatch: (id: string) => void
 }
 
 function toPersistedState(store: AppStore): AppState {
@@ -174,19 +194,27 @@ function assertValidActiveMatchInput(state: AppState, input: ActiveMatchInput): 
   if (!input.player1Id || !input.player2Id || !input.deck1Id || !input.deck2Id) {
     throw new Error('請選擇兩位玩家與兩副牌組')
   }
+  assertActiveMatchFields(state, input)
+}
 
-  if (input.player1Id === input.player2Id) {
+function assertActiveMatchFields(state: AppState, input: ActiveMatchInput): void {
+  if (input.player1Id && input.player2Id && input.player1Id === input.player2Id) {
     throw new Error('玩家 A 與玩家 B 不能相同')
   }
 
   const players = new Set(state.players.filter((player) => !player.archived).map((player) => player.id))
   const decks = new Set(state.decks.filter((deck) => !deck.archived).map((deck) => deck.id))
 
-  if (!players.has(input.player1Id) || !players.has(input.player2Id)) {
+  if (input.player1Id && !players.has(input.player1Id)) {
     throw new Error('玩家不存在或已封存')
   }
-
-  if (!decks.has(input.deck1Id) || !decks.has(input.deck2Id)) {
+  if (input.player2Id && !players.has(input.player2Id)) {
+    throw new Error('玩家不存在或已封存')
+  }
+  if (input.deck1Id && !decks.has(input.deck1Id)) {
+    throw new Error('牌組不存在或已封存')
+  }
+  if (input.deck2Id && !decks.has(input.deck2Id)) {
     throw new Error('牌組不存在或已封存')
   }
 
@@ -197,6 +225,22 @@ function assertValidActiveMatchInput(state: AppState, input: ActiveMatchInput): 
   ) {
     throw new Error('先攻玩家必須是玩家 A 或玩家 B')
   }
+}
+
+function isCompleteActiveMatchInput(input: ActiveMatchInput): boolean {
+  return Boolean(input.player1Id && input.player2Id && input.deck1Id && input.deck2Id)
+}
+
+function afterGroupCollabChange(state: AppState, options?: { completedMatch?: Match; deletedActiveId?: string }) {
+  const groupCode = state.settings.lastGroupCode
+  if (!groupCode || !state.settings.groupCollabEnabled) return
+  if (options?.completedMatch) {
+    void pushCompletedMatch(groupCode, options.completedMatch)
+  }
+  if (options?.deletedActiveId) {
+    void deleteRemoteActiveMatch(groupCode, options.deletedActiveId)
+  }
+  scheduleGroupCollabSync(groupCode, state)
 }
 
 function findOrCreatePlayer(state: AppState, name: string): { state: AppState; player: Player } {
@@ -226,7 +270,16 @@ function findDeckByQuery(state: AppState, query: string) {
   return resolveDeckQuery(state, query)?.legacyDeck ?? null
 }
 
-export const useAppStore = create<AppStore>((set) => ({
+function rosterPromptPatch(state: AppState, sessionId: string): AppState['settings'] {
+  const activeCount = state.players.filter((player) => !player.archived).length
+  const shouldPrompt = activeCount >= 2 && !hasExplicitSessionRoster(state, sessionId)
+  return {
+    ...state.settings,
+    rosterPromptSessionId: shouldPrompt ? sessionId : null,
+  }
+}
+
+export const useAppStore = create<AppStore>((set, get) => ({
   ...createDefaultAppState(),
   hydrated: false,
   activeTab: 'record',
@@ -270,10 +323,14 @@ export const useAppStore = create<AppStore>((set) => ({
   createNewSession: (name) => {
     const current = getAppState()
     const session = createSession(name)
-    const next = persist({
+    const nextState = {
       ...current,
       currentSessionId: session.id,
       sessions: [session, ...current.sessions],
+    }
+    const next = persist({
+      ...nextState,
+      settings: rosterPromptPatch(nextState, session.id),
     })
     set({ ...next })
     return session
@@ -297,12 +354,17 @@ export const useAppStore = create<AppStore>((set) => ({
     const target = current.sessions.find((session) => session.id === sessionId)
     if (!target) throw new Error('找不到 Session')
 
-    const next = persist({
+    const updatedSessions = current.sessions.map((session) =>
+      session.id === sessionId ? { ...session, endedAt: null } : session,
+    )
+    const nextState = {
       ...current,
       currentSessionId: sessionId,
-      sessions: current.sessions.map((session) =>
-        session.id === sessionId ? { ...session, endedAt: null } : session,
-      ),
+      sessions: updatedSessions,
+    }
+    const next = persist({
+      ...nextState,
+      settings: rosterPromptPatch(nextState, sessionId),
     })
     set({ ...next })
   },
@@ -348,6 +410,7 @@ export const useAppStore = create<AppStore>((set) => ({
       ],
     })
     set({ ...next })
+    afterGroupCollabChange(next)
     return player
   },
 
@@ -469,10 +532,15 @@ export const useAppStore = create<AppStore>((set) => ({
     const { state, session } = ensureSessionState(current)
     assertValidActiveMatchInput(state, input)
 
+    const tableSlot =
+      input.tableSlot ??
+      findFirstEmptyTableSlot(state, session.id)
+
     const activeMatch: ActiveMatch = {
       id: createId(),
       sessionId: session.id,
       matchNumber: getNextMatchNumber(state, session.id),
+      tableSlot: tableSlot ?? null,
       player1Id: input.player1Id,
       deck1Id: input.deck1Id,
       player2Id: input.player2Id,
@@ -487,7 +555,26 @@ export const useAppStore = create<AppStore>((set) => ({
       activeMatches: [activeMatch, ...state.activeMatches],
     })
     set({ ...next })
+    afterGroupCollabChange(next)
     return activeMatch
+  },
+
+  createActiveMatchOnEmptyTable: (input) => {
+    const current = getAppState()
+    const sessionId = current.currentSessionId
+    if (!sessionId) throw new Error('請先開始場次')
+
+    let slot = findFirstEmptyTableSlot(current, sessionId)
+    if (!slot) {
+      const count = getSessionTableCount(current, sessionId)
+      if (count >= MAX_TABLE_COUNT) {
+        throw new Error('沒有空桌，請先清空一桌或完成對局')
+      }
+      get().setSessionTableCount(sessionId, count + 1)
+      slot = getSessionTableCount(getAppState(), sessionId)
+    }
+
+    return get().createActiveMatch({ ...input, tableSlot: slot })
   },
 
   setActiveMatchFirstPlayer: (id, firstPlayerId) => {
@@ -509,6 +596,7 @@ export const useAppStore = create<AppStore>((set) => ({
       ),
     })
     set({ ...next })
+    afterGroupCollabChange(next)
   },
 
   completeActiveMatch: (id, winnerPlayerId) => {
@@ -517,6 +605,15 @@ export const useAppStore = create<AppStore>((set) => ({
     if (!activeMatch) {
       throw new Error('找不到進行中對局')
     }
+
+    assertValidActiveMatchInput(current, {
+      player1Id: activeMatch.player1Id,
+      deck1Id: activeMatch.deck1Id,
+      player2Id: activeMatch.player2Id,
+      deck2Id: activeMatch.deck2Id,
+      firstPlayerId: activeMatch.firstPlayerId,
+      notes: activeMatch.notes,
+    })
 
     if (winnerPlayerId !== activeMatch.player1Id && winnerPlayerId !== activeMatch.player2Id) {
       throw new Error('勝方必須是對局中的玩家')
@@ -550,6 +647,7 @@ export const useAppStore = create<AppStore>((set) => ({
       matches: [match, ...current.matches],
     })
     set({ ...next })
+    afterGroupCollabChange(next, { completedMatch: match })
     return match
   },
 
@@ -622,6 +720,7 @@ export const useAppStore = create<AppStore>((set) => ({
       id: match.id,
       sessionId: match.sessionId,
       matchNumber: match.matchNumber,
+      tableSlot: null,
       player1Id: match.player1Id,
       deck1Id: match.deck1Id,
       player2Id: match.player2Id,
@@ -842,6 +941,200 @@ export const useAppStore = create<AppStore>((set) => ({
       },
     })
     set({ ...next })
+  },
+
+  setSessionRoster: (sessionId, playerIds) => {
+    const current = getAppState()
+    const uniqueIds = Array.from(new Set(playerIds))
+    const next = persist({
+      ...current,
+      sessionPlayers: [
+        ...current.sessionPlayers.filter((item) => item.sessionId !== sessionId),
+        ...uniqueIds.map((playerId) => ({
+          sessionId,
+          playerId,
+          defaultDeckVariantId: null,
+        })),
+      ],
+      settings: {
+        ...current.settings,
+        rosterPromptSessionId:
+          current.settings.rosterPromptSessionId === sessionId ? null : current.settings.rosterPromptSessionId,
+      },
+    })
+    set({ ...next })
+    afterGroupCollabChange(next)
+  },
+
+  setMatchNotes: (matchId, notes) => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      matches: current.matches.map((match) =>
+        match.id === matchId ? { ...match, notes: notes?.trim() || null } : match,
+      ),
+    })
+    set({ ...next })
+  },
+
+  openSessionRosterPrompt: (sessionId) => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      settings: { ...current.settings, rosterPromptSessionId: sessionId },
+    })
+    set({ ...next })
+  },
+
+  dismissSessionRosterPrompt: () => {
+    const current = getAppState()
+    if (!current.settings.rosterPromptSessionId) return
+    const next = persist({
+      ...current,
+      settings: { ...current.settings, rosterPromptSessionId: null },
+    })
+    set({ ...next })
+  },
+
+  updateActiveMatch: (id, input) => {
+    const current = getAppState()
+    const activeMatch = current.activeMatches.find((match) => match.id === id)
+    if (!activeMatch) throw new Error('找不到進行中對局')
+
+    const merged: ActiveMatchInput = {
+      player1Id: input.player1Id ?? activeMatch.player1Id,
+      deck1Id: input.deck1Id ?? activeMatch.deck1Id,
+      player2Id: input.player2Id ?? activeMatch.player2Id,
+      deck2Id: input.deck2Id ?? activeMatch.deck2Id,
+      firstPlayerId: input.firstPlayerId !== undefined ? input.firstPlayerId : activeMatch.firstPlayerId,
+      notes: activeMatch.notes,
+    }
+    assertActiveMatchFields(current, merged)
+    if (isCompleteActiveMatchInput(merged)) {
+      assertValidActiveMatchInput(current, merged)
+    }
+
+    const next = persist({
+      ...current,
+      activeMatches: current.activeMatches.map((match) =>
+        match.id === id
+          ? {
+              ...match,
+              player1Id: merged.player1Id,
+              deck1Id: merged.deck1Id,
+              player2Id: merged.player2Id,
+              deck2Id: merged.deck2Id,
+              firstPlayerId: merged.firstPlayerId,
+              tableSlot: input.tableSlot !== undefined ? input.tableSlot ?? null : match.tableSlot,
+            }
+          : match,
+      ),
+    })
+    set({ ...next })
+    afterGroupCollabChange(next)
+  },
+
+  setSessionTableCount: (sessionId, count) => {
+    const current = getAppState()
+    const nextCount = Math.max(1, Math.min(MAX_TABLE_COUNT, count))
+    const blocked = current.activeMatches.some(
+      (match) => match.sessionId === sessionId && match.tableSlot !== null && match.tableSlot > nextCount,
+    )
+    if (blocked) {
+      throw new Error('請先清空或移走較高桌號的對局')
+    }
+
+    const next = persist({
+      ...current,
+      settings: {
+        ...current.settings,
+        sessionTableCounts: {
+          ...current.settings.sessionTableCounts,
+          [sessionId]: nextCount,
+        },
+      },
+    })
+    set({ ...next })
+  },
+
+  assignTableSide: (sessionId, tableSlot, side, assignment) => {
+    const current = getAppState()
+    const existing = getActiveMatchForTableSlot(current.activeMatches, sessionId, tableSlot)
+    const base: ActiveMatchInput = existing
+      ? {
+          player1Id: existing.player1Id,
+          deck1Id: existing.deck1Id,
+          player2Id: existing.player2Id,
+          deck2Id: existing.deck2Id,
+          firstPlayerId: existing.firstPlayerId,
+          notes: existing.notes,
+          tableSlot,
+        }
+      : {
+          player1Id: '',
+          deck1Id: '',
+          player2Id: '',
+          deck2Id: '',
+          firstPlayerId: null,
+          notes: null,
+          tableSlot,
+        }
+
+    const merged: ActiveMatchInput =
+      side === 'left'
+        ? {
+            ...base,
+            player1Id: assignment.playerId ?? base.player1Id,
+            deck1Id: assignment.deckId ?? base.deck1Id,
+          }
+        : {
+            ...base,
+            player2Id: assignment.playerId ?? base.player2Id,
+            deck2Id: assignment.deckId ?? base.deck2Id,
+          }
+
+    assertActiveMatchFields(current, merged)
+
+    if (existing) {
+      get().updateActiveMatch(existing.id, merged)
+      return getAppState().activeMatches.find((match) => match.id === existing.id)!
+    }
+
+    if (!isCompleteActiveMatchInput(merged)) {
+      const { state, session } = ensureSessionState(current)
+      const activeMatch: ActiveMatch = {
+        id: createId(),
+        sessionId: session.id,
+        matchNumber: getNextMatchNumber(state, session.id),
+        tableSlot,
+        player1Id: merged.player1Id,
+        deck1Id: merged.deck1Id,
+        player2Id: merged.player2Id,
+        deck2Id: merged.deck2Id,
+        firstPlayerId: merged.firstPlayerId,
+        startedAt: nowIso(),
+        notes: null,
+      }
+      const next = persist({
+        ...state,
+        activeMatches: [activeMatch, ...state.activeMatches],
+      })
+      set({ ...next })
+      afterGroupCollabChange(next)
+      return activeMatch
+    }
+
+    return get().createActiveMatch(merged)
+  },
+
+  clearActiveMatch: (id) => {
+    const current = getAppState()
+    const next = persist({
+      ...current,
+      activeMatches: current.activeMatches.filter((match) => match.id !== id),
+    })
+    set({ ...next })
+    afterGroupCollabChange(next, { deletedActiveId: id })
   },
 }))
 
