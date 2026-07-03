@@ -193,78 +193,6 @@ function MappingSelect({
   )
 }
 
-function PlayerMergeTool() {
-  const { t } = useI18n()
-  const players = useAppStore((state) => state.players)
-  const mergePlayers = useAppStore((state) => state.mergePlayers)
-  const toast = useToast()
-  const [sourceId, setSourceId] = useState('')
-  const [targetId, setTargetId] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
-
-  return (
-    <section className="rounded-2xl bg-surface-elevated p-4">
-      <h2 className="text-lg font-semibold">{t('data.mergePlayers')}</h2>
-      <p className="mt-1 text-sm text-text-secondary">
-        {t('data.mergePlayersDesc')}
-      </p>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <label>
-          <span className="text-sm text-text-secondary">要合併走</span>
-          <select
-            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-            value={sourceId}
-            onChange={(event) => setSourceId(event.target.value)}
-          >
-            <option value="">選玩家</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="text-sm text-text-secondary">保留為</span>
-          <select
-            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-            value={targetId}
-            onChange={(event) => setTargetId(event.target.value)}
-          >
-            <option value="">選玩家</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <Button
-        className="mt-3"
-        fullWidth
-        disabled={!sourceId || !targetId || sourceId === targetId}
-        onClick={() => {
-          try {
-            mergePlayers(sourceId, targetId)
-            setMessage('玩家已合併')
-            toast.success('玩家已合併')
-            setSourceId('')
-            setTargetId('')
-          } catch (caught) {
-            const nextMessage = caught instanceof Error ? caught.message : '合併失敗'
-            setMessage(nextMessage)
-            toast.error(nextMessage)
-          }
-        }}
-      >
-        合併玩家
-      </Button>
-      {message ? <p className="mt-3 text-sm text-text-secondary">{message}</p> : null}
-    </section>
-  )
-}
-
 function ImportTool() {
   const { t } = useI18n()
   const importMatches = useAppStore((state) => state.importMatches)
@@ -506,7 +434,6 @@ export function DataTools() {
   return (
     <>
       <ExportTool />
-      <PlayerMergeTool />
       <ImportTool />
     </>
   )

@@ -159,6 +159,7 @@ function MatchSideCard({
           decks={decks}
           preferredDeckIds={preferredDeckIds}
           onChange={onDeckChange}
+          showResultsWhenEmpty={false}
         />
       </div>
     </section>

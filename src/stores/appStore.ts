@@ -29,6 +29,7 @@ interface AppStore extends AppState {
   ensureCurrentSession: () => Session
   createNewSession: (name?: string) => Session
   updateSessionName: (sessionId: string, name: string) => void
+  switchSession: (sessionId: string) => void
   endCurrentSession: () => void
   addPlayer: (input: PlayerInput) => Player
   updatePlayer: (id: string, input: PlayerInput) => void
@@ -286,6 +287,21 @@ export const useAppStore = create<AppStore>((set) => ({
       ...current,
       sessions: current.sessions.map((session) =>
         session.id === sessionId ? { ...session, name: trimmedName } : session,
+      ),
+    })
+    set({ ...next })
+  },
+
+  switchSession: (sessionId) => {
+    const current = getAppState()
+    const target = current.sessions.find((session) => session.id === sessionId)
+    if (!target) throw new Error('找不到 Session')
+
+    const next = persist({
+      ...current,
+      currentSessionId: sessionId,
+      sessions: current.sessions.map((session) =>
+        session.id === sessionId ? { ...session, endedAt: null } : session,
       ),
     })
     set({ ...next })

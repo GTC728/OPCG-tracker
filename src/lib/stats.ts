@@ -65,6 +65,10 @@ export function getWinRate(wins: number, total: number): number | null {
   return wins / total
 }
 
+function getCompactDeckName(deck: Deck): string {
+  return [deck.setCode, deck.leaderName].filter(Boolean).join(' ')
+}
+
 export function formatPercent(value: number | null): string {
   if (value === null) return '—'
   return `${(value * 100).toFixed(1)}%`
@@ -138,7 +142,7 @@ export function buildDeckStats(decks: Deck[], matches: Match[]): RecordStat[] {
 
       return {
         id: deck.id,
-        name: deck.displayName,
+        name: getCompactDeckName(deck),
         wins,
         losses,
         total,
@@ -174,10 +178,13 @@ export function buildDashboardStats(
   }
 
   const mostUsedDeckEntry = [...usageByDeck.entries()].sort((left, right) => right[1] - left[1])[0]
+  const mostUsedDeckData = mostUsedDeckEntry
+    ? decks.find((deck) => deck.id === mostUsedDeckEntry[0])
+    : null
   const mostUsedDeck = mostUsedDeckEntry
     ? {
         id: mostUsedDeckEntry[0],
-        name: decks.find((deck) => deck.id === mostUsedDeckEntry[0])?.displayName ?? '未知牌組',
+        name: mostUsedDeckData ? getCompactDeckName(mostUsedDeckData) : '未知牌組',
         total: mostUsedDeckEntry[1],
       }
     : null
@@ -193,7 +200,7 @@ export function buildDashboardStats(
 }
 
 export function buildMatchupStats(decks: Deck[], matches: Match[]): MatchupStat[] {
-  const deckNameById = new Map(decks.map((deck) => [deck.id, deck.displayName]))
+  const deckNameById = new Map(decks.map((deck) => [deck.id, getCompactDeckName(deck)]))
   const stats = new Map<string, MatchupStat>()
 
   for (const match of getCompletedMatches(matches)) {
@@ -235,7 +242,7 @@ export function buildPlayerDeckStats(
   matches: Match[],
 ): PlayerDeckStat[] {
   const playerNameById = new Map(players.map((player) => [player.id, player.name]))
-  const deckNameById = new Map(decks.map((deck) => [deck.id, deck.displayName]))
+  const deckNameById = new Map(decks.map((deck) => [deck.id, getCompactDeckName(deck)]))
   const stats = new Map<string, PlayerDeckStat>()
 
   for (const match of getCompletedMatches(matches)) {

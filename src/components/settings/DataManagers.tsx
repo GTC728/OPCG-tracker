@@ -153,10 +153,9 @@ function DeckAliasForm({
       }}
     >
       <section className="rounded-2xl bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">
-          {deck.leaderCode}
-        </p>
-        <h3 className="mt-1 text-lg font-semibold">{deck.leaderName}</h3>
+        <h3 className="text-lg font-semibold">
+          <DeckLabel deck={deck} />
+        </h3>
         <p className="mt-1 text-sm text-text-secondary">
           可以加入本地叫法，例如：黑胡、紅髮、紫路、藍多佛。
         </p>
@@ -174,6 +173,77 @@ function DeckAliasForm({
         <Button type="submit">儲存別名</Button>
       </div>
     </form>
+  )
+}
+
+function PlayerMergeTool() {
+  const players = useAppStore((state) => state.players)
+  const mergePlayers = useAppStore((state) => state.mergePlayers)
+  const toast = useToast()
+  const [sourceId, setSourceId] = useState('')
+  const [targetId, setTargetId] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+
+  return (
+    <section className="rounded-2xl bg-surface-elevated p-4">
+      <h2 className="text-lg font-semibold">玩家合併</h2>
+      <p className="mt-1 text-sm text-text-secondary">
+        修正重複玩家。合併後歷史對局會指向保留玩家。
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <label>
+          <span className="text-sm text-text-secondary">要合併走</span>
+          <select
+            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+            value={sourceId}
+            onChange={(event) => setSourceId(event.target.value)}
+          >
+            <option value="">選玩家</option>
+            {players.map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="text-sm text-text-secondary">保留為</span>
+          <select
+            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+            value={targetId}
+            onChange={(event) => setTargetId(event.target.value)}
+          >
+            <option value="">選玩家</option>
+            {players.map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <Button
+        className="mt-3"
+        fullWidth
+        disabled={!sourceId || !targetId || sourceId === targetId}
+        onClick={() => {
+          try {
+            mergePlayers(sourceId, targetId)
+            setMessage('玩家已合併')
+            toast.success('玩家已合併')
+            setSourceId('')
+            setTargetId('')
+          } catch (caught) {
+            const nextMessage = caught instanceof Error ? caught.message : '合併失敗'
+            setMessage(nextMessage)
+            toast.error(nextMessage)
+          }
+        }}
+      >
+        合併玩家
+      </Button>
+      {message ? <p className="mt-3 text-sm text-text-secondary">{message}</p> : null}
+    </section>
   )
 }
 
@@ -252,9 +322,6 @@ function DeckCard({
             </h3>
             <ArchiveBadge archived={deck.archived} />
           </div>
-          <p className="mt-1 text-sm text-text-secondary">
-            {deck.leaderCode || '未設定詳細資料'}
-          </p>
           <p className="mt-2 text-sm text-text-secondary">
             {deck.aliases.length ? `別名：${formatList(deck.aliases)}` : '未設定別名'}
           </p>
@@ -276,7 +343,7 @@ function DeckCard({
   )
 }
 
-export function DataManagers() {
+export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'leaders' }) {
   const toast = useToast()
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
@@ -298,6 +365,7 @@ export function DataManagers() {
 
   return (
     <>
+      {mode !== 'leaders' ? (
       <section className="rounded-2xl bg-surface-elevated p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -326,7 +394,11 @@ export function DataManagers() {
           )}
         </div>
       </section>
+      ) : null}
 
+      {mode !== 'leaders' ? <PlayerMergeTool /> : null}
+
+      {mode !== 'players' ? (
       <section className="rounded-2xl bg-surface-elevated p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -357,6 +429,7 @@ export function DataManagers() {
           )}
         </div>
       </section>
+      ) : null}
 
       <BottomSheet
         open={editor !== null}

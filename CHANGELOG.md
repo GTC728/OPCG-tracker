@@ -9,6 +9,24 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.2.0 - 2026-07-03
+
+### New
+
+- Added session switching so users can return to older sessions.
+
+### Changed
+
+- Moved match creation sheets higher and constrained them to dynamic viewport height for better mobile keyboard behavior.
+- New Match deck results now stay hidden until the user searches.
+- Settings now has a separate language section, separate player and Leader management, and inline About information at the bottom.
+- Player merge now lives inside player management.
+- Stats and remaining deck-heavy UI now use compact Leader names instead of full leader card codes.
+
+### Fixed
+
+- Removed duplicate small `OPxx-xxx` deck subtitles from deck search results and Leader management cards.
+
 ## V3.1.0 - 2026-07-03
 
 ### New

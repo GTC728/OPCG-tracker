@@ -213,3 +213,22 @@ Improve high-friction daily-use flows without changing the underlying data model
 ### Verification
 
 - Pending final lint/build/audit.
+
+## 2026-07-03 V3.2 Mobile And Settings Refinement
+
+### Goal
+
+Fix mobile usability issues found after V3.1 and make settings/navigation clearer for daily use.
+
+### Changed Areas
+
+- `src/components/ui/BottomSheet.tsx`: moved sheets higher and used dynamic viewport height.
+- `src/components/deck/DeckSearchField.tsx`: hide results until search when requested and remove duplicate leader code subtitles.
+- `src/pages/SettingsPage.tsx`: separate language/player/Leader settings, inline About, session switching.
+- `src/components/settings/DataManagers.tsx`: player merge moved into player management; Leader management can be shown separately.
+- `src/lib/stats.ts`: compact deck names in stats.
+- `src/stores/appStore.ts`: added `switchSession`.
+
+### Verification
+
+- Pending final lint/build/audit.

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getCompactDeckName } from '@/components/deck/DeckLabel'
 import {
   buildDashboardStats,
   buildDeckStats,
@@ -624,8 +625,8 @@ function DeckProfileView({
   return (
     <div className="space-y-4">
       <ProfileHeader
-        title={deck.displayName}
-        subtitle={`${deck.colors.join(' / ') || '未知顏色'} · ${deckMatches.length} 次出場`}
+        title={getCompactDeckName(deck)}
+        subtitle={`${deckMatches.length} 次出場`}
         onBack={onBack}
       />
       <MiniStatGrid stat={stat} />

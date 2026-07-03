@@ -10,7 +10,7 @@ import { formatDateTime } from '@/lib/utils'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type SettingsSection = 'home' | 'session' | 'players' | 'data' | 'cloud' | 'about'
+type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud'
 
 function SettingsRow({
   title,
@@ -61,8 +61,12 @@ export function SettingsPage() {
   const currentSessionId = useAppStore((s) => s.currentSessionId)
   const createNewSession = useAppStore((s) => s.createNewSession)
   const updateSessionName = useAppStore((s) => s.updateSessionName)
+  const switchSession = useAppStore((s) => s.switchSession)
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
+  const sortedSessions = [...sessions].sort(
+    (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
+  )
   const [sessionName, setSessionName] = useState(currentSession?.name ?? '')
 
   useEffect(() => {
@@ -103,10 +107,22 @@ export function SettingsPage() {
               onClick={() => setSection('session')}
             />
             <SettingsRow
+              title={t('settings.language')}
+              description={t('settings.languageDesc')}
+              meta={languageLabels.find((item) => item.value === language)?.label}
+              onClick={() => setSection('language')}
+            />
+            <SettingsRow
               title={t('settings.players')}
               description={t('settings.playersDesc')}
               meta={`${players}`}
               onClick={() => setSection('players')}
+            />
+            <SettingsRow
+              title="Leader 管理"
+              description="Leader database, aliases, and archive"
+              meta={`${decks}`}
+              onClick={() => setSection('leaders')}
             />
             <SettingsRow
               title={t('settings.dataTools')}
@@ -118,12 +134,11 @@ export function SettingsPage() {
               description={t('settings.cloudDesc')}
               onClick={() => setSection('cloud')}
             />
-            <SettingsRow
-              title={t('settings.about')}
-              description={t('settings.aboutDesc')}
-              meta={`v${APP_VERSION}`}
-              onClick={() => setSection('about')}
-            />
+          </section>
+          <section className="rounded-2xl bg-surface-elevated p-4 text-sm text-text-secondary">
+            <h2 className="text-base font-semibold text-text-primary">{t('settings.about')}</h2>
+            <p className="mt-2">App v{APP_VERSION}</p>
+            <p>Schema v{SCHEMA_VERSION}</p>
           </section>
         </>
       ) : null}
@@ -186,6 +201,37 @@ export function SettingsPage() {
             <p className="mt-3 text-xs text-text-secondary">
               {t('settings.totalSessions')}：{sessions.length}
             </p>
+            <div className="mt-4 space-y-2">
+              <h3 className="text-sm font-semibold text-text-secondary">切換 Session</h3>
+              {sortedSessions.map((session) => (
+                <button
+                  key={session.id}
+                  type="button"
+                  className={[
+                    'flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left text-sm ring-1 ring-surface-muted',
+                    session.id === currentSessionId ? 'bg-brand-600 text-white' : 'bg-surface hover:bg-surface-muted',
+                  ].join(' ')}
+                  onClick={() => {
+                    try {
+                      switchSession(session.id)
+                      toast.success(`已切換到 ${session.name}`)
+                    } catch (caught) {
+                      toast.error(caught instanceof Error ? caught.message : '切換 Session 失敗')
+                    }
+                  }}
+                >
+                  <span>
+                    <span className="block font-semibold">{session.name}</span>
+                    <span className="mt-1 block text-xs opacity-75">
+                      {formatDateTime(session.startedAt)}
+                    </span>
+                  </span>
+                  <span className="text-xs opacity-75">
+                    {session.id === currentSessionId ? '目前' : session.endedAt ? '已結束' : '開啟中'}
+                  </span>
+                </button>
+              ))}
+            </div>
           </section>
         </>
       ) : null}
@@ -193,7 +239,14 @@ export function SettingsPage() {
       {section === 'players' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <DataManagers />
+          <DataManagers mode="players" />
+        </>
+      ) : null}
+
+      {section === 'leaders' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <DataManagers mode="leaders" />
         </>
       ) : null}
 
@@ -211,7 +264,7 @@ export function SettingsPage() {
         </>
       ) : null}
 
-      {section === 'about' ? (
+      {section === 'language' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
           <section className="rounded-2xl bg-surface-elevated p-4">
@@ -228,10 +281,6 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
-          </section>
-          <section className="rounded-2xl bg-surface-elevated p-4 text-sm text-text-secondary">
-            <p>App v{APP_VERSION}</p>
-            <p>Schema v{SCHEMA_VERSION}</p>
           </section>
         </>
       ) : null}

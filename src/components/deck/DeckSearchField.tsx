@@ -112,7 +112,6 @@ export function DeckSearchField({
               <span className="block font-semibold">
                 <DeckLabel deck={deck} />
               </span>
-              <span className="mt-1 block text-xs opacity-75">{deck.leaderCode}</span>
             </button>
           ))
         ) : (
