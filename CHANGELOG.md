@@ -9,6 +9,15 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.5.4 - 2026-07-04
+
+### Fixed
+
+- Prevent stale active-table rollback by pushing only changed active rows and guarding remote active updates with local edit timestamps.
+- Player management sync now pushes changed players directly and listens to `sync_players` Realtime.
+- Settings overview active count now matches Record page by counting only the current session.
+- Added visible-tab polling fallback so player changes and missed active-table deletes sync even when Realtime events are dropped.
+
 ## V3.5.3 - 2026-07-04
 
 ### Fixed

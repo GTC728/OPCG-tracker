@@ -56,9 +56,11 @@ export function SettingsPage() {
   const players = useAppStore((s) => s.players.length)
   const decks = useAppStore((s) => s.decks.length)
   const matches = useAppStore((s) => s.matches.length)
-  const activeMatches = useAppStore((s) => s.activeMatches.length)
   const sessions = useAppStore((s) => s.sessions)
   const currentSessionId = useAppStore((s) => s.currentSessionId)
+  const activeMatches = useAppStore(
+    (s) => s.activeMatches.filter((match) => match.sessionId === s.currentSessionId).length,
+  )
   const createNewSession = useAppStore((s) => s.createNewSession)
   const updateSessionName = useAppStore((s) => s.updateSessionName)
   const switchSession = useAppStore((s) => s.switchSession)

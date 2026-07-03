@@ -517,7 +517,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
     for (const [id, match] of activeById) {
       if (!remoteActiveIds.has(id)) {
         const localTouch = localActiveTouch.get(id) ?? 0
-        if (Date.now() - localTouch > 5000) {
+        if (!localTouch) {
           activeById.delete(id)
         }
         continue

@@ -50,10 +50,17 @@ export function useGroupCollab() {
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || !groupCode) return
+      void pullGroupCollabState(groupCode).catch((error) => {
+        console.error('Group collab poll failed', error)
+      })
+    }, 5000)
 
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.clearInterval(pollId)
       stopGroupCollabRealtime()
     }
   }, [groupCode, groupCollabBootstrapped, groupCollabEnabled, hydrated, updateSettings])
