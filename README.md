@@ -1,68 +1,92 @@
 # OPCG Tracker
 
-**V3.2**：改善新對局彈窗高度、牌組搜尋顯示、設定頁分類、全站短格式 Leader 顯示，並支援切換舊 Session。
+**V3.2**: a mobile-first One Piece Card Game match tracker with faster match entry, compact Leader display, searchable history, cloud/group sharing, Excel import/export, and long-term session history.
 
-OPCG Tracker 是一個手機優先的 One Piece Card Game 對局記錄、匯入匯出、戰績分析和雲端共享工具。
+Language versions:
 
-它適合卡店測試、朋友群練牌、賽前 meta 記錄，也可以長期在手機和電腦之間共用同一份資料。
+- English: [`README.md`](README.md)
+- 繁體中文: [`README.zh-HK.md`](README.zh-HK.md)
+- 日本語: [`README.ja.md`](README.ja.md)
 
-## 第一次使用
+OPCG Tracker helps players and small playtest groups record matches, manage players and Leaders, analyze results, import old spreadsheets, export durable Excel backups, and share one dataset across phone and desktop.
 
-1. 打開網站。
-2. 先選擇語言。預設是 English，之後可在 `Settings / 設定` 更改。
-3. 如要手機和電腦共用，可到 Cloud Backup 登入 email 並加入群組。
-4. 到 `設定`。
-5. 進入 `玩家 / Leader`。
-6. 先新增至少兩位玩家。
-7. 回到 `記錄`。
-8. 按 `＋ 新對局`。
-9. 選兩位玩家、兩副 Leader / 牌組。
-10. 對局完成後按勝方。
-11. 到 `統計` 查看統計，或到 `歷史` 修正舊對局。
+## What It Is For
 
-## 常用功能
+- Record OPCG matches quickly during store play, testing sessions, or pre-event practice.
+- Track player records, Leader records, first/second performance, recent form, and matchup data.
+- Keep data usable long term through IndexedDB, Excel backup/restore, and optional Supabase cloud sync.
+- Share data inside a trusted group using email login and group codes.
 
-- `記錄`：建立正在進行的對局，完成後直接按勝方。
-- `統計`：看勝率、先後攻、玩家表現、牌組表現和 matchup。
-- `歷史`：搜尋舊對局、編輯、複製重開、刪除或還原。
-- `設定`：管理玩家、Leader 別名、匯入舊 Excel、匯出 Excel、雲端備份和群組共享。
+## First Use
 
-## 匯入舊 Excel
+1. Open the app.
+2. Choose a language. New users default to English and can change it later in `Settings`.
+3. To share data between phone and desktop, go to `Cloud & Group`, sign in by email, and join a group code.
+4. Go to `Settings`.
+5. Open `Players`.
+6. Add at least two players.
+7. Return to `Record`.
+8. Tap `+ New Match`.
+9. Select two players and two Leaders/decks.
+10. When the match ends, tap the winner.
+11. Use `Stats` for analysis or `History` to fix previous matches.
 
-1. 到 `設定 → 匯入 / 清理`。
-2. 按 `選擇 Excel / CSV 檔案`。
-3. 選你的舊 `.xlsx`、`.xls` 或 `.csv`。
-4. 如果是普通表格，系統會讓你配對欄位，例如玩家 A、牌組 A、勝方。
-5. 確認 preview 沒問題後按 `確認匯入`。
+## Main Features
 
-## 匯出 Excel
+- `Record`: create active matches, choose players and Leaders, set first player, and record the winner.
+- `Stats`: review win rates, first/second results, player profiles, deck profiles, matchup data, and recent form.
+- `History`: search, filter, edit, copy, soft-delete, and restore completed matches.
+- `Settings`: manage players, Leader aliases, language, sessions, Excel tools, cloud backup, and group sharing.
 
-1. 到 `設定 → 匯入 / 清理`。
-2. 按 `匯出 Excel`。
-3. Excel 會包含兩種內容：
-   - `README` 和 `對局總表`：給人看的表。
-   - `_meta`、`matches`、`_app_state_json`：給 app 日後完整還原用。
+## Excel Import
 
-如果你之後把 OPCG Tracker 自己匯出的 Excel 再匯入，系統會自動辨認並要求你確認是否完整還原。
+1. Go to `Settings -> Import / Export`.
+2. Choose an `.xlsx`, `.xls`, or `.csv` file.
+3. For normal spreadsheets, map fields such as Player A, Deck A, Player B, Deck B, winner, and first player.
+4. Preview the mapped rows.
+5. Confirm import.
 
-## 手機和電腦共用
+OPCG Tracker also detects its own Excel export format and can restore the full app state after confirmation.
 
-1. 到 `設定 → App 資料 → Cloud Backup`。
-2. 輸入 email。
-3. 到 email 打開 magic link 登入。
-4. 登入後輸入 8 字以上群組碼。
-5. 同一群組碼的登入使用者可以上傳或下載同一份群組資料。
+## Excel Export
 
-群組碼等同邀請密鑰，只分享給可信任的人。
+1. Go to `Settings -> Import / Export`.
+2. Tap `Export Excel`.
+3. The workbook contains:
+   - Human-readable sheets such as `README` and `對局總表`.
+   - Machine-readable sheets such as `_meta`, `matches`, and `_app_state_json`.
 
-## 更多文件
+The `_app_state_json` sheet is the safest long-term restore path.
 
-- 使用手冊：[`docs/USER-GUIDE.md`](docs/USER-GUIDE.md)
-- 開發與本機執行：[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
-- Cloud Sync 設定：[`docs/CLOUD-SYNC.md`](docs/CLOUD-SYNC.md)
-- Excel 格式：[`docs/EXCEL-FORMAT.md`](docs/EXCEL-FORMAT.md)
-- Git / Push 摘要流程：[`docs/GIT-WORKFLOW.md`](docs/GIT-WORKFLOW.md)
-- Changelog：[`CHANGELOG.md`](CHANGELOG.md)
-- Roadmap：[`docs/ROADMAP.md`](docs/ROADMAP.md)
-- 工程記錄：[`docs/ENGINEERING-LOG.md`](docs/ENGINEERING-LOG.md)
-- 產品規格：[`docs/OPCG-Tracker-Product-Plan-V2.1.md`](docs/OPCG-Tracker-Product-Plan-V2.1.md)
+## Cloud And Group Sharing
+
+1. Go to `Settings -> Cloud & Group`.
+2. Enter your email and open the magic link.
+3. Enter a group code with at least 8 characters.
+4. Group members can upload or download the shared group dataset.
+
+Group codes are invite secrets. Share them only with trusted people.
+
+## Project Direction
+
+Current priorities are personal match tracking, playtest group sharing, durable backups, and useful analytics. Future planning includes:
+
+- Store tournament mode for small Swiss events.
+- League/ruleset mode for long-running custom scoring systems.
+- Better public/shareable reports for store events and meta analysis.
+
+See [`docs/EVENTS-AND-LEAGUES.md`](docs/EVENTS-AND-LEAGUES.md) for the current design blueprint.
+
+## Documentation
+
+- User guide: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md)
+- Development: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
+- Cloud sync setup: [`docs/CLOUD-SYNC.md`](docs/CLOUD-SYNC.md)
+- Excel format: [`docs/EXCEL-FORMAT.md`](docs/EXCEL-FORMAT.md)
+- Git workflow: [`docs/GIT-WORKFLOW.md`](docs/GIT-WORKFLOW.md)
+- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Project history: [`docs/PROJECT-HISTORY.md`](docs/PROJECT-HISTORY.md)
+- Engineering log: [`docs/ENGINEERING-LOG.md`](docs/ENGINEERING-LOG.md)
+- Product plan: [`docs/OPCG-Tracker-Product-Plan-V2.1.md`](docs/OPCG-Tracker-Product-Plan-V2.1.md)
+- Event and League blueprint: [`docs/EVENTS-AND-LEAGUES.md`](docs/EVENTS-AND-LEAGUES.md)

@@ -16,7 +16,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
 
 ## User Flow
 
-1. Open `設定 → App 資料 → Cloud Backup`.
+1. Open `Settings → Cloud & Group`.
 2. Enter email.
 3. Open the magic link from email.
 4. Enter a group code after login.

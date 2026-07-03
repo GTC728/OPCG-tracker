@@ -8,7 +8,7 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 1. 打開網站。
 2. 到 `設定`。
-3. 進入 `玩家 / Leader`。
+3. 進入 `玩家管理`。
 4. 新增你常用的玩家。
 5. 回到 `記錄`。
 6. 建立新對局並選擇玩家和牌組。
@@ -16,7 +16,7 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 ## 新增玩家
 
-1. 到 `設定 → 玩家 / Leader`。
+1. 到 `設定 → 玩家管理`。
 2. 按 `新增`。
 3. 輸入玩家名稱。
 4. 如有常用暱稱，可填入別名。
@@ -33,7 +33,7 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 ## 查看統計
 
-到 `今日` 查看：
+到 `統計` 查看：
 
 - 總對局數。
 - 先攻勝率。
@@ -54,7 +54,7 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 ## 匯入舊 Excel
 
-1. 到 `設定 → 匯入 / 清理`。
+1. 到 `設定 → 匯入 / 匯出`。
 2. 按 `選擇 Excel / CSV 檔案`。
 3. 選擇 `.xlsx`、`.xls` 或 `.csv`。
 4. 配對欄位，例如玩家 A、牌組 A、玩家 B、牌組 B、勝方。
@@ -63,14 +63,14 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 ## 匯出 Excel
 
-1. 到 `設定 → 匯入 / 清理`。
+1. 到 `設定 → 匯入 / 匯出`。
 2. 按 `匯出 Excel`。
 3. 打開 Excel 後先看 `README` 和 `對局總表`。
 4. 底線開頭的 sheets 是給 app 日後完整還原用。
 
 ## Cloud Backup 和群組共享
 
-1. 到 `設定 → App 資料 → Cloud Backup`。
+1. 到 `設定 → Cloud & Group`。
 2. 輸入 email 並寄出登入連結。
 3. 到 email 打開 magic link。
 4. 回到網站後輸入群組碼。
@@ -80,7 +80,7 @@ OPCG Tracker 幫你記錄 OPCG 對局、管理玩家和 Leader、查看統計、
 
 ### 為什麼找不到 Leader？
 
-試試輸入 set code，例如 `OP01`、`OP-01`、`ST10`、`EB01`，或到 `設定 → 玩家 / Leader` 加入本地別名。
+試試輸入 set code，例如 `OP01`、`OP-01`、`ST10`、`EB01`，或到 `設定 → Leader 管理` 加入本地別名。
 
 ### 匯入 OPCG Tracker 自己匯出的 Excel 會怎樣？
 

@@ -19,8 +19,24 @@
 | 9D | Login + Group Sync | Part 1 完成 | Email login、群組碼加入/建立、群組上傳/下載 |
 | 9E | Auto Sync | 待做 | 自動同步、衝突提示、裝置狀態 |
 | V3.0 | Interaction + I18n + Docs | 完成 | 互動反饋、三語系、文件拆分、使用者 README、可讀 Excel 匯入匯出 |
+| V3.1 | Usability Patch | 完成 | Email rate-limit 提示、短格式 Leader 顯示、History 牌組搜尋、別名分隔、Cloud 偏好保存、新對局重排 |
+| V3.2 | Mobile + Settings Refinement | 完成 | 新對局彈窗高度、設定頁分類、玩家/Leader 分離、Session 切換、全站短格式 deck 名稱 |
+| V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
+| V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
+| V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |
+| V4.3 | Reports + Sharing | 規劃中 | 店賽報告、League leaderboard、Excel / image / read-only link 分享 |
 
 ## Next
 
 - 做 Auto Sync 和衝突處理。
-- 繼續補深層統計頁和少數提示文字的完整三語翻譯。
+- 補完整三語文件和深層 UI 文案。
+- 先設計 Event / League foundation，不急於做完整 tournament software。
+- Store Tournament 和 League Ruleset 應作為獨立模組整合入 app，不應污染普通 Session 和 Match database。
+
+## V4 Event / League Direction
+
+詳情見 [`docs/EVENTS-AND-LEAGUES.md`](EVENTS-AND-LEAGUES.md)。
+
+- `Session`：日常對局記錄。
+- `Event`：店賽 / 瑞士輪 / 有輪次和 standings 的活動。
+- `League`：長期自訂計分規則，讀取既有 match data 計算 leaderboard，不改原始對局資料。
