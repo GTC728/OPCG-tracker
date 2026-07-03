@@ -209,22 +209,24 @@ function HistoryMatchCard({
     >
       <button
         type="button"
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left outline-none"
+        className="block w-full px-3 py-2.5 text-left outline-none"
         onClick={() => setExpanded((value) => !value)}
       >
-        <span className="shrink-0 text-xs font-semibold text-brand-500">#{match.matchNumber}</span>
-        <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="shrink-0 text-xs font-semibold text-brand-500">#{match.matchNumber}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-xs tabular-nums text-text-secondary">
+              {formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
+            </span>
+            {match.deletedAt ? (
+              <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] text-red-100">已刪</span>
+            ) : null}
+            <span className="text-xs text-brand-400">{expanded ? '▲' : '▼'}</span>
+          </div>
+        </div>
+        <div className="mt-1.5 min-w-0">
           <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors />
         </div>
-        <span className="shrink-0 text-xs tabular-nums text-text-secondary">
-          {formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
-        </span>
-        {match.deletedAt ? (
-          <span className="shrink-0 rounded-full bg-danger/15 px-2 py-0.5 text-[10px] text-red-100">
-            已刪
-          </span>
-        ) : null}
-        <span className="shrink-0 text-xs text-brand-400">{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded ? (

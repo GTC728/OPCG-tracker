@@ -206,14 +206,100 @@ export async function flushGroupCollabSync(groupCode: string, state: AppState): 
   }
 }
 
-export async function pushCompletedMatch(groupCode: string, match: Match): Promise<void> {
+export async function pushSyncedMatch(groupCode: string, match: Match): Promise<void> {
   const supabase = await getSupabaseClient()
   if (!supabase) return
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
-  const { error: matchError } = await supabase.from('sync_matches').upsert(toMatchRow(groupKey, match, userId))
-  if (matchError) throw matchError
+  const { error } = await supabase.from('sync_matches').upsert(toMatchRow(groupKey, match, userId))
+  if (error) throw error
+}
+
+/** @deprecated use pushSyncedMatch */
+export async function pushCompletedMatch(groupCode: string, match: Match): Promise<void> {
+  await pushSyncedMatch(groupCode, match)
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const groupKey = await resolveGroupKey(groupCode)
   await supabase.from('sync_active_matches').delete().eq('group_key', groupKey).eq('id', match.id)
+}
+
+export async function pushSyncedMatches(groupCode: string, matches: Match[]): Promise<void> {
+  if (!matches.length) return
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+  const { error } = await supabase.from('sync_matches').upsert(
+    matches.map((match) => toMatchRow(groupKey, match, userId)),
+  )
+  if (error) throw error
+}
+
+function matchPayloadChanged(before: Match, after: Match): boolean {
+  return (
+    before.deletedAt !== after.deletedAt ||
+    before.notes !== after.notes ||
+    before.winnerPlayerId !== after.winnerPlayerId ||
+    before.winnerDeckId !== after.winnerDeckId ||
+    before.player1Id !== after.player1Id ||
+    before.player2Id !== after.player2Id ||
+    before.deck1Id !== after.deck1Id ||
+    before.deck2Id !== after.deck2Id ||
+    before.firstPlayerId !== after.firstPlayerId ||
+    before.finishedAt !== after.finishedAt
+  )
+}
+
+function shouldApplyRemoteMatch(existing: Match | undefined, row: SyncMatchRow): boolean {
+  if (!existing) return true
+  const remote = rowToMatch(row)
+  if (remote.deletedAt !== existing.deletedAt) return true
+  return new Date(row.updated_at).getTime() >= new Date(existing.finishedAt).getTime()
+}
+
+let groupCollabNotifyPaused = false
+
+export function pauseGroupCollabNotify(): void {
+  groupCollabNotifyPaused = true
+}
+
+export function resumeGroupCollabNotify(): void {
+  groupCollabNotifyPaused = false
+}
+
+/** Central sync entry: diff prev/next after local persist. */
+export function notifyGroupCollabChange(prev: AppState | null, next: AppState): void {
+  if (groupCollabNotifyPaused || !prev || !isGroupCollabActive(next)) return
+  const groupCode = next.settings.lastGroupCode
+  if (!groupCode) return
+
+  const nextActiveIds = new Set(next.activeMatches.map((match) => match.id))
+  for (const match of prev.activeMatches) {
+    if (!nextActiveIds.has(match.id)) {
+      void deleteRemoteActiveMatch(groupCode, match.id)
+    }
+  }
+
+  const prevMatches = new Map(prev.matches.map((match) => [match.id, match]))
+  const changedMatches: Match[] = []
+  for (const match of next.matches) {
+    const before = prevMatches.get(match.id)
+    if (!before || matchPayloadChanged(before, match)) {
+      changedMatches.push(match)
+    }
+  }
+
+  if (changedMatches.length) {
+    void pushSyncedMatches(groupCode, changedMatches)
+    for (const match of changedMatches) {
+      if (prev.activeMatches.some((item) => item.id === match.id)) {
+        void deleteRemoteActiveMatch(groupCode, match.id)
+      }
+    }
+  }
+
+  flushGroupCollabSyncNow(groupCode)
 }
 
 export function scheduleGroupCollabSync(groupCode: string, _state?: AppState): void {
@@ -225,7 +311,7 @@ export function scheduleGroupCollabSync(groupCode: string, _state?: AppState): v
     flushGroupCollabSync(groupCode, latest).catch((error) => {
       console.error('Group collab sync failed', error)
     })
-  }, 400)
+  }, 150)
 }
 
 export function flushGroupCollabSyncNow(groupCode: string): void {
@@ -323,7 +409,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
     for (const row of remoteMatches) {
       const remote = rowToMatch(row)
       const existing = matchesById.get(remote.id)
-      if (!existing || new Date(remote.finishedAt) >= new Date(existing.finishedAt)) {
+      if (!existing || shouldApplyRemoteMatch(existing, row)) {
         matchesById.set(remote.id, remote)
       }
     }
@@ -401,7 +487,7 @@ function applyRemoteMatchRow(row: SyncMatchRow): void {
   const remote = rowToMatch(row)
   updateAppState((current) => {
     const existing = current.matches.find((item) => item.id === remote.id)
-    if (existing && new Date(remote.finishedAt).getTime() < new Date(existing.finishedAt).getTime()) {
+    if (existing && !shouldApplyRemoteMatch(existing, row)) {
       return current
     }
     const without = current.matches.filter((item) => item.id !== remote.id)

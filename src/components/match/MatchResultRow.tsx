@@ -39,7 +39,7 @@ function SideBlock({
     >
       <p className={['truncate text-xs font-semibold leading-tight', colorClass].join(' ')}>{name}</p>
       {deck ? (
-        <div className={['min-w-0', align === 'end' ? 'justify-end' : ''].join(' ')}>
+        <div className={['min-w-0 max-w-full overflow-hidden', align === 'end' ? 'text-right' : ''].join(' ')}>
           <DeckLabel deck={deck} showCode className="inline-flex max-w-full text-[11px] text-text-secondary" />
         </div>
       ) : (
@@ -72,7 +72,7 @@ export function MatchResultRow({
     return (
       <div
         className={[
-          'match-result-row match-result-row--compact flex min-w-0 items-center gap-2',
+          'match-result-row match-result-row--compact grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5',
           bare ? '' : 'rounded-xl bg-surface px-3 py-2 ring-1 ring-surface-muted',
         ].join(' ')}
       >
@@ -85,7 +85,7 @@ export function MatchResultRow({
           showResultColors={showResultColors}
           align="start"
         />
-        <span className="match-result-vs shrink-0 px-0.5 text-[10px] font-semibold uppercase text-text-secondary">
+        <span className="match-result-vs shrink-0 self-center text-[10px] font-semibold uppercase text-text-secondary">
           vs
         </span>
         <SideBlock
@@ -97,7 +97,11 @@ export function MatchResultRow({
           showResultColors={showResultColors}
           align="end"
         />
-        {meta ? <span className="match-result-meta ml-1 shrink-0 text-xs tabular-nums text-text-secondary">{meta}</span> : null}
+        {meta ? (
+          <span className="match-result-meta col-span-3 text-right text-xs tabular-nums text-text-secondary">
+            {meta}
+          </span>
+        ) : null}
       </div>
     )
   }
@@ -173,8 +177,15 @@ export function MatchListItem({
 }) {
   const content = (
     <>
-      {badge}
-      <div className="min-w-0 flex-1">
+      {(badge || meta) && (
+        <div className="match-list-item__header flex w-full items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">{badge}</div>
+          {meta ? (
+            <span className="match-list-item__meta shrink-0 text-xs tabular-nums text-text-secondary">{meta}</span>
+          ) : null}
+        </div>
+      )}
+      <div className="match-list-item__body min-w-0 w-full">
         <MatchResultRow
           match={match}
           players={players}
@@ -184,12 +195,11 @@ export function MatchListItem({
           showResultColors={showResultColors}
         />
       </div>
-      {meta ? <span className="match-list-item__meta shrink-0 text-xs tabular-nums text-text-secondary">{meta}</span> : null}
     </>
   )
 
   const classes = [
-    'match-list-item flex w-full items-center gap-2 rounded-xl bg-surface-elevated px-3 py-2 text-left ring-1 ring-surface-muted outline-none transition',
+    'match-list-item flex w-full flex-col gap-1.5 rounded-xl bg-surface-elevated px-3 py-2 text-left ring-1 ring-surface-muted outline-none transition',
     onClick ? 'hover:bg-surface-muted/40 active:bg-surface-muted/60' : '',
     className,
   ]

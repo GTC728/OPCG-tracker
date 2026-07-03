@@ -4,10 +4,9 @@ import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@
 import { createSession, findOpenSessionForToday } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
-  deleteRemoteActiveMatch,
-  flushGroupCollabSyncNow,
-  pushCompletedMatch,
-  scheduleGroupCollabSync,
+  notifyGroupCollabChange,
+  pauseGroupCollabNotify,
+  resumeGroupCollabNotify,
 } from '@/lib/groupSync'
 import { loadAppState, saveAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
@@ -94,9 +93,14 @@ function toPersistedState(store: AppStore): AppState {
   }
 }
 
+let lastPersistedAppState: AppState | null = null
+
 function persist(state: AppState): AppState {
+  const prev = lastPersistedAppState
   const persisted = { ...state, appVersion: APP_VERSION }
   saveAppState(persisted)
+  lastPersistedAppState = persisted
+  notifyGroupCollabChange(prev, persisted)
   return persisted
 }
 
@@ -232,22 +236,6 @@ function isCompleteActiveMatchInput(input: ActiveMatchInput): boolean {
   return Boolean(input.player1Id && input.player2Id && input.deck1Id && input.deck2Id)
 }
 
-function afterGroupCollabChange(state: AppState, options?: { completedMatch?: Match; deletedActiveId?: string }) {
-  const groupCode = state.settings.lastGroupCode
-  if (!groupCode || !state.settings.groupCollabEnabled) return
-  if (options?.completedMatch) {
-    void pushCompletedMatch(groupCode, options.completedMatch)
-  }
-  if (options?.deletedActiveId) {
-    void deleteRemoteActiveMatch(groupCode, options.deletedActiveId)
-  }
-  if (options?.completedMatch || options?.deletedActiveId) {
-    flushGroupCollabSyncNow(groupCode)
-  } else {
-    scheduleGroupCollabSync(groupCode)
-  }
-}
-
 function findOrCreatePlayer(state: AppState, name: string): { state: AppState; player: Player } {
   const existing = resolvePlayerName(state, name)
 
@@ -306,9 +294,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   replaceState: (state) => {
-    const { state: nextState } = ensureSessionState(state)
-    const persisted = persist(nextState)
-    set({ ...persisted, hydrated: true })
+    pauseGroupCollabNotify()
+    try {
+      lastPersistedAppState = null
+      const { state: nextState } = ensureSessionState(state)
+      const persisted = persist(nextState)
+      set({ ...persisted, hydrated: true })
+    } finally {
+      resumeGroupCollabNotify()
+    }
   },
 
   resetAllData: () => {
@@ -415,7 +409,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ],
     })
     set({ ...next })
-    afterGroupCollabChange(next)
     return player
   },
 
@@ -560,7 +553,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeMatches: [activeMatch, ...state.activeMatches],
     })
     set({ ...next })
-    afterGroupCollabChange(next)
     return activeMatch
   },
 
@@ -601,7 +593,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ),
     })
     set({ ...next })
-    afterGroupCollabChange(next)
   },
 
   completeActiveMatch: (id, winnerPlayerId) => {
@@ -652,7 +643,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       matches: [match, ...current.matches],
     })
     set({ ...next })
-    afterGroupCollabChange(next, { completedMatch: match })
     return match
   },
 
@@ -968,7 +958,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
     })
     set({ ...next })
-    afterGroupCollabChange(next)
   },
 
   setMatchNotes: (matchId, notes) => {
@@ -1036,7 +1025,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ),
     })
     set({ ...next })
-    afterGroupCollabChange(next)
   },
 
   setSessionTableCount: (sessionId, count) => {
@@ -1125,7 +1113,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
         activeMatches: [activeMatch, ...state.activeMatches],
       })
       set({ ...next })
-      afterGroupCollabChange(next)
       return activeMatch
     }
 
@@ -1139,15 +1126,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeMatches: current.activeMatches.filter((match) => match.id !== id),
     })
     set({ ...next })
-    afterGroupCollabChange(next, { deletedActiveId: id })
   },
 }))
 
 export function updateAppState(updater: (state: AppState) => AppState) {
   const current = getAppState()
-  const next = updater(current)
-  const persisted = persist(next)
-  useAppStore.setState({ ...persisted })
+  pauseGroupCollabNotify()
+  try {
+    const next = updater(current)
+    const persisted = persist(next)
+    useAppStore.setState({ ...persisted })
+  } finally {
+    resumeGroupCollabNotify()
+  }
 }
 
 export function getAppState(): AppState {

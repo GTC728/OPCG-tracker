@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.5.2 - 2026-07-04
+
+### Fixed
+
+- **Centralized group collab sync** in `persist()`: diff prev/next state instead of per-action hooks — covers soft delete, restore, edit, clear table, notes, undo, etc.
+- Remote pull no longer echoes back to Supabase (`pauseGroupCollabNotify` during inbound merge).
+- History match cards use two-row layout (no overlapping text on mobile).
+
 ## V3.5.1 - 2026-07-04
 
 ### Fixed
