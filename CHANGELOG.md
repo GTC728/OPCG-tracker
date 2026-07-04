@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.6.1 - 2026-07-05
+
+### New
+
+- Record session details show weighted top deck (win rate) instead of most-used deck.
+- Cross-day session prompt with new / continue / manage actions.
+- Compact settings list row layout.
+
+### Fixed
+
+- Permanent delete and session delete no longer roll back when group collab is enabled: purges push to Supabase and block pull/realtime restore.
+
 ## V3.6.0 - 2026-07-04
 
 ### New

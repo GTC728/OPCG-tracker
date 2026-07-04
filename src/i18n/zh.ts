@@ -141,6 +141,7 @@ export const zh = {
   'record.firstWinRate': '先攻勝率',
   'record.mvp': '今日 MVP',
   'record.usedDeck': '常用牌組',
+  'record.topDeck': '最佳牌組',
   'record.newMatch': '＋ 新對局',
   'record.newSession': '新場次',
   'record.players': '玩家',
@@ -244,4 +245,10 @@ export const zh = {
   'cloud.restoreVersionDone': '已還原所選版本',
   'cloud.restoreVersionFailed': '還原版本失敗',
   'cloud.versionMissing': '找不到所選備份',
+  'sessionDay.title': '換日場次提醒',
+  'sessionDay.intro': '今天是 {today}，目前場次是較早前開始的。',
+  'sessionDay.question': '要為今天開新場次，還是繼續記錄在舊場次？',
+  'sessionDay.newSession': '開今日新場次',
+  'sessionDay.continue': '繼續目前場次',
+  'sessionDay.manage': '管理場次',
 } as const

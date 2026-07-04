@@ -208,6 +208,7 @@ export interface AppSettings {
   sessionTableCounts: Record<string, number>
   groupCollabEnabled: boolean
   groupCollabBootstrapped: boolean
+  sessionDayPromptDismissedFor: string | null
 }
 
 export interface AppState {

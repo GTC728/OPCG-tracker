@@ -141,6 +141,7 @@ export const ja = {
   'record.firstWinRate': '先攻勝率',
   'record.mvp': '今日の MVP',
   'record.usedDeck': 'よく使うデッキ',
+  'record.topDeck': 'ベストデッキ',
   'record.newMatch': '+ 新規対戦',
   'record.active': '進行中',
   'record.recentCombos': '最近の組み合わせ',
@@ -244,4 +245,10 @@ export const ja = {
   'cloud.restoreVersionDone': '選択した版を復元しました',
   'cloud.restoreVersionFailed': '版の復元に失敗しました',
   'cloud.versionMissing': '選択したバックアップが見つかりません',
+  'sessionDay.title': '日付が変わりました',
+  'sessionDay.intro': '今日は {today} です。現在のセッションは以前開始されたものです。',
+  'sessionDay.question': '今日の新しいセッションを開始しますか？それとも現在のセッションを続けますか？',
+  'sessionDay.newSession': '今日のセッションを開始',
+  'sessionDay.continue': '現在のセッションを続ける',
+  'sessionDay.manage': 'セッション管理',
 } as const

@@ -127,13 +127,19 @@ export function RecordPage() {
               <dd className="truncate font-semibold">{dashboard.topPlayer?.name ?? '—'}</dd>
             </div>
             <div className="rounded-lg bg-surface px-2 py-1.5">
-              <dt className="text-text-secondary">{t('record.usedDeck')}</dt>
-              <dd className="truncate font-semibold">
-                {dashboard.mostUsedDeck ? (
-                  <DeckLabel
-                    deck={decks.find((deck) => deck.id === dashboard.mostUsedDeck?.id)}
-                    showCode
-                  />
+              <dt className="text-text-secondary">{t('record.topDeck')}</dt>
+              <dd className="font-semibold">
+                {dashboard.topDeck ? (
+                  <span className="block min-w-0 truncate">
+                    <DeckLabel
+                      deck={decks.find((deck) => deck.id === dashboard.topDeck?.id)}
+                      showCode
+                    />
+                    <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
+                      {formatPercent(dashboard.topDeck.winRate)} · {dashboard.topDeck.wins}W
+                      {dashboard.topDeck.losses}L
+                    </span>
+                  </span>
                 ) : (
                   '—'
                 )}

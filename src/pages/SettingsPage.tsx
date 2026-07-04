@@ -25,16 +25,16 @@ function SettingsRow({
   return (
     <button
       type="button"
-      className="flex w-full items-center justify-between gap-3 rounded-2xl bg-surface-elevated p-4 text-left ring-1 ring-surface-muted transition hover:bg-surface-muted active:scale-[0.99]"
+      className="flex w-full items-center gap-3 rounded-xl bg-surface-elevated px-3 py-2.5 text-left ring-1 ring-surface-muted transition hover:bg-surface-muted active:scale-[0.99]"
       onClick={onClick}
     >
-      <span>
-        <span className="block font-semibold">{title}</span>
-        <span className="mt-1 block text-sm text-text-secondary">{description}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="mt-0.5 block text-xs text-text-secondary line-clamp-1">{description}</span>
       </span>
-      <span className="shrink-0 text-right text-sm text-text-secondary">
-        {meta ? <span className="block">{meta}</span> : null}
-        <span aria-hidden>›</span>
+      <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
+        {meta ? <span className="max-w-[6.5rem] truncate tabular-nums">{meta}</span> : null}
+        <span aria-hidden className="text-sm leading-none">›</span>
       </span>
     </button>
   )
@@ -62,32 +62,32 @@ export function SettingsPage() {
   const currentSession = sessions.find((session) => session.id === currentSessionId)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {section === 'home' ? (
         <>
-          <section className="rounded-2xl bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold text-text-secondary">{t('settings.dataOverview')}</h2>
-            <dl className="mt-3 grid grid-cols-4 gap-3 text-center">
+          <section className="rounded-xl bg-surface-elevated p-3">
+            <h2 className="text-xs font-semibold text-text-secondary">{t('settings.dataOverview')}</h2>
+            <dl className="mt-2 grid grid-cols-4 gap-2 text-center">
               <div>
-                <dt className="text-xs text-text-secondary">{t('settings.playersCount')}</dt>
-                <dd className="text-2xl font-bold">{players}</dd>
+                <dt className="text-[10px] text-text-secondary">{t('settings.playersCount')}</dt>
+                <dd className="text-xl font-bold">{players}</dd>
               </div>
               <div>
-                <dt className="text-xs text-text-secondary">{t('settings.decksCount')}</dt>
-                <dd className="text-2xl font-bold">{decks}</dd>
+                <dt className="text-[10px] text-text-secondary">{t('settings.decksCount')}</dt>
+                <dd className="text-xl font-bold">{decks}</dd>
               </div>
               <div>
-                <dt className="text-xs text-text-secondary">{t('settings.matchesCount')}</dt>
-                <dd className="text-2xl font-bold">{matches}</dd>
+                <dt className="text-[10px] text-text-secondary">{t('settings.matchesCount')}</dt>
+                <dd className="text-xl font-bold">{matches}</dd>
               </div>
               <div>
-                <dt className="text-xs text-text-secondary">{t('settings.activeCount')}</dt>
-                <dd className="text-2xl font-bold">{activeMatches}</dd>
+                <dt className="text-[10px] text-text-secondary">{t('settings.activeCount')}</dt>
+                <dd className="text-xl font-bold">{activeMatches}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="space-y-2">
+          <section className="space-y-1.5">
             <SettingsRow
               title={t('settings.language')}
               description={t('settings.languageDesc')}
@@ -123,8 +123,8 @@ export function SettingsPage() {
               onClick={() => setSection('data')}
             />
           </section>
-          <section className="rounded-2xl bg-surface-elevated p-4 text-sm text-text-secondary">
-            <h2 className="text-base font-semibold text-text-primary">{t('settings.about')}</h2>
+          <section className="rounded-xl bg-surface-elevated p-3 text-sm text-text-secondary">
+            <h2 className="text-sm font-semibold text-text-primary">{t('settings.about')}</h2>
             <p className="mt-2">App v{APP_VERSION}</p>
             <p>Schema v{SCHEMA_VERSION}</p>
           </section>

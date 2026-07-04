@@ -141,6 +141,7 @@ export const en = {
   'record.firstWinRate': 'First Win Rate',
   'record.mvp': 'Today MVP',
   'record.usedDeck': 'Most Used Deck',
+  'record.topDeck': 'Top Deck',
   'record.newMatch': '+ New Match',
   'record.active': 'Active',
   'record.recentCombos': 'Recent Combos',
@@ -244,4 +245,10 @@ export const en = {
   'cloud.restoreVersionDone': 'Selected version restored',
   'cloud.restoreVersionFailed': 'Could not restore version',
   'cloud.versionMissing': 'Selected backup not found',
+  'sessionDay.title': 'New day session',
+  'sessionDay.intro': 'Today is {today}. Your current session started on an earlier day.',
+  'sessionDay.question': 'Start a session for today, or keep recording in the current one?',
+  'sessionDay.newSession': 'Start today\'s session',
+  'sessionDay.continue': 'Continue current session',
+  'sessionDay.manage': 'Manage sessions',
 } as const

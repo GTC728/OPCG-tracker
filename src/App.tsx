@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
+import { SessionDayPrompt } from '@/components/session/SessionDayPrompt'
 import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
 import { useGroupCollab } from '@/hooks/useGroupCollab'
 import { HistoryPage } from '@/pages/HistoryPage'
@@ -120,6 +121,7 @@ export default function App() {
   return (
     <ToastProvider>
       <GlobalSessionRosterPrompt />
+      <SessionDayPrompt />
       <AppShell
         title={meta.title}
         subtitle={meta.subtitle}

@@ -51,6 +51,10 @@ const localActiveTouch = new Map<string, number>()
 const localMatchTouch = new Map<string, number>()
 /** Local edit timestamp per player id. */
 const localPlayerTouch = new Map<string, number>()
+/** Locally purged entity ids — block pull/realtime from restoring deleted rows. */
+const localPurgedMatches = new Set<string>()
+const localPurgedSessions = new Set<string>()
+const localPurgedPlayers = new Set<string>()
 
 function touchLocalActive(ids: Iterable<string>): void {
   const now = Date.now()
@@ -206,6 +210,34 @@ export async function deleteRemoteActiveMatch(groupCode: string, matchId: string
   if (!supabase) return
   const groupKey = await resolveGroupKey(groupCode)
   await supabase.from('sync_active_matches').delete().eq('group_key', groupKey).eq('id', matchId)
+}
+
+export async function deleteRemoteMatch(groupCode: string, matchId: string): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const groupKey = await resolveGroupKey(groupCode)
+  await supabase.from('sync_matches').delete().eq('group_key', groupKey).eq('id', matchId)
+}
+
+export async function markRemoteSessionDeleted(groupCode: string, sessionId: string): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+  const now = new Date().toISOString()
+  const { error } = await supabase
+    .from('sync_sessions')
+    .update({ deleted_at: now, updated_at: now, updated_by: userId })
+    .eq('group_key', groupKey)
+    .eq('id', sessionId)
+  if (error) throw error
+}
+
+export async function deleteRemotePlayer(groupCode: string, playerId: string): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const groupKey = await resolveGroupKey(groupCode)
+  await supabase.from('sync_players').delete().eq('group_key', groupKey).eq('id', playerId)
 }
 
 export async function flushGroupCollabSync(groupCode: string, state: AppState): Promise<void> {
@@ -384,6 +416,26 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
     void pushSyncedPlayers(groupCode, changedPlayers)
   }
 
+  for (const match of prev.matches) {
+    if (next.matches.some((item) => item.id === match.id)) continue
+    localPurgedMatches.add(match.id)
+    touchLocalMatches([match.id])
+    void deleteRemoteMatch(groupCode, match.id)
+  }
+
+  for (const session of prev.sessions) {
+    if (next.sessions.some((item) => item.id === session.id)) continue
+    localPurgedSessions.add(session.id)
+    void markRemoteSessionDeleted(groupCode, session.id)
+  }
+
+  for (const player of prev.players) {
+    if (next.players.some((item) => item.id === player.id)) continue
+    localPurgedPlayers.add(player.id)
+    touchLocalPlayers([player.id])
+    void deleteRemotePlayer(groupCode, player.id)
+  }
+
   flushGroupCollabSyncNow(groupCode)
 }
 
@@ -506,6 +558,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       name: string
       started_at: string
       ended_at: string | null
+      deleted_at: string | null
     }[]
 
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
@@ -530,15 +583,20 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 
     const matchesById = new Map(current.matches.map((match) => [match.id, match]))
     for (const row of remoteMatches) {
+      if (localPurgedMatches.has(row.id)) continue
       const remote = rowToMatch(row)
       const existing = matchesById.get(remote.id)
       if (!existing || shouldApplyRemoteMatch(existing, row)) {
         matchesById.set(remote.id, remote)
       }
     }
+    for (const id of localPurgedMatches) {
+      matchesById.delete(id)
+    }
 
     const playersById = new Map(current.players.map((player) => [player.id, player]))
     for (const remote of remotePlayers) {
+      if (localPurgedPlayers.has(remote.id)) continue
       const existing = playersById.get(remote.id)
       if (!shouldApplyRemotePlayer(existing, remote)) continue
       if (existing) {
@@ -555,9 +613,16 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
         })
       }
     }
+    for (const id of localPurgedPlayers) {
+      playersById.delete(id)
+    }
 
     const sessionsById = new Map(current.sessions.map((session) => [session.id, session]))
     for (const remote of remoteSessions) {
+      if (localPurgedSessions.has(remote.id) || remote.deleted_at) {
+        sessionsById.delete(remote.id)
+        continue
+      }
       const existing = sessionsById.get(remote.id)
       if (existing) {
         sessionsById.set(remote.id, {
@@ -576,6 +641,9 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
           createdAt: now,
         })
       }
+    }
+    for (const id of localPurgedSessions) {
+      sessionsById.delete(id)
     }
 
     return {
@@ -611,6 +679,7 @@ function removeRemoteActiveMatch(matchId: string): void {
 }
 
 function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean; updated_at: string }): void {
+  if (localPurgedPlayers.has(row.id)) return
   updateAppState((current) => {
     const existing = current.players.find((player) => player.id === row.id)
     if (!shouldApplyRemotePlayer(existing, row)) return current
@@ -636,6 +705,7 @@ function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean
 }
 
 function applyRemoteMatchRow(row: SyncMatchRow): void {
+  if (localPurgedMatches.has(row.id)) return
   const remote = rowToMatch(row)
   updateAppState((current) => {
     const existing = current.matches.find((item) => item.id === remote.id)
