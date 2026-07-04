@@ -1,4 +1,5 @@
 import { buildLegacyDeckView } from '@/lib/dataModel'
+import { isSelectablePlayer } from '@/lib/entityVisibility'
 import type { AppState, Deck, DeckVariant, Leader, Match, Player } from '@/types'
 
 export interface ResolvedDeckQuery {
@@ -62,10 +63,12 @@ export function getSessionRoster(state: AppState, sessionId: string): Player[] {
   )
 
   if (sessionPlayerIds.size) {
-    return state.players.filter((player) => sessionPlayerIds.has(player.id))
+    return state.players.filter(
+      (player) => sessionPlayerIds.has(player.id) && isSelectablePlayer(player),
+    )
   }
 
-  return state.players.filter((player) => !player.archived)
+  return state.players.filter(isSelectablePlayer)
 }
 
 export function hasExplicitSessionRoster(state: AppState, sessionId: string): boolean {
@@ -99,9 +102,7 @@ function countPlayerMatches(
 
 export function getSortedPlayersForSession(state: AppState, sessionId: string): Player[] {
   const roster = getSessionRoster(state, sessionId)
-  const pool = roster.length
-    ? roster
-    : state.players.filter((player) => !player.archived)
+  const pool = roster.length ? roster : state.players.filter(isSelectablePlayer)
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
 
   return [...pool].sort((left, right) => {
@@ -118,7 +119,7 @@ export function getSortedPlayersForSession(state: AppState, sessionId: string): 
 
 export function getDefaultRosterPlayerIds(state: AppState): string[] {
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-  const activePlayers = state.players.filter((player) => !player.archived)
+  const activePlayers = state.players.filter(isSelectablePlayer)
 
   const ranked = [...activePlayers]
     .map((player) => ({

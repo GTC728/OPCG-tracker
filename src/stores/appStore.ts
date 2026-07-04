@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { APP_VERSION, createDefaultAppState } from '@/lib/constants'
 import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
+import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { createSession, findOpenSessionForToday } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
@@ -37,6 +38,8 @@ interface AppStore extends AppState {
   updateSessionName: (sessionId: string, name: string) => void
   switchSession: (sessionId: string) => void
   endCurrentSession: () => void
+  archiveSession: (sessionId: string) => void
+  unarchiveSession: (sessionId: string) => void
   deleteSession: (sessionId: string) => void
   addPlayer: (input: PlayerInput) => Player
   updatePlayer: (id: string, input: PlayerInput) => void
@@ -50,10 +53,8 @@ interface AppStore extends AppState {
   completeActiveMatch: (id: string, winnerPlayerId: string) => Match
   updateMatch: (id: string, input: MatchEditInput) => void
   undoCompletedMatch: (matchId: string) => void
-  softDeleteMatch: (matchId: string) => void
-  restoreMatch: (matchId: string) => void
-  permanentlyDeleteMatch: (matchId: string) => void
-  permanentlyDeletePlayer: (playerId: string) => void
+  deleteMatch: (matchId: string) => void
+  deletePlayer: (playerId: string) => void
   permanentlyDeleteDeck: (deckId: string) => void
   importMatches: (rows: ImportMatchInput[], filename: string, rawData: string) => ImportSummary
   setLanguage: (language: Language) => void
@@ -111,7 +112,10 @@ function persist(state: AppState): AppState {
 function ensureSessionState(state: AppState): { state: AppState; session: Session } {
   const currentSession =
     state.sessions.find(
-      (session) => session.id === state.currentSessionId && session.endedAt === null,
+      (session) =>
+        session.id === state.currentSessionId &&
+        session.deletedAt === null &&
+        session.endedAt === null,
     ) ?? null
 
   if (currentSession) {
@@ -168,7 +172,10 @@ function createPlayerAliasRecords(playerId: string, aliases: string[], source: '
 function assertUniquePlayerName(players: Player[], name: string, currentId?: string): void {
   const target = normalizeName(name)
   const exists = players.some(
-    (player) => player.id !== currentId && normalizeName(player.name) === target,
+    (player) =>
+      player.id !== currentId &&
+      !player.deletedAt &&
+      normalizeName(player.name) === target,
   )
 
   if (exists) {
@@ -211,7 +218,7 @@ function assertActiveMatchFields(state: AppState, input: ActiveMatchInput): void
     throw new Error('玩家 A 與玩家 B 不能相同')
   }
 
-  const players = new Set(state.players.filter((player) => !player.archived).map((player) => player.id))
+  const players = new Set(state.players.filter(isSelectablePlayer).map((player) => player.id))
   const decks = new Set(state.decks.filter((deck) => !deck.archived).map((deck) => deck.id))
 
   if (input.player1Id && !players.has(input.player1Id)) {
@@ -253,6 +260,7 @@ function findOrCreatePlayer(state: AppState, name: string): { state: AppState; p
     name: name.trim(),
     aliases: [],
     archived: false,
+    deletedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -268,7 +276,7 @@ function findDeckByQuery(state: AppState, query: string) {
 }
 
 function rosterPromptPatch(state: AppState, sessionId: string): AppState['settings'] {
-  const activeCount = state.players.filter((player) => !player.archived).length
+  const activeCount = state.players.filter(isSelectablePlayer).length
   const shouldPrompt = activeCount >= 2 && !hasExplicitSessionRoster(state, sessionId)
   return {
     ...state.settings,
@@ -355,7 +363,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   switchSession: (sessionId) => {
     const current = getAppState()
     const target = current.sessions.find((session) => session.id === sessionId)
-    if (!target) throw new Error('找不到 Session')
+    if (!target || target.deletedAt !== null) throw new Error('找不到 Session')
 
     const updatedSessions = current.sessions.map((session) =>
       session.id === sessionId ? { ...session, endedAt: null } : session,
@@ -388,33 +396,93 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
-  deleteSession: (sessionId) => {
+  archiveSession: (sessionId) => {
     const current = getAppState()
     const target = current.sessions.find((session) => session.id === sessionId)
-    if (!target) throw new Error('找不到 Session')
+    if (!target || target.deletedAt !== null) throw new Error('找不到 Session')
+    if (target.archivedAt !== null) return
 
-    const remainingSessions = current.sessions.filter((session) => session.id !== sessionId)
-    const wasCurrent = current.currentSessionId === sessionId
-    let nextCurrentId = wasCurrent ? null : current.currentSessionId
-
-    if (wasCurrent) {
+    const timestamp = nowIso()
+    let nextCurrentId = current.currentSessionId
+    if (current.currentSessionId === sessionId) {
       const fallback =
-        remainingSessions.find((session) => session.endedAt === null) ?? remainingSessions[0] ?? null
+        current.sessions.find(
+          (session) =>
+            session.id !== sessionId &&
+            session.deletedAt === null &&
+            session.archivedAt === null &&
+            session.endedAt === null,
+        ) ??
+        current.sessions.find(
+          (session) =>
+            session.id !== sessionId && session.deletedAt === null && session.archivedAt === null,
+        ) ??
+        null
       nextCurrentId = fallback?.id ?? null
     }
 
     const next = persist({
       ...current,
       currentSessionId: nextCurrentId,
-      sessions: remainingSessions,
-      matches: current.matches.filter((match) => match.sessionId !== sessionId),
+      sessions: current.sessions.map((session) =>
+        session.id === sessionId ? { ...session, archivedAt: timestamp } : session,
+      ),
+    })
+    set({ ...next })
+  },
+
+  unarchiveSession: (sessionId) => {
+    const current = getAppState()
+    const target = current.sessions.find((session) => session.id === sessionId)
+    if (!target || target.deletedAt !== null) throw new Error('找不到 Session')
+
+    const next = persist({
+      ...current,
+      sessions: current.sessions.map((session) =>
+        session.id === sessionId ? { ...session, archivedAt: null } : session,
+      ),
+    })
+    set({ ...next })
+  },
+
+  deleteSession: (sessionId) => {
+    const current = getAppState()
+    const target = current.sessions.find((session) => session.id === sessionId)
+    if (!target || target.deletedAt !== null) throw new Error('找不到 Session')
+
+    const timestamp = nowIso()
+    const wasCurrent = current.currentSessionId === sessionId
+    let nextCurrentId = wasCurrent ? null : current.currentSessionId
+
+    if (wasCurrent) {
+      const fallback =
+        current.sessions.find(
+          (session) =>
+            session.id !== sessionId &&
+            session.deletedAt === null &&
+            session.archivedAt === null &&
+            session.endedAt === null,
+        ) ??
+        current.sessions.find(
+          (session) =>
+            session.id !== sessionId && session.deletedAt === null && session.archivedAt === null,
+        ) ??
+        null
+      nextCurrentId = fallback?.id ?? null
+    }
+
+    const next = persist({
+      ...current,
+      currentSessionId: nextCurrentId,
+      sessions: current.sessions.map((session) =>
+        session.id === sessionId ? { ...session, deletedAt: timestamp } : session,
+      ),
+      matches: current.matches.map((match) =>
+        match.sessionId === sessionId && match.deletedAt === null
+          ? { ...match, deletedAt: timestamp, source: 'manual_edit' }
+          : match,
+      ),
       activeMatches: current.activeMatches.filter((match) => match.sessionId !== sessionId),
-      sessionPlayers: current.sessionPlayers.filter((item) => item.sessionId !== sessionId),
-      sessionDecks: current.sessionDecks.filter((item) => item.sessionId !== sessionId),
-      matchRevisions: current.matchRevisions.filter((revision) => {
-        const match = current.matches.find((item) => item.id === revision.matchId)
-        return match ? match.sessionId !== sessionId : true
-      }),
     })
     set({ ...next })
   },
@@ -431,6 +499,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       name,
       aliases: normalizeUniqueList(input.aliases),
       archived: false,
+      deletedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
@@ -768,54 +837,35 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
-  softDeleteMatch: (matchId) => {
-    const current = getAppState()
-    const next = persist({
-      ...current,
-      matches: current.matches.map((match) =>
-        match.id === matchId && match.deletedAt === null
-          ? { ...match, deletedAt: nowIso(), source: 'manual_edit' }
-          : match,
-      ),
-    })
-    set({ ...next })
-  },
-
-  restoreMatch: (matchId) => {
-    const current = getAppState()
-    const next = persist({
-      ...current,
-      matches: current.matches.map((match) =>
-        match.id === matchId ? { ...match, deletedAt: null, source: 'manual_edit' } : match,
-      ),
-    })
-    set({ ...next })
-  },
-
-  permanentlyDeleteMatch: (matchId) => {
+  deleteMatch: (matchId) => {
     const current = getAppState()
     const match = current.matches.find((item) => item.id === matchId)
     if (!match) throw new Error('找不到對局')
-    if (match.deletedAt === null) throw new Error('請先軟刪除對局')
+    if (match.deletedAt !== null) return
 
     const next = persist({
       ...current,
-      matches: current.matches.filter((item) => item.id !== matchId),
-      matchRevisions: current.matchRevisions.filter((revision) => revision.matchId !== matchId),
+      matches: current.matches.map((item) =>
+        item.id === matchId
+          ? { ...item, deletedAt: nowIso(), source: 'manual_edit' as const }
+          : item,
+      ),
     })
     set({ ...next })
   },
 
-  permanentlyDeletePlayer: (playerId) => {
+  deletePlayer: (playerId) => {
     const current = getAppState()
     const player = current.players.find((item) => item.id === playerId)
     if (!player) throw new Error('找不到玩家')
-    if (!player.archived) throw new Error('請先封存玩家')
+    if (player.deletedAt !== null) return
 
+    const timestamp = nowIso()
     const next = persist({
       ...current,
-      players: current.players.filter((item) => item.id !== playerId),
-      playerAliases: current.playerAliases.filter((alias) => alias.playerId !== playerId),
+      players: current.players.map((item) =>
+        item.id === playerId ? { ...item, deletedAt: timestamp, updatedAt: timestamp } : item,
+      ),
       sessionPlayers: current.sessionPlayers.filter((item) => item.playerId !== playerId),
     })
     set({ ...next })

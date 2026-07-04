@@ -51,14 +51,17 @@ const localActiveTouch = new Map<string, number>()
 const localMatchTouch = new Map<string, number>()
 /** Local edit timestamp per player id. */
 const localPlayerTouch = new Map<string, number>()
-/** Locally purged entity ids — block pull/realtime from restoring deleted rows. */
-const localPurgedMatches = new Set<string>()
-const localPurgedSessions = new Set<string>()
-const localPurgedPlayers = new Set<string>()
+/** Local edit timestamp per session id. */
+const localSessionTouch = new Map<string, number>()
 
 function touchLocalActive(ids: Iterable<string>): void {
   const now = Date.now()
   for (const id of ids) localActiveTouch.set(id, now)
+}
+
+function touchLocalSessions(ids: Iterable<string>): void {
+  const now = Date.now()
+  for (const id of ids) localSessionTouch.set(id, now)
 }
 
 function touchLocalPlayers(ids: Iterable<string>): void {
@@ -85,7 +88,21 @@ function activePayloadChanged(before: ActiveMatch, after: ActiveMatch): boolean 
 }
 
 function playerPayloadChanged(before: Player, after: Player): boolean {
-  return before.name !== after.name || before.archived !== after.archived
+  return (
+    before.name !== after.name ||
+    before.archived !== after.archived ||
+    before.deletedAt !== after.deletedAt
+  )
+}
+
+function sessionPayloadChanged(before: Session, after: Session): boolean {
+  return (
+    before.name !== after.name ||
+    before.startedAt !== after.startedAt ||
+    before.endedAt !== after.endedAt ||
+    before.archivedAt !== after.archivedAt ||
+    before.deletedAt !== after.deletedAt
+  )
 }
 
 function shouldApplyRemoteActive(row: SyncActiveRow): boolean {
@@ -106,9 +123,20 @@ function shouldApplyRemoteMatch(existing: Match | undefined, row: SyncMatchRow):
 
 function shouldApplyRemotePlayer(
   existing: Player | undefined,
-  remote: { id: string; name: string; archived: boolean; updated_at?: string },
+  remote: { id: string; name: string; archived: boolean; deleted_at?: string | null; updated_at?: string },
 ): boolean {
   const localTouch = localPlayerTouch.get(remote.id) ?? 0
+  if (remote.updated_at) {
+    return new Date(remote.updated_at).getTime() >= localTouch
+  }
+  return !existing
+}
+
+function shouldApplyRemoteSession(
+  existing: Session | undefined,
+  remote: { updated_at?: string },
+): boolean {
+  const localTouch = existing ? localSessionTouch.get(existing.id) ?? 0 : 0
   if (remote.updated_at) {
     return new Date(remote.updated_at).getTime() >= localTouch
   }
@@ -240,34 +268,9 @@ export async function deleteRemotePlayer(groupCode: string, playerId: string): P
   await supabase.from('sync_players').delete().eq('group_key', groupKey).eq('id', playerId)
 }
 
-export async function flushGroupCollabSync(groupCode: string, state: AppState): Promise<void> {
-  if (!isGroupCollabActive(state)) return
-  const supabase = await getSupabaseClient()
-  if (!supabase) return
-
-  const userId = await requireUserId()
-  const groupKey = await resolveGroupKey(groupCode)
-
-  if (state.currentSessionId) {
-    const session = state.sessions.find((item) => item.id === state.currentSessionId)
-    if (session) {
-      const { error } = await supabase.from('sync_sessions').upsert({
-        id: session.id,
-        group_key: groupKey,
-        name: session.name,
-        started_at: session.startedAt,
-        ended_at: session.endedAt,
-        updated_at: new Date().toISOString(),
-        updated_by: userId,
-        deleted_at: null,
-      })
-      if (error) throw error
-    }
-  }
-
+export async function flushGroupCollabSync(_groupCode: string, _state: AppState): Promise<void> {
+  if (!isGroupCollabActive(_state)) return
   // Row-level entity changes are pushed by notifyGroupCollabChange().
-  // Keep this flush scoped to session metadata so a stale tab cannot rewrite
-  // active tables or players with a fresh updated_at.
 }
 
 export async function pushSyncedActiveMatches(groupCode: string, matches: ActiveMatch[]): Promise<void> {
@@ -294,6 +297,29 @@ export async function pushSyncedPlayers(groupCode: string, players: Player[]): P
       group_key: groupKey,
       name: player.name,
       archived: player.archived,
+      deleted_at: player.deletedAt,
+      updated_at: new Date().toISOString(),
+      updated_by: userId,
+    })),
+  )
+  if (error) throw error
+}
+
+export async function pushSyncedSessions(groupCode: string, sessions: Session[]): Promise<void> {
+  if (!sessions.length) return
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+  const { error } = await supabase.from('sync_sessions').upsert(
+    sessions.map((session) => ({
+      id: session.id,
+      group_key: groupKey,
+      name: session.name,
+      started_at: session.startedAt,
+      ended_at: session.endedAt,
+      archived_at: session.archivedAt,
+      deleted_at: session.deletedAt,
       updated_at: new Date().toISOString(),
       updated_by: userId,
     })),
@@ -410,31 +436,24 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
       touchedPlayers.add(player.id)
     }
   }
-  if (touchedPlayers.size) touchLocalPlayers(touchedPlayers)
   if (touchedPlayers.size) {
+    touchLocalPlayers(touchedPlayers)
     const changedPlayers = next.players.filter((player) => touchedPlayers.has(player.id))
     void pushSyncedPlayers(groupCode, changedPlayers)
   }
 
-  for (const match of prev.matches) {
-    if (next.matches.some((item) => item.id === match.id)) continue
-    localPurgedMatches.add(match.id)
-    touchLocalMatches([match.id])
-    void deleteRemoteMatch(groupCode, match.id)
+  const touchedSessions = new Set<string>()
+  const prevSessions = new Map(prev.sessions.map((session) => [session.id, session]))
+  const changedSessions: Session[] = []
+  for (const session of next.sessions) {
+    const before = prevSessions.get(session.id)
+    if (!before || sessionPayloadChanged(before, session)) {
+      touchedSessions.add(session.id)
+      changedSessions.push(session)
+    }
   }
-
-  for (const session of prev.sessions) {
-    if (next.sessions.some((item) => item.id === session.id)) continue
-    localPurgedSessions.add(session.id)
-    void markRemoteSessionDeleted(groupCode, session.id)
-  }
-
-  for (const player of prev.players) {
-    if (next.players.some((item) => item.id === player.id)) continue
-    localPurgedPlayers.add(player.id)
-    touchLocalPlayers([player.id])
-    void deleteRemotePlayer(groupCode, player.id)
-  }
+  if (touchedSessions.size) touchLocalSessions(touchedSessions)
+  if (changedSessions.length) void pushSyncedSessions(groupCode, changedSessions)
 
   flushGroupCollabSyncNow(groupCode)
 }
@@ -492,20 +511,22 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
     name: session.name,
     started_at: session.startedAt,
     ended_at: session.endedAt,
+    archived_at: session.archivedAt,
+    deleted_at: session.deletedAt,
     updated_at: new Date().toISOString(),
     updated_by: userId,
-    deleted_at: null,
   }))
   if (sessionRows.length) {
     const { error } = await supabase.from('sync_sessions').upsert(sessionRows)
     if (error) throw error
   }
 
-  const playerRows = state.players.filter((p) => !p.archived).map((player: Player) => ({
+  const playerRows = state.players.map((player: Player) => ({
     id: player.id,
     group_key: groupKey,
     name: player.name,
     archived: player.archived,
+    deleted_at: player.deletedAt,
     updated_at: new Date().toISOString(),
     updated_by: userId,
   }))
@@ -515,7 +536,6 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
   }
 
   const matchRows = state.matches
-    .filter((match) => match.deletedAt === null)
     .slice(0, 500)
     .map((match) => toMatchRow(groupKey, match, userId))
   if (matchRows.length) {
@@ -551,6 +571,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       id: string
       name: string
       archived: boolean
+      deleted_at: string | null
       updated_at: string
     }[]
     const remoteSessions = sessionRes.data as {
@@ -558,7 +579,9 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       name: string
       started_at: string
       ended_at: string | null
+      archived_at: string | null
       deleted_at: string | null
+      updated_at: string
     }[]
 
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
@@ -583,24 +606,25 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 
     const matchesById = new Map(current.matches.map((match) => [match.id, match]))
     for (const row of remoteMatches) {
-      if (localPurgedMatches.has(row.id)) continue
       const remote = rowToMatch(row)
       const existing = matchesById.get(remote.id)
       if (!existing || shouldApplyRemoteMatch(existing, row)) {
         matchesById.set(remote.id, remote)
       }
     }
-    for (const id of localPurgedMatches) {
-      matchesById.delete(id)
-    }
 
     const playersById = new Map(current.players.map((player) => [player.id, player]))
     for (const remote of remotePlayers) {
-      if (localPurgedPlayers.has(remote.id)) continue
       const existing = playersById.get(remote.id)
       if (!shouldApplyRemotePlayer(existing, remote)) continue
       if (existing) {
-        playersById.set(remote.id, { ...existing, name: remote.name, archived: remote.archived })
+        playersById.set(remote.id, {
+          ...existing,
+          name: remote.name,
+          archived: remote.archived,
+          deletedAt: remote.deleted_at ?? null,
+          updatedAt: remote.updated_at,
+        })
       } else {
         const now = new Date().toISOString()
         playersById.set(remote.id, {
@@ -608,28 +632,25 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
           name: remote.name,
           aliases: [],
           archived: remote.archived,
+          deletedAt: remote.deleted_at ?? null,
           createdAt: now,
-          updatedAt: now,
+          updatedAt: remote.updated_at,
         })
       }
-    }
-    for (const id of localPurgedPlayers) {
-      playersById.delete(id)
     }
 
     const sessionsById = new Map(current.sessions.map((session) => [session.id, session]))
     for (const remote of remoteSessions) {
-      if (localPurgedSessions.has(remote.id) || remote.deleted_at) {
-        sessionsById.delete(remote.id)
-        continue
-      }
       const existing = sessionsById.get(remote.id)
+      if (existing && !shouldApplyRemoteSession(existing, remote)) continue
       if (existing) {
         sessionsById.set(remote.id, {
           ...existing,
           name: remote.name,
           startedAt: remote.started_at,
           endedAt: remote.ended_at,
+          archivedAt: remote.archived_at ?? null,
+          deletedAt: remote.deleted_at ?? null,
         })
       } else {
         const now = new Date().toISOString()
@@ -638,12 +659,11 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
           name: remote.name,
           startedAt: remote.started_at,
           endedAt: remote.ended_at,
+          archivedAt: remote.archived_at ?? null,
+          deletedAt: remote.deleted_at ?? null,
           createdAt: now,
         })
       }
-    }
-    for (const id of localPurgedSessions) {
-      sessionsById.delete(id)
     }
 
     return {
@@ -678,8 +698,13 @@ function removeRemoteActiveMatch(matchId: string): void {
   }))
 }
 
-function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean; updated_at: string }): void {
-  if (localPurgedPlayers.has(row.id)) return
+function applyRemotePlayerRow(row: {
+  id: string
+  name: string
+  archived: boolean
+  deleted_at?: string | null
+  updated_at: string
+}): void {
   updateAppState((current) => {
     const existing = current.players.find((player) => player.id === row.id)
     if (!shouldApplyRemotePlayer(existing, row)) return current
@@ -687,7 +712,15 @@ function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean
       return {
         ...current,
         players: current.players.map((player) =>
-          player.id === row.id ? { ...player, name: row.name, archived: row.archived } : player,
+          player.id === row.id
+            ? {
+                ...player,
+                name: row.name,
+                archived: row.archived,
+                deletedAt: row.deleted_at ?? null,
+                updatedAt: row.updated_at,
+              }
+            : player,
         ),
       }
     }
@@ -697,15 +730,58 @@ function applyRemotePlayerRow(row: { id: string; name: string; archived: boolean
       name: row.name,
       aliases: [],
       archived: row.archived,
+      deletedAt: row.deleted_at ?? null,
       createdAt: now,
-      updatedAt: now,
+      updatedAt: row.updated_at,
     }
     return { ...current, players: [player, ...current.players] }
   })
 }
 
+function applyRemoteSessionRow(row: {
+  id: string
+  name: string
+  started_at: string
+  ended_at: string | null
+  archived_at?: string | null
+  deleted_at?: string | null
+  updated_at: string
+}): void {
+  updateAppState((current) => {
+    const existing = current.sessions.find((session) => session.id === row.id)
+    if (existing && !shouldApplyRemoteSession(existing, row)) return current
+    if (existing) {
+      return {
+        ...current,
+        sessions: current.sessions.map((session) =>
+          session.id === row.id
+            ? {
+                ...session,
+                name: row.name,
+                startedAt: row.started_at,
+                endedAt: row.ended_at,
+                archivedAt: row.archived_at ?? null,
+                deletedAt: row.deleted_at ?? null,
+              }
+            : session,
+        ),
+      }
+    }
+    const now = new Date().toISOString()
+    const session: Session = {
+      id: row.id,
+      name: row.name,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      archivedAt: row.archived_at ?? null,
+      deletedAt: row.deleted_at ?? null,
+      createdAt: now,
+    }
+    return { ...current, sessions: [session, ...current.sessions] }
+  })
+}
+
 function applyRemoteMatchRow(row: SyncMatchRow): void {
-  if (localPurgedMatches.has(row.id)) return
   const remote = rowToMatch(row)
   updateAppState((current) => {
     const existing = current.matches.find((item) => item.id === remote.id)
@@ -724,9 +800,14 @@ function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow
   if (payload.eventType === 'DELETE') {
     const matchId = payload.old?.id
     if (!matchId) return
+    const timestamp = new Date().toISOString()
     updateAppState((current) => ({
       ...current,
-      matches: current.matches.filter((match) => match.id !== matchId),
+      matches: current.matches.map((match) =>
+        match.id === matchId && match.deletedAt === null
+          ? { ...match, deletedAt: timestamp, source: 'manual_edit' }
+          : match,
+      ),
     }))
     return
   }
@@ -771,7 +852,35 @@ export async function startGroupCollabRealtime(groupCode: string): Promise<void>
       (payload) => {
         if (payload.eventType === 'DELETE') return
         if (payload.new) {
-          applyRemotePlayerRow(payload.new as { id: string; name: string; archived: boolean; updated_at: string })
+          applyRemotePlayerRow(
+            payload.new as {
+              id: string
+              name: string
+              archived: boolean
+              deleted_at?: string | null
+              updated_at: string
+            },
+          )
+        }
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'sync_sessions', filter: `group_key=eq.${groupKey}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') return
+        if (payload.new) {
+          applyRemoteSessionRow(
+            payload.new as {
+              id: string
+              name: string
+              started_at: string
+              ended_at: string | null
+              archived_at?: string | null
+              deleted_at?: string | null
+              updated_at: string
+            },
+          )
         }
       },
     )

@@ -21,6 +21,8 @@ export function createSession(name = createSessionName()): Session {
     name,
     startedAt: createdAt,
     endedAt: null,
+    archivedAt: null,
+    deletedAt: null,
     createdAt,
   }
 }
@@ -38,7 +40,11 @@ export function isSameLocalDate(leftIso: string, right = new Date()): boolean {
 export function findOpenSessionForToday(sessions: Session[], date = new Date()): Session | null {
   return (
     sessions.find(
-      (session) => session.endedAt === null && isSameLocalDate(session.startedAt, date),
+      (session) =>
+        session.deletedAt === null &&
+        session.archivedAt === null &&
+        session.endedAt === null &&
+        isSameLocalDate(session.startedAt, date),
     ) ?? null
   )
 }

@@ -7,6 +7,7 @@ export interface Player {
   name: string
   aliases: string[]
   archived: boolean
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -65,6 +66,8 @@ export interface Session {
   name: string
   startedAt: string
   endedAt: string | null
+  archivedAt: string | null
+  deletedAt: string | null
   createdAt: string
 }
 

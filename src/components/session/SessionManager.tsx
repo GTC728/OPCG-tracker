@@ -3,15 +3,78 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { useToast } from '@/components/ui/Toast'
+import {
+  activeListedSessions,
+  archivedSessions,
+  countSessionMatches,
+} from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Session } from '@/types'
 
-function sessionMatchCount(sessionId: string, matches: { sessionId: string }[], activeMatches: { sessionId: string }[]) {
+function SessionRow({
+  session,
+  currentSessionId,
+  matchCount,
+  onSwitch,
+  onArchive,
+  onUnarchive,
+  onDelete,
+}: {
+  session: Session
+  currentSessionId: string | null
+  matchCount: number
+  onSwitch: () => void
+  onArchive?: () => void
+  onUnarchive?: () => void
+  onDelete: () => void
+}) {
+  const { t } = useI18n()
+
   return (
-    matches.filter((match) => match.sessionId === sessionId).length +
-    activeMatches.filter((match) => match.sessionId === sessionId).length
+    <div
+      className={[
+        'rounded-xl p-3 ring-1 ring-surface-muted',
+        session.id === currentSessionId ? 'bg-brand-600 text-white' : 'bg-surface',
+      ].join(' ')}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <button type="button" className="min-w-0 flex-1 text-left outline-none" onClick={onSwitch}>
+          <span className="block font-semibold">{session.name}</span>
+          <span className="mt-1 block text-xs opacity-75">{formatDateTime(session.startedAt)}</span>
+          <span className="mt-1 block text-xs opacity-75">
+            {matchCount} {t('session.matchCount')}
+          </span>
+        </button>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="text-xs opacity-75">
+            {session.id === currentSessionId
+              ? t('settings.currentLabel')
+              : session.endedAt
+                ? t('settings.endedLabel')
+                : t('settings.openLabel')}
+          </span>
+          {onArchive ? (
+            <button type="button" className="text-xs underline opacity-80 outline-none" onClick={onArchive}>
+              {t('session.archive')}
+            </button>
+          ) : null}
+          {onUnarchive ? (
+            <button type="button" className="text-xs underline opacity-80 outline-none" onClick={onUnarchive}>
+              {t('session.unarchive')}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="text-xs text-red-200 underline outline-none"
+            onClick={onDelete}
+          >
+            {t('common.delete')}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -36,13 +99,19 @@ export function SessionManager({
   const updateSessionName = useAppStore((s) => s.updateSessionName)
   const switchSession = useAppStore((s) => s.switchSession)
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
+  const archiveSession = useAppStore((s) => s.archiveSession)
+  const unarchiveSession = useAppStore((s) => s.unarchiveSession)
   const deleteSession = useAppStore((s) => s.deleteSession)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
-  const sortedSessions = [...sessions].sort(
+  const listedSessions = activeListedSessions(sessions).sort(
+    (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
+  )
+  const pastSessions = archivedSessions(sessions).sort(
     (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
   )
   const [sessionName, setSessionName] = useState(currentSession?.name ?? '')
   const [deleteTarget, setDeleteTarget] = useState<Session | null>(null)
+  const [pastExpanded, setPastExpanded] = useState(false)
 
   useEffect(() => {
     setSessionName(currentSession?.name ?? '')
@@ -108,62 +177,84 @@ export function SessionManager({
 
       <section className="rounded-2xl bg-surface-elevated p-4">
         <h3 className="text-sm font-semibold text-text-secondary">
-          {t('settings.switchSession')} · {sessions.length}
+          {t('settings.switchSession')} · {listedSessions.length}
         </h3>
         <div className="mt-3 space-y-2">
-          {sortedSessions.map((session) => {
-            const matchCount = sessionMatchCount(session.id, matches, activeMatches)
-            return (
-              <div
-                key={session.id}
-                className={[
-                  'rounded-xl p-3 ring-1 ring-surface-muted',
-                  session.id === currentSessionId ? 'bg-brand-600 text-white' : 'bg-surface',
-                ].join(' ')}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left outline-none"
-                    onClick={() => {
-                      try {
-                        switchSession(session.id)
-                        setSessionName(session.name)
-                        toast.success(`${t('settings.switchedTo')} ${session.name}`)
-                        onClose?.()
-                      } catch (caught) {
-                        toast.error(caught instanceof Error ? caught.message : t('settings.switchSessionFailed'))
-                      }
-                    }}
-                  >
-                    <span className="block font-semibold">{session.name}</span>
-                    <span className="mt-1 block text-xs opacity-75">{formatDateTime(session.startedAt)}</span>
-                    <span className="mt-1 block text-xs opacity-75">
-                      {matchCount} {t('session.matchCount')}
-                    </span>
-                  </button>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <span className="text-xs opacity-75">
-                      {session.id === currentSessionId
-                        ? t('settings.currentLabel')
-                        : session.endedAt
-                          ? t('settings.endedLabel')
-                          : t('settings.openLabel')}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-xs text-red-200 underline outline-none"
-                      onClick={() => setDeleteTarget(session)}
-                    >
-                      {t('common.delete')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {listedSessions.map((session) => (
+            <SessionRow
+              key={session.id}
+              session={session}
+              currentSessionId={currentSessionId}
+              matchCount={countSessionMatches(session.id, matches, activeMatches)}
+              onSwitch={() => {
+                try {
+                  switchSession(session.id)
+                  setSessionName(session.name)
+                  toast.success(`${t('settings.switchedTo')} ${session.name}`)
+                  onClose?.()
+                } catch (caught) {
+                  toast.error(caught instanceof Error ? caught.message : t('settings.switchSessionFailed'))
+                }
+              }}
+              onArchive={() => {
+                try {
+                  archiveSession(session.id)
+                  toast.success(t('session.archived'))
+                } catch (caught) {
+                  toast.error(caught instanceof Error ? caught.message : t('session.archiveFailed'))
+                }
+              }}
+              onDelete={() => setDeleteTarget(session)}
+            />
+          ))}
         </div>
       </section>
+
+      {pastSessions.length ? (
+        <section className="rounded-2xl bg-surface-elevated p-4">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-sm font-semibold text-text-secondary outline-none"
+            onClick={() => setPastExpanded((value) => !value)}
+          >
+            <span>
+              {t('session.pastSessions')} · {pastSessions.length}
+            </span>
+            <span>{pastExpanded ? '▲' : '▼'}</span>
+          </button>
+          {pastExpanded ? (
+            <div className="mt-3 space-y-2">
+              {pastSessions.map((session) => (
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  currentSessionId={currentSessionId}
+                  matchCount={countSessionMatches(session.id, matches, activeMatches)}
+                  onSwitch={() => {
+                    try {
+                      switchSession(session.id)
+                      setSessionName(session.name)
+                      toast.success(`${t('settings.switchedTo')} ${session.name}`)
+                      onClose?.()
+                    } catch (caught) {
+                      toast.error(caught instanceof Error ? caught.message : t('settings.switchSessionFailed'))
+                    }
+                  }}
+                  onUnarchive={() => {
+                    try {
+                      unarchiveSession(session.id)
+                      toast.success(t('session.unarchived'))
+                    } catch (caught) {
+                      toast.error(caught instanceof Error ? caught.message : t('session.unarchiveFailed'))
+                    }
+                  }}
+                  onDelete={() => setDeleteTarget(session)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   )
 
@@ -174,7 +265,7 @@ export function SessionManager({
       description={t('session.deleteDesc')}
       detail={
         deleteTarget
-          ? `${deleteTarget.name} · ${sessionMatchCount(deleteTarget.id, matches, activeMatches)} ${t('session.matchCount')}`
+          ? `${deleteTarget.name} · ${countSessionMatches(deleteTarget.id, matches, activeMatches)} ${t('session.matchCount')}`
           : undefined
       }
       onClose={() => setDeleteTarget(null)}
@@ -183,6 +274,7 @@ export function SessionManager({
         if (!deleteTarget) return
         try {
           deleteSession(deleteTarget.id)
+          setDeleteTarget(null)
           toast.success(t('session.deleted'))
         } catch (caught) {
           toast.error(caught instanceof Error ? caught.message : t('session.deleteFailed'))

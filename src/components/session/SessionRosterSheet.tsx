@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { getDefaultRosterPlayerIds } from '@/lib/selectors'
 import { useI18n } from '@/lib/i18n'
+import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { useAppStore } from '@/stores/appStore'
 
 function PlayerChip({
@@ -45,7 +46,7 @@ export function SessionRosterSheet({
   const addPlayer = useAppStore((s) => s.addPlayer)
   const allPlayers = useMemo(
     () =>
-      [...state.players.filter((player) => !player.archived)].sort((left, right) =>
+      [...state.players.filter(isSelectablePlayer)].sort((left, right) =>
         left.name.localeCompare(right.name),
       ),
     [state.players],

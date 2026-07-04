@@ -315,12 +315,12 @@ function PlayerCard({
   player,
   onEdit,
   onArchiveChange,
-  onPermanentDelete,
+  onDelete,
 }: {
   player: Player
   onEdit: () => void
   onArchiveChange: (archived: boolean) => void
-  onPermanentDelete: () => void
+  onDelete: () => void
 }) {
   return (
     <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
@@ -329,6 +329,11 @@ function PlayerCard({
           <div className="flex items-center gap-2">
             <h3 className="font-semibold">{player.name}</h3>
             <ArchiveBadge archived={player.archived} />
+            {player.deletedAt ? (
+              <span className="rounded-full bg-danger/15 px-2 py-1 text-xs font-medium text-red-200">
+                已刪除
+              </span>
+            ) : null}
           </div>
           <p className="mt-1 text-sm text-text-secondary">
             {player.aliases.length ? `別名：${formatList(player.aliases)}` : '未設定別名'}
@@ -336,20 +341,21 @@ function PlayerCard({
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEdit}>
+        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEdit} disabled={Boolean(player.deletedAt)}>
           編輯
         </Button>
         <Button
           variant={player.archived ? 'ghost' : 'danger'}
           className="min-h-10 py-2 text-sm"
+          disabled={Boolean(player.deletedAt)}
           onClick={() => onArchiveChange(!player.archived)}
         >
           {player.archived ? '還原' : '封存'}
         </Button>
       </div>
-      {player.archived ? (
-        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onPermanentDelete}>
-          永久刪除
+      {!player.deletedAt ? (
+        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onDelete}>
+          刪除玩家
         </Button>
       ) : null}
     </article>
@@ -411,7 +417,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
   const setPlayerArchived = useAppStore((state) => state.setPlayerArchived)
-  const permanentlyDeletePlayer = useAppStore((state) => state.permanentlyDeletePlayer)
+  const deletePlayer = useAppStore((state) => state.deletePlayer)
   const permanentlyDeleteDeck = useAppStore((state) => state.permanentlyDeleteDeck)
   const setDeckArchived = useAppStore((state) => state.setDeckArchived)
   const updateDeckAliases = useAppStore((state) => state.updateDeckAliases)
@@ -453,7 +459,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                   setPlayerArchived(player.id, archived)
                   toast.success(archived ? '玩家已封存' : '玩家已還原')
                 }}
-                onPermanentDelete={() => setPurgePlayer(player)}
+                onDelete={() => setPurgePlayer(player)}
               />
             ))
           ) : (
@@ -549,7 +555,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
         onConfirm={() => {
           if (!purgePlayer) return
           try {
-            permanentlyDeletePlayer(purgePlayer.id)
+            deletePlayer(purgePlayer.id)
             toast.success(t('delete.playerDone'))
           } catch (caught) {
             toast.error(caught instanceof Error ? caught.message : t('delete.failed'))

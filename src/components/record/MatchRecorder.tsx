@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
+import { isSelectablePlayer } from '@/lib/entityVisibility'
 import {
   getSortedPlayersForSession,
 } from '@/lib/selectors'
@@ -26,7 +27,7 @@ function getRecentCombosWithMeta(
   decks: Deck[],
   sessionId: string | null,
 ): RecentComboWithMeta[] {
-  const activePlayers = new Set(players.filter((player) => !player.archived).map((player) => player.id))
+  const activePlayers = new Set(players.filter(isSelectablePlayer).map((player) => player.id))
   const activeDecks = new Set(decks.filter((deck) => !deck.archived).map((deck) => deck.id))
   const seen = new Set<string>()
   const combos: RecentComboWithMeta[] = []
@@ -185,7 +186,7 @@ export function MatchRecorder() {
   const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
 
   const rosterPlayers = useMemo(() => {
-    if (!currentSessionId) return players.filter((player) => !player.archived)
+    if (!currentSessionId) return players.filter(isSelectablePlayer)
     return getSortedPlayersForSession(appState, currentSessionId)
   }, [appState, currentSessionId, players])
 

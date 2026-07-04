@@ -9,6 +9,26 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.7.0 - 2026-07-05
+
+### New
+
+- **Unified tombstone sync**: match, player, and session deletes sync across group devices via `deleted_at` / `archived_at` UPSERT (requires `docs/supabase-sync-v3.7.sql`).
+- **Session archive**: collapse old nights under「過往場次」; archived sessions keep match history and stats.
+- **Session cascade delete**: deleting a test/wrong session tombstones all its matches on every device.
+- **History filters**: filter completed matches by session and date range.
+- **Mobile table assign**: tap a table slot to open player/deck picker; empty tables fold to a compact row on phone.
+
+### Changed
+
+- Single **删除** for matches (no soft delete → permanent delete flow).
+- Player delete keeps the row for historical names; player is hidden from assignment lists.
+- Assignment dock hidden on mobile; use tap-to-assign on table slots.
+
+### Fixed
+
+- Player and match permanent deletes now sync to other group devices (V3.6.1 hard DELETE failed under RLS).
+
 ## V3.6.1 - 2026-07-05
 
 ### New

@@ -46,6 +46,19 @@ const migrations: Record<number, Migration> = {
       importRows: Array.isArray(state.importRows) ? state.importRows : [],
     }
   },
+  5: (state) => ({
+    ...state,
+    schemaVersion: 5,
+    players: (Array.isArray(state.players) ? state.players : []).map((player) => ({
+      ...player,
+      deletedAt: player.deletedAt ?? null,
+    })),
+    sessions: (Array.isArray(state.sessions) ? state.sessions : []).map((session) => ({
+      ...session,
+      archivedAt: session.archivedAt ?? null,
+      deletedAt: session.deletedAt ?? null,
+    })),
+  }),
 }
 
 function withLocaleAliases(deck: Deck): Deck {
@@ -84,10 +97,15 @@ function mergeSeedDecks(decks: Deck[], seedDecks: Deck[]): Deck[] {
 
 function normalizeSessionName(session: Session): Session {
   const legacyDefaultName = `${getSessionDateLabel(new Date(session.startedAt))} 卡店`
-  if (session.name === legacyDefaultName) {
-    return { ...session, name: getSessionDateLabel(new Date(session.startedAt)) }
+  const base =
+    session.name === legacyDefaultName
+      ? { ...session, name: getSessionDateLabel(new Date(session.startedAt)) }
+      : session
+  return {
+    ...base,
+    archivedAt: base.archivedAt ?? null,
+    deletedAt: base.deletedAt ?? null,
   }
-  return session
 }
 
 function normalizeState(raw: Partial<AppState>): AppState {
@@ -102,7 +120,10 @@ function normalizeState(raw: Partial<AppState>): AppState {
   return {
     ...defaults,
     ...raw,
-    players: Array.isArray(raw.players) ? raw.players : defaults.players,
+    players: (Array.isArray(raw.players) ? raw.players : defaults.players).map((player) => ({
+      ...player,
+      deletedAt: player.deletedAt ?? null,
+    })),
     playerAliases: Array.isArray(raw.playerAliases)
       ? raw.playerAliases
       : playerAliasesFromPlayers(Array.isArray(raw.players) ? raw.players : []),

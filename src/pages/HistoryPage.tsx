@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { getPlayerName } from '@/lib/entities'
+import { activeListedSessions } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -188,8 +189,6 @@ function HistoryMatchCard({
   onEdit,
   onCopy,
   onDelete,
-  onRestore,
-  onPermanentDelete,
 }: {
   match: Match
   players: Player[]
@@ -197,19 +196,12 @@ function HistoryMatchCard({
   onEdit: () => void
   onCopy: () => void
   onDelete: () => void
-  onRestore: () => void
-  onPermanentDelete: () => void
 }) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <article
-      className={[
-        'rounded-xl bg-surface-elevated ring-1 ring-surface-muted',
-        match.deletedAt ? 'opacity-60' : '',
-      ].join(' ')}
-    >
+    <article className="rounded-xl bg-surface-elevated ring-1 ring-surface-muted">
       <button
         type="button"
         className="block w-full px-3 py-2.5 text-left outline-none"
@@ -221,9 +213,6 @@ function HistoryMatchCard({
             <span className="text-xs tabular-nums text-text-secondary">
               {formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
             </span>
-            {match.deletedAt ? (
-              <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] text-red-100">已刪</span>
-            ) : null}
             <span className="text-xs text-brand-400">{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
@@ -240,38 +229,17 @@ function HistoryMatchCard({
           </p>
           {match.notes ? <p className="mt-1 text-xs text-text-secondary">備註：{match.notes}</p> : null}
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button
-              variant="secondary"
-              className="min-h-9 py-1.5 text-xs"
-              disabled={match.deletedAt !== null}
-              onClick={onEdit}
-            >
+            <Button variant="secondary" className="min-h-9 py-1.5 text-xs" onClick={onEdit}>
               {t('common.edit')}
             </Button>
-            <Button
-              variant="secondary"
-              className="min-h-9 py-1.5 text-xs"
-              disabled={match.deletedAt !== null}
-              onClick={onCopy}
-            >
+            <Button variant="secondary" className="min-h-9 py-1.5 text-xs" onClick={onCopy}>
               複製重開
             </Button>
           </div>
           <div className="mt-2">
-            {match.deletedAt ? (
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="ghost" className="min-h-9 py-1.5 text-xs" onClick={onRestore}>
-                  {t('common.restore')}
-                </Button>
-                <Button variant="danger" className="min-h-9 py-1.5 text-xs" onClick={onPermanentDelete}>
-                  {t('delete.permanent')}
-                </Button>
-              </div>
-            ) : (
-              <Button variant="danger" className="min-h-9 w-full py-1.5 text-xs" onClick={onDelete}>
-                {t('delete.soft')}
-              </Button>
-            )}
+            <Button variant="danger" className="min-h-9 w-full py-1.5 text-xs" onClick={onDelete}>
+              {t('common.delete')}
+            </Button>
           </div>
         </div>
       ) : null}
@@ -282,27 +250,29 @@ function HistoryMatchCard({
 export function HistoryPage() {
   const { t } = useI18n()
   const toast = useToast()
+  const sessions = useAppStore((state) => state.sessions)
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
   const createActiveMatch = useAppStore((state) => state.createActiveMatch)
   const updateMatch = useAppStore((state) => state.updateMatch)
-  const softDeleteMatch = useAppStore((state) => state.softDeleteMatch)
-  const restoreMatch = useAppStore((state) => state.restoreMatch)
-  const permanentlyDeleteMatch = useAppStore((state) => state.permanentlyDeleteMatch)
+  const deleteMatch = useAppStore((state) => state.deleteMatch)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [sessionFilter, setSessionFilter] = useState('')
   const [playerFilter, setPlayerFilter] = useState('')
   const [deckFilter, setDeckFilter] = useState('')
-  const [showDeleted, setShowDeleted] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
-  const [purgeTarget, setPurgeTarget] = useState<Match | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Match | null>(null)
+
+  const sessionOptions = useMemo(() => activeListedSessions(sessions), [sessions])
 
   const filteredMatches = useMemo(() => {
     return matches
       .filter((match) => {
-        if (!showDeleted && match.deletedAt !== null) return false
+        if (match.deletedAt !== null) return false
+        if (sessionFilter && match.sessionId !== sessionFilter) return false
         if (dateFilter === 'today' && !isToday(match.finishedAt)) return false
         if (dateFilter === 'week' && !isThisWeek(match.finishedAt)) return false
         if (playerFilter && !matchIncludesPlayer(match, playerFilter)) return false
@@ -312,7 +282,7 @@ export function HistoryPage() {
       .sort((left, right) => {
         return new Date(right.finishedAt).getTime() - new Date(left.finishedAt).getTime()
       })
-  }, [dateFilter, deckFilter, matches, playerFilter, showDeleted])
+  }, [dateFilter, deckFilter, matches, playerFilter, sessionFilter])
 
   const copyAsNewMatch = (match: Match) => {
     try {
@@ -339,19 +309,34 @@ export function HistoryPage() {
         <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-sm text-text-secondary">日期</span>
+            <span className="text-sm text-text-secondary">{t('history.dateFilter')}</span>
             <select
               className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
               value={dateFilter}
               onChange={(event) => setDateFilter(event.target.value as DateFilter)}
             >
-              <option value="all">全部</option>
-              <option value="today">今日</option>
-              <option value="week">最近 7 日</option>
+              <option value="all">{t('history.dateAll')}</option>
+              <option value="today">{t('history.dateToday')}</option>
+              <option value="week">{t('history.dateWeek')}</option>
             </select>
           </label>
           <label className="block">
-            <span className="text-sm text-text-secondary">玩家</span>
+            <span className="text-sm text-text-secondary">{t('history.sessionFilter')}</span>
+            <select
+              className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+              value={sessionFilter}
+              onChange={(event) => setSessionFilter(event.target.value)}
+            >
+              <option value="">{t('history.sessionAll')}</option>
+              {sessionOptions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block col-span-2 sm:col-span-1">
+            <span className="text-sm text-text-secondary">{t('history.playerFilter')}</span>
             <select
               className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
               value={playerFilter}
@@ -380,14 +365,6 @@ export function HistoryPage() {
               </Button>
             ) : null}
           </div>
-          <label className="flex items-end gap-2 pb-3 text-sm text-text-secondary">
-            <input
-              type="checkbox"
-              checked={showDeleted}
-              onChange={(event) => setShowDeleted(event.target.checked)}
-            />
-            顯示已刪除
-          </label>
         </div>
       </section>
 
@@ -419,15 +396,7 @@ export function HistoryPage() {
               decks={decks}
               onEdit={() => setEditingMatch(match)}
               onCopy={() => copyAsNewMatch(match)}
-              onDelete={() => {
-                softDeleteMatch(match.id)
-                toast.success('對局已刪除')
-              }}
-              onRestore={() => {
-                restoreMatch(match.id)
-                toast.success('對局已還原')
-              }}
-              onPermanentDelete={() => setPurgeTarget(match)}
+              onDelete={() => setDeleteTarget(match)}
             />
           ))
         ) : (
@@ -454,19 +423,20 @@ export function HistoryPage() {
       </BottomSheet>
 
       <PermanentDeletePrompt
-        open={purgeTarget !== null}
+        open={deleteTarget !== null}
         title={t('delete.matchTitle')}
         description={t('delete.matchDesc')}
-        detail={purgeTarget ? `#${purgeTarget.matchNumber}` : undefined}
-        onClose={() => setPurgeTarget(null)}
+        detail={deleteTarget ? `#${deleteTarget.matchNumber}` : undefined}
+        onClose={() => setDeleteTarget(null)}
         onBackup={() => {
-          setPurgeTarget(null)
+          setDeleteTarget(null)
           setActiveTab('settings')
         }}
         onConfirm={() => {
-          if (!purgeTarget) return
+          if (!deleteTarget) return
           try {
-            permanentlyDeleteMatch(purgeTarget.id)
+            deleteMatch(deleteTarget.id)
+            setDeleteTarget(null)
             toast.success(t('delete.matchDone'))
           } catch (caught) {
             toast.error(caught instanceof Error ? caught.message : t('delete.failed'))

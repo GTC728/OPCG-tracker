@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { ActiveMatchCard } from '@/components/record/ActiveMatchCard'
 import { AssignmentDock } from '@/components/record/AssignmentDock'
@@ -6,7 +6,9 @@ import { MatchForm } from '@/components/record/MatchForm'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { getDeck, getPlayerName } from '@/lib/entities'
+import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import {
@@ -19,6 +21,124 @@ import {
 } from '@/lib/tableMode'
 import { useAppStore } from '@/stores/appStore'
 import type { ActiveMatch, Deck, Match, Player } from '@/types'
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase().replace(/[-_\s.]/g, '')
+}
+
+function deckMatchesSearch(deck: Deck, query: string): boolean {
+  const normalizedQuery = normalizeSearch(query)
+  if (!normalizedQuery) return true
+  const candidates = [deck.displayName, deck.setCode, deck.leaderCode, deck.leaderName, ...deck.colors, ...deck.aliases]
+  return candidates.some((candidate) => normalizeSearch(candidate).includes(normalizedQuery))
+}
+
+function TableSlotAssignSheet({
+  open,
+  slot,
+  side,
+  players,
+  decks,
+  onClose,
+  onPickPlayer,
+  onPickDeck,
+}: {
+  open: boolean
+  slot: number
+  side: 'left' | 'right'
+  players: Player[]
+  decks: Deck[]
+  onClose: () => void
+  onPickPlayer: (playerId: string) => void
+  onPickDeck: (deckId: string) => void
+}) {
+  const { t } = useI18n()
+  const [deckQuery, setDeckQuery] = useState('')
+  const selectablePlayers = players.filter(isSelectablePlayer)
+  const activeDecks = decks.filter((deck) => !deck.archived)
+  const filteredDecks = useMemo(
+    () => activeDecks.filter((deck) => deckMatchesSearch(deck, deckQuery)).slice(0, 24),
+    [activeDecks, deckQuery],
+  )
+
+  return (
+    <BottomSheet
+      open={open}
+      title={`${t('table.label')} ${slot} · ${side === 'left' ? t('table.sideLeft') : t('table.sideRight')}`}
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-text-secondary">{t('table.pickPlayer')}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {selectablePlayers.map((player) => (
+              <button
+                key={player.id}
+                type="button"
+                className="rounded-lg border border-surface-muted bg-surface px-3 py-1.5 text-sm font-semibold"
+                onClick={() => {
+                  onPickPlayer(player.id)
+                  onClose()
+                }}
+              >
+                {player.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="block">
+            <span className="text-sm text-text-secondary">{t('table.pickDeck')}</span>
+            <input
+              className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+              value={deckQuery}
+              onChange={(event) => setDeckQuery(event.target.value)}
+              placeholder={t('table.deckSearch')}
+            />
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {filteredDecks.map((deck) => (
+              <button
+                key={deck.id}
+                type="button"
+                className="rounded-lg border border-surface-muted bg-surface px-2 py-1 text-xs"
+                onClick={() => {
+                  onPickDeck(deck.id)
+                  onClose()
+                }}
+              >
+                <DeckLabel deck={deck} showCode className="inline-flex" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </BottomSheet>
+  )
+}
+
+function CompactEmptyTableSlot({
+  slot,
+  onTap,
+}: {
+  slot: number
+  onTap: () => void
+}) {
+  const { t } = useI18n()
+
+  return (
+    <button
+      type="button"
+      className="flex h-10 w-full items-center justify-between rounded-xl bg-surface-elevated px-3 ring-1 ring-surface-muted outline-none"
+      onClick={onTap}
+    >
+      <span className="text-xs font-semibold text-brand-500">
+        {t('table.label')} {slot}
+      </span>
+      <span className="text-[10px] text-text-secondary">{t('table.tapToAssign')}</span>
+    </button>
+  )
+}
 
 function CompactSideDrop({
   label,
@@ -229,6 +349,7 @@ function TableSlotPanel({
   onClear,
   onComplete,
   onSetFirstPlayer,
+  compactEmpty,
 }: {
   slot: number
   match?: ActiveMatch
@@ -241,11 +362,16 @@ function TableSlotPanel({
   onClear: () => void
   onComplete: (winnerPlayerId: string) => void
   onSetFirstPlayer: (firstPlayerId: string | null) => void
+  compactEmpty?: boolean
 }) {
   const { t } = useI18n()
   const isComplete = Boolean(
     match?.player1Id && match?.player2Id && match?.deck1Id && match?.deck2Id,
   )
+
+  if (compactEmpty && !match) {
+    return <CompactEmptyTableSlot slot={slot} onTap={() => onTapSide('left')} />
+  }
 
   if (match && isComplete) {
     return (
@@ -319,6 +445,7 @@ export function TableBoard({
 }) {
   const { t } = useI18n()
   const toast = useToast()
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const appState = useAppStore()
   const activeMatches = useAppStore((state) => state.activeMatches)
   const assignTableSide = useAppStore((state) => state.assignTableSide)
@@ -326,6 +453,7 @@ export function TableBoard({
   const clearActiveMatch = useAppStore((state) => state.clearActiveMatch)
 
   const [pendingAssignment, setPendingAssignment] = useState<PendingTableAssignment | null>(null)
+  const [slotPicker, setSlotPicker] = useState<{ slot: number; side: 'left' | 'right' } | null>(null)
 
   const tableCount = getSessionTableCount(appState, sessionId)
   const sessionMatches = activeMatches.filter((match) => match.sessionId === sessionId)
@@ -349,12 +477,11 @@ export function TableBoard({
   }
 
   const handleTapSide = (tableSlot: number, side: 'left' | 'right') => {
-    if (!pendingAssignment) return
-    if (pendingAssignment.kind === 'player') {
+    if (pendingAssignment) {
       applyAssignment(tableSlot, side, pendingAssignment)
-    } else {
-      applyAssignment(tableSlot, side, pendingAssignment)
+      return
     }
+    setSlotPicker({ slot: tableSlot, side })
   }
 
   const changeTableCount = (delta: number) => {
@@ -401,6 +528,7 @@ export function TableBoard({
               }}
               onComplete={(winnerPlayerId) => match && onComplete(match.id, winnerPlayerId)}
               onSetFirstPlayer={(firstPlayerId) => match && onSetFirstPlayer(match.id, firstPlayerId)}
+              compactEmpty={isMobile}
             />
           )
         })}
@@ -431,7 +559,7 @@ export function TableBoard({
       ) : null}
       </div>
 
-      <div className="order-2 md:order-1">
+      <div className="order-2 hidden md:block md:order-1">
         <AssignmentDock
           sessionId={sessionId}
           players={players}
@@ -442,6 +570,23 @@ export function TableBoard({
           onClearAssignment={() => setPendingAssignment(null)}
         />
       </div>
+
+      <TableSlotAssignSheet
+        open={slotPicker !== null}
+        slot={slotPicker?.slot ?? 0}
+        side={slotPicker?.side ?? 'left'}
+        players={players}
+        decks={decks}
+        onClose={() => setSlotPicker(null)}
+        onPickPlayer={(playerId) => {
+          if (!slotPicker) return
+          applyAssignment(slotPicker.slot, slotPicker.side, { kind: 'player', playerId })
+        }}
+        onPickDeck={(deckId) => {
+          if (!slotPicker) return
+          applyAssignment(slotPicker.slot, slotPicker.side, { kind: 'deck', deckId })
+        }}
+      />
     </div>
   )
 }
