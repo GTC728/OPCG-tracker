@@ -26,12 +26,12 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               key={tab.id}
               type="button"
               className={[
-                'flex min-h-16 flex-col items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-colors',
+                'flex min-h-11 flex-col items-center justify-center gap-0.5 px-1 py-1 text-[10px] font-medium leading-none transition-colors',
                 active ? 'text-brand-500' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')}
               onClick={() => onChange(tab.id)}
             >
-              <span className="text-lg" aria-hidden>
+              <span className="text-base leading-none" aria-hidden>
                 {tab.icon}
               </span>
               <span>{t(tab.labelKey)}</span>
@@ -66,7 +66,7 @@ export function AppShell({
         {subtitle ? <p className="mt-1 text-sm text-text-secondary">{subtitle}</p> : null}
       </header>
 
-      <main className="flex-1 px-5 pb-28 pt-4">{children}</main>
+      <main className="app-main-bottom-pad flex-1 px-5 pt-4">{children}</main>
 
       <BottomNav activeTab={activeTab} onChange={onTabChange} />
     </div>

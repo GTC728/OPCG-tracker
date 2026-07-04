@@ -214,6 +214,42 @@ Improve high-friction daily-use flows without changing the underlying data model
 
 - Pending final lint/build/audit.
 
+## 2026-07-05 V3.8 Mobile Assignment Drawer And UI Standards
+
+### Goal
+
+Replace V3.7 tap-table BottomSheet assign flow with a fixed mobile assignment drawer; compact table rows; shared bottom-layout tokens; document UI preferences for future work.
+
+### Product / UX Decisions
+
+- Mobile assign uses **fixed drawer above bottom nav**, not inline dock and not per-table sheet.
+- **Bidirectional assign**: drawer → table or table cell → drawer; highlight active drawer zone (`player` vs `deck`).
+- Drawer compact rows: player label + chips same line; deck label + search same line; recent decks separate scroll row; 10px (`px-2.5` / `gap-2.5`) spacing.
+- Drawer shell **full width like bottom nav**, content `max-w-lg`, bottom offset includes safe-area; no left inset gap.
+- Bottom nav shortened to `min-h-11`.
+- Incomplete table: `[#][player][deck] vs [player][deck][×]`; × always visible; remove last empty slot or clear match.
+- Complete table: one row + ⋯ menu; win buttons always **W**.
+- `MAX_TABLE_COUNT` raised to 32.
+- Living UI prefs: `docs/UI-DESIGN.md`.
+
+### Changed Areas
+
+- `src/components/record/AssignmentDock.tsx`: drawer variant, compact stacked rows, zone highlight, layout constants import.
+- `src/components/record/TableBoard.tsx`: `AssignFieldCell` grid, `CompactCompleteTable`, `PendingTableTarget`, dismiss table logic, mobile drawer integration.
+- `src/components/layout/AppShell.tsx`: shorter bottom nav, `app-main-bottom-pad`.
+- `src/lib/layout.ts`: new — bottom nav height, drawer height, offset strings.
+- `src/lib/tableMode.ts`: `PendingTableTarget`, `MAX_TABLE_COUNT = 32`.
+- `src/index.css`: `--app-bottom-nav-height`, `.app-above-bottom-nav`, `.app-main-bottom-pad`, `.scrollbar-none`.
+- `src/components/ui/Toast.tsx`: uses `.app-above-bottom-nav`.
+- `src/components/settings/DataManagers.tsx`: filter deleted players from list.
+- `src/i18n/{zh,en,ja}.ts`: table remove/win/actions strings.
+- Removed: `src/components/record/TableAssignSheet.tsx` (if present in branch).
+
+### Verification
+
+- `npx tsc --noEmit`
+- Manual: mobile width ≤767px — drawer aligns with nav, no overlap, tap table cell highlights drawer section.
+
 ## 2026-07-03 V3.2 Mobile And Settings Refinement
 
 ### Goal

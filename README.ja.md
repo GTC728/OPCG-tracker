@@ -2,7 +2,7 @@
 
 **Live Demo:** [https://opcg-tracker-v2.pages.dev](https://opcg-tracker-v2.pages.dev)
 
-**V3.3**: セッション参加者選択、記録画面のコンパクト化、Deck combobox、試合後メモ、統計ミニランキング、Leader 多言語別名に対応。
+**V3.8**: モバイル固定割当ドック、双方向テーブル配置、コンパクト1行完了テーブル、UI 設計偏好ドキュメント（[`docs/UI-DESIGN.md`](docs/UI-DESIGN.md)）。
 
 言語:
 

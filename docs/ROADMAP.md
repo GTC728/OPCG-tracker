@@ -25,6 +25,9 @@
 | V3.4 | Table Mode | 完成 | Slot-based 多桌對局、拖曳分配、± 調整桌數 |
 | V3.4.1 | Record UX Patch | 完成 | 緊湊桌卡、AssignmentDock、移除新對局、最近組合→空桌 rematch |
 | V3.5 | Group Realtime Collab | 完成 | Plan B：Supabase 拆表、entity sync、Realtime、offline queue |
+| V3.6 | Mobile Record + Session Mgmt | 完成 | 手機桌在上、Session 管理、永久刪除、備份版本還原 |
+| V3.7 | Tombstone Sync + Archive | 完成 | 統一 tombstone 同步、Session 封存、History 篩選 |
+| V3.8 | Mobile Assignment Drawer | 完成 | 固定底部分配欄、雙向分配、緊湊桌列、UI 設計文件 |
 | V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
 | V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
 | V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |

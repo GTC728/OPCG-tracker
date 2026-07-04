@@ -2,7 +2,7 @@
 
 **Live Demo:** [https://opcg-tracker-v2.pages.dev](https://opcg-tracker-v2.pages.dev)
 
-**V3.3**: match-flow polish — session roster, compact Record layout, combobox deck picker, post-match notes, stats micro-leaderboards, and locale Leader aliases.
+**V3.8**: mobile assignment drawer above bottom nav, bidirectional table assign, compact single-row complete tables, UI design preferences doc ([`docs/UI-DESIGN.md`](docs/UI-DESIGN.md)).
 
 Language versions:
 
@@ -86,6 +86,7 @@ See [`docs/EVENTS-AND-LEAGUES.md`](docs/EVENTS-AND-LEAGUES.md) for the current d
 - Cloud sync setup: [`docs/CLOUD-SYNC.md`](docs/CLOUD-SYNC.md)
 - Excel format: [`docs/EXCEL-FORMAT.md`](docs/EXCEL-FORMAT.md)
 - Git workflow: [`docs/GIT-WORKFLOW.md`](docs/GIT-WORKFLOW.md)
+- UI design preferences: [`docs/UI-DESIGN.md`](docs/UI-DESIGN.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Project history: [`docs/PROJECT-HISTORY.md`](docs/PROJECT-HISTORY.md)

@@ -1,7 +1,7 @@
 import type { ActiveMatch, AppState } from '@/types'
 
 export const DEFAULT_TABLE_COUNT = 2
-export const MAX_TABLE_COUNT = 12
+export const MAX_TABLE_COUNT = 32
 
 export function getSessionTableCount(state: AppState, sessionId: string): number {
   const configured = state.settings.sessionTableCounts[sessionId]
@@ -58,3 +58,9 @@ export function findFirstEmptyTableSlot(state: AppState, sessionId: string): num
 export type PendingTableAssignment =
   | { kind: 'player'; playerId: string }
   | { kind: 'deck'; deckId: string }
+
+export type PendingTableTarget = {
+  slot: number
+  side: 'left' | 'right'
+  field: 'player' | 'deck'
+}

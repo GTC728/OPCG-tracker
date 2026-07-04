@@ -9,6 +9,34 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.8.0 - 2026-07-05
+
+### New
+
+- **Mobile assignment drawer**: fixed panel above bottom nav (keyboard-style), replacing per-table BottomSheet picker; stays visible while assigning across tables.
+- **Bidirectional table assign**: pick player/deck in drawer then tap table cell, or tap table cell first then pick in drawer; active field highlights matching drawer section (player row or deck row).
+- **Compact complete table row**: single line `# | side · deck | W vs W | side · deck | ⋯` with secondary actions in ⋯ menu (roll, first A/B, edit, clear).
+- **Layout tokens**: `src/lib/layout.ts` + CSS vars (`--app-bottom-nav-height`, `.app-above-bottom-nav`, `.app-main-bottom-pad`) for safe-area-aware bottom chrome.
+- **UI design doc**: [`docs/UI-DESIGN.md`](docs/UI-DESIGN.md) — living record of spacing, typography, drawer/table patterns (update when we agree new standards).
+- i18n: `table.removeTable`, `table.removeOnlyLast`, `table.winShort`, `table.moreActions`, `table.actionsTitle`.
+
+### Changed
+
+- **Assignment drawer layout (mobile)**: players label + chips on one row; deck label + search on one row; recent decks on separate horizontal scroll row; `px-2.5` / `gap-2.5` (10px) on those rows.
+- **Drawer width/position**: full-width shell aligned with bottom nav; inner `max-w-lg`; sits flush on top of nav (`BOTTOM_NAV_OFFSET`), no left-edge gap, no overlap with tab icons.
+- **Bottom nav**: shorter (`min-h-11`), smaller icons/labels (`text-base` / `text-[10px]`).
+- **Incomplete table row**: `[#][player][deck] vs [player][deck][×]` grid; table number as 16×16 badge; win buttons always **W** (all locales).
+- **× on incomplete tables**: always shown; clears partial match or removes last empty table slot.
+- **Max tables**: `MAX_TABLE_COUNT` 12 → 32.
+- **Settings player list**: hides tombstoned/deleted players from management UI (`isDeletedPlayer` filter).
+- Removed `TableAssignSheet` (tap-table BottomSheet flow superseded by drawer).
+
+### Fixed
+
+- Assignment drawer no longer eats bottom nav space or shows vertical scrollbar on typical content height.
+- Main content bottom padding and toast position follow shared bottom-nav offset (includes safe-area).
+- Drawer section highlight when tapping table assign cells (`pendingTableTarget`).
+
 ## V3.7.0 - 2026-07-05
 
 ### New

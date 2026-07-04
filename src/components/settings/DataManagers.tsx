@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
+import { isDeletedPlayer } from '@/lib/entityVisibility'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Player, PlayerInput } from '@/types'
 
@@ -426,10 +427,12 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const [purgePlayer, setPurgePlayer] = useState<Player | null>(null)
   const [purgeDeck, setPurgeDeck] = useState<Deck | null>(null)
 
-  const sortedPlayers = [...players].sort((left, right) => {
-    if (left.archived !== right.archived) return left.archived ? 1 : -1
-    return left.name.localeCompare(right.name, 'zh-Hant')
-  })
+  const sortedPlayers = [...players]
+    .filter((player) => !isDeletedPlayer(player))
+    .sort((left, right) => {
+      if (left.archived !== right.archived) return left.archived ? 1 : -1
+      return left.name.localeCompare(right.name, 'zh-Hant')
+    })
   const sortedDecks = [...decks].sort((left, right) => {
     if (left.archived !== right.archived) return left.archived ? 1 : -1
     return left.displayName.localeCompare(right.displayName, 'zh-Hant')

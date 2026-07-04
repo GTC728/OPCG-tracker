@@ -65,3 +65,8 @@ Schema V4 introduced:
 - `ImportRow`
 
 The legacy `decks` view is retained for compatibility while newer code can use `leaders + deckVariants`.
+
+## UI And Layout
+
+- Design preferences (spacing, mobile drawer, table rows, theme tokens): [`docs/UI-DESIGN.md`](UI-DESIGN.md)
+- Bottom nav / drawer offsets: `src/lib/layout.ts`, `src/index.css` (`--app-bottom-nav-height`)

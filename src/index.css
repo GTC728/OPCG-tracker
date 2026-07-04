@@ -71,3 +71,24 @@ textarea:focus-visible {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+:root {
+  --app-bottom-nav-height: 2.75rem;
+}
+
+.app-above-bottom-nav {
+  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+}
+
+.app-main-bottom-pad {
+  padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
