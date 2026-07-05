@@ -12,6 +12,7 @@ import {
   buildPlayerStats,
   buildRecentForm,
   formatPercent,
+  getCompletedMatches,
   sortStatsByUsage,
   sortStatsByWeightedWinRate,
   type FirstSecondStat,
@@ -22,7 +23,7 @@ import {
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
 
-type StatsSectionId = 'overview' | 'players' | 'decks' | 'matchups'
+type StatsSectionId = 'overview' | 'players' | 'decks'
 type ProfileTarget = { type: 'player' | 'deck'; id: string } | null
 
 function SummaryCard({
@@ -89,11 +90,10 @@ function SectionTabs({
     { id: 'overview', label: '總覽' },
     { id: 'players', label: '玩家' },
     { id: 'decks', label: '牌組' },
-    { id: 'matchups', label: '對位' },
   ]
 
   return (
-    <section className="grid grid-cols-4 gap-2 rounded-2xl bg-surface-elevated p-2">
+    <section className="grid grid-cols-3 gap-2 rounded-2xl bg-surface-elevated p-2">
       {sections.map((section) => (
         <button
           key={section.id}
@@ -293,22 +293,46 @@ function MatchupRow({
         : 'text-text-secondary'
 
   return (
-    <article className="rounded-2xl bg-surface-elevated p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <h3 className="font-semibold">
-            <DeckLabel deck={selfDeck} showCode className="inline-flex min-w-0" />
-          </h3>
-          <p className="text-sm text-text-secondary">
-            vs <DeckLabel deck={oppDeck} showCode className="inline-flex min-w-0" />
+    <article className="rounded-2xl bg-surface-elevated p-3">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          {anchorDeckId ? (
+            <p className="text-xs text-text-secondary">對手牌組</p>
+          ) : (
+            <p className="text-xs text-text-secondary">
+              <DeckLabel deck={selfDeck} showCode compact className="inline-flex" />
+            </p>
+          )}
+          <p className="mt-1 font-semibold leading-tight">
+            <DeckLabel deck={oppDeck} showCode compact className="inline-flex min-w-0" />
           </p>
         </div>
-        <span className={`text-right text-sm font-semibold ${rateClass}`}>
-          {selfWins}-{oppWins}
-          <span className="block">{formatPercent(displayWinRate)}</span>
-        </span>
+        <div className={`shrink-0 text-right ${rateClass}`}>
+          <p className="text-xl font-bold tabular-nums">
+            {selfWins}-{oppWins}
+          </p>
+          <p className="text-sm font-semibold">{formatPercent(displayWinRate)}</p>
+        </div>
       </div>
-      <p className="mt-2 text-xs text-text-secondary">{verdict} · {getSampleLabel(matchup.total)}</p>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+        <div
+          className={[
+            'h-full rounded-full transition-all',
+            displayWinRate === null
+              ? 'w-1/2 bg-text-secondary/40'
+              : displayWinRate >= 0.5
+                ? 'bg-success'
+                : 'bg-danger',
+          ].join(' ')}
+          style={{
+            width:
+              displayWinRate === null ? '50%' : `${Math.max(8, Math.min(92, displayWinRate * 100))}%`,
+          }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-text-secondary">
+        {verdict} · {getSampleLabel(matchup.total)}
+      </p>
     </article>
   )
 }
@@ -317,10 +341,14 @@ function MatchupHeatmap({
   matchups,
   decks,
   maxDecks = 14,
+  title = '對位表',
+  deckIds,
 }: {
   matchups: MatchupStat[]
   decks: Deck[]
   maxDecks?: number
+  title?: string
+  deckIds?: string[]
 }) {
   const deckTotals = new Map<string, { id: string; total: number }>()
   const matchupByPair = new Map(matchups.map((matchup) => [matchup.key, matchup]))
@@ -336,7 +364,13 @@ function MatchupHeatmap({
     })
   }
 
-  const topDecks = [...deckTotals.values()].sort((left, right) => right.total - left.total).slice(0, maxDecks)
+  const scopedDeckIds = deckIds?.length ? new Set(deckIds) : null
+  const rankedDecks = [...deckTotals.values()]
+    .filter((entry) => !scopedDeckIds || scopedDeckIds.has(entry.id))
+    .sort((left, right) => right.total - left.total)
+    .slice(0, maxDecks)
+  const columnWidth = '6.75rem'
+  const rowLabelWidth = '10.5rem'
 
   function getCell(rowId: string, columnId: string) {
     if (rowId === columnId) return null
@@ -353,23 +387,26 @@ function MatchupHeatmap({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">對位 Heatmap</h2>
-        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <span className="shrink-0 rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
           結論 / 場數
         </span>
       </div>
-      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-4">
-        {topDecks.length >= 2 ? (
-          <div className="min-w-max" style={{ minWidth: `${8 + topDecks.length * 4.5}rem` }}>
+      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-3">
+        {rankedDecks.length >= 2 ? (
+          <div
+            className="min-w-max"
+            style={{ minWidth: `calc(${rowLabelWidth} + ${rankedDecks.length} * ${columnWidth})` }}
+          >
             <div
               className="grid gap-1 text-xs"
               style={{
-                gridTemplateColumns: `9rem repeat(${topDecks.length}, minmax(4.5rem, 1fr))`,
+                gridTemplateColumns: `${rowLabelWidth} repeat(${rankedDecks.length}, ${columnWidth})`,
               }}
             >
               <div />
-              {topDecks.map((entry) => (
+              {rankedDecks.map((entry) => (
                 <div
                   key={entry.id}
                   className="px-1 pb-1 text-center text-text-secondary"
@@ -378,32 +415,34 @@ function MatchupHeatmap({
                   <DeckLabel
                     deck={decks.find((deck) => deck.id === entry.id)}
                     showCode
-                    className="inline-flex max-w-[4.25rem] justify-center text-[9px] leading-tight [word-break:break-word]"
+                    compact
+                    className="inline-flex justify-center whitespace-nowrap text-[10px] leading-none"
                   />
                 </div>
               ))}
-              {topDecks.map((rowEntry) => (
+              {rankedDecks.map((rowEntry) => (
                 <div key={rowEntry.id} className="contents">
-                  <div className="py-2 pr-2 font-semibold leading-tight">
+                  <div className="flex items-center py-1 pr-2 font-semibold leading-none">
                     <DeckLabel
                       deck={decks.find((deck) => deck.id === rowEntry.id)}
                       showCode
-                      className="inline-flex max-w-[8.5rem] text-[10px] leading-tight [word-break:break-word]"
+                      compact
+                      className="inline-flex min-w-0 whitespace-nowrap text-[10px] leading-none"
                     />
                   </div>
-                  {topDecks.map((columnEntry) => {
+                  {rankedDecks.map((columnEntry) => {
                     const cell = getCell(rowEntry.id, columnEntry.id)
                     const displayWinRate = cell ? getDisplayWinRate(cell.winRate, cell.total) : null
 
                     return (
                       <div
                         key={`${rowEntry.id}:${columnEntry.id}`}
-                        className="grid min-h-16 place-items-center rounded-xl px-0.5 text-center"
+                        className="grid min-h-11 place-items-center rounded-lg px-0.5 text-center"
                         style={{ backgroundColor: getWinRateColor(displayWinRate) }}
                         title={cell ? `${getSampleLabel(cell.total)} ${formatPercent(displayWinRate)}` : '未有對局'}
                       >
                         {cell ? (
-                          <span className="text-[11px] font-semibold">
+                          <span className="text-[10px] font-semibold leading-tight">
                             {displayWinRate === null ? '不足' : formatPercent(displayWinRate)}
                             <span className="block font-normal text-text-secondary">{cell.total}場</span>
                           </span>
@@ -416,12 +455,76 @@ function MatchupHeatmap({
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-text-secondary">少於 3 場標示資料不足；綠色優勢，紅色劣勢。</p>
+            <p className="mt-3 text-xs text-text-secondary">少於 3 場標示資料不足；綠色優勢，紅色劣勢。左右滑動可查看更多牌組。</p>
           </div>
         ) : (
           <p className="text-sm text-text-secondary">完成兩種以上牌組對局後會顯示對位矩陣。</p>
         )}
       </article>
+    </section>
+  )
+}
+
+function ProfileMatchupSection({
+  title,
+  matchups,
+  decks,
+  anchorDeckId,
+  deckIds,
+  playerDeckIds,
+}: {
+  title: string
+  matchups: MatchupStat[]
+  decks: Deck[]
+  anchorDeckId?: string
+  deckIds?: string[]
+  playerDeckIds?: Set<string>
+}) {
+  const sorted = [...matchups].sort((left, right) => right.total - left.total)
+
+  const resolveAnchor = (matchup: MatchupStat) => {
+    if (anchorDeckId) return anchorDeckId
+    if (playerDeckIds?.has(matchup.deckAId)) return matchup.deckAId
+    if (playerDeckIds?.has(matchup.deckBId)) return matchup.deckBId
+    return undefined
+  }
+
+  if (!sorted.length) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <EmptyState>暫時未有可分析對位。</EmptyState>
+      </section>
+    )
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          {sorted.length} 組
+        </span>
+      </div>
+      {sorted.length >= 2 ? (
+        <MatchupHeatmap
+          matchups={sorted}
+          decks={decks}
+          maxDecks={8}
+          title="對位表"
+          deckIds={deckIds}
+        />
+      ) : null}
+      <div className="space-y-2">
+        {sorted.map((matchup) => (
+          <MatchupRow
+            key={matchup.key}
+            matchup={matchup}
+            decks={decks}
+            anchorDeckId={resolveAnchor(matchup)}
+          />
+        ))}
+      </div>
     </section>
   )
 }
@@ -670,7 +773,7 @@ function PlayerProfileView({
   onOpenDeck: (deckId: string) => void
 }) {
   const { t } = useI18n()
-  const playerMatches = matches.filter(
+  const playerMatches = getCompletedMatches(matches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
   const stat = buildPlayerStats(players, matches).find((item) => item.id === player.id) ?? null
@@ -721,16 +824,13 @@ function PlayerProfileView({
         )}
       </section>
       <FirstSecondSection stats={buildFirstSecondStats(playerMatches)} />
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">相關對位</h2>
-        {relevantMatchups.length ? (
-          relevantMatchups.slice(0, 8).map((matchup) => (
-            <MatchupRow key={matchup.key} matchup={matchup} decks={decks} />
-          ))
-        ) : (
-          <EmptyState>此玩家暫時未有可分析對位。</EmptyState>
-        )}
-      </section>
+      <ProfileMatchupSection
+        title="對位分析"
+        matchups={relevantMatchups}
+        decks={decks}
+        deckIds={[...playerDeckIds]}
+        playerDeckIds={playerDeckIds}
+      />
     </div>
   )
 }
@@ -752,7 +852,9 @@ function DeckProfileView({
   onBack: () => void
   onOpenPlayer: (playerId: string) => void
 }) {
-  const deckMatches = matches.filter((match) => match.deck1Id === deck.id || match.deck2Id === deck.id)
+  const deckMatches = getCompletedMatches(matches).filter(
+    (match) => match.deck1Id === deck.id || match.deck2Id === deck.id,
+  )
   const stat = buildDeckStats(decks, matches, language).find((item) => item.id === deck.id) ?? null
   const pilotStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.deckId === deck.id,
@@ -787,16 +889,13 @@ function DeckProfileView({
           <EmptyState>此牌組暫時未有玩家使用數據。</EmptyState>
         )}
       </section>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">牌組對位</h2>
-        {relevantMatchups.length ? (
-          relevantMatchups.map((matchup) => (
-            <MatchupRow key={matchup.key} matchup={matchup} decks={decks} anchorDeckId={deck.id} />
-          ))
-        ) : (
-          <EmptyState>此牌組暫時未有 matchup 數據。</EmptyState>
-        )}
-      </section>
+      <ProfileMatchupSection
+        title="對位分析"
+        matchups={relevantMatchups}
+        decks={decks}
+        anchorDeckId={deck.id}
+        deckIds={[deck.id, ...relevantMatchups.map((matchup) => (matchup.deckAId === deck.id ? matchup.deckBId : matchup.deckAId))]}
+      />
     </div>
   )
 }
@@ -817,9 +916,7 @@ export function StatsPage() {
   const dashboard = buildDashboardStats(players, decks, scopedMatches, language)
   const playerStats = buildPlayerStats(players, scopedMatches)
   const deckStats = buildDeckStats(decks, scopedMatches, language)
-  const matchupStats = buildMatchupStats(decks, scopedMatches, language)
   const playerDeckStats = buildPlayerDeckStats(players, decks, scopedMatches, language)
-  const firstSecondStats = buildFirstSecondStats(scopedMatches)
   const selectedPlayer =
     profileTarget?.type === 'player'
       ? players.find((player) => player.id === profileTarget.id) ?? null
@@ -970,28 +1067,6 @@ export function StatsPage() {
             variant="deck"
             onSelect={(stat) => setProfileTarget({ type: 'deck', id: stat.id })}
           />
-        </>
-      ) : null}
-
-      {activeSection === 'matchups' ? (
-        <>
-          <MatchupHeatmap matchups={matchupStats} decks={decks} />
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">常見對位</h2>
-              <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-                {matchupStats.length} 組
-              </span>
-            </div>
-            {matchupStats.length ? (
-              matchupStats.slice(0, 16).map((matchup) => (
-                <MatchupRow key={matchup.key} matchup={matchup} decks={decks} />
-              ))
-            ) : (
-              <EmptyState>完成不同牌組之間的對局後會顯示 matchup。</EmptyState>
-            )}
-          </section>
-          <FirstSecondSection stats={firstSecondStats} />
         </>
       ) : null}
     </div>

@@ -822,11 +822,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const match = current.matches.find((item) => item.id === matchId)
     if (!match || match.deletedAt !== null) return
 
+    let tableSlot = findFirstEmptyTableSlot(current, match.sessionId)
+    if (!tableSlot) {
+      const count = getSessionTableCount(current, match.sessionId)
+      if (count < MAX_TABLE_COUNT) {
+        get().setSessionTableCount(match.sessionId, count + 1)
+        tableSlot = getSessionTableCount(getAppState(), match.sessionId)
+      }
+    }
+
     const activeMatch: ActiveMatch = {
       id: match.id,
       sessionId: match.sessionId,
       matchNumber: match.matchNumber,
-      tableSlot: null,
+      tableSlot: tableSlot ?? null,
       player1Id: match.player1Id,
       deck1Id: match.deck1Id,
       player2Id: match.player2Id,

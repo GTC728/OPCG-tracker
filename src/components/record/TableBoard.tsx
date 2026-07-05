@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
-import { ActiveMatchCard } from '@/components/record/ActiveMatchCard'
 import { AssignmentDock } from '@/components/record/AssignmentDock'
 import { MatchForm } from '@/components/record/MatchForm'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -55,15 +54,20 @@ function TableSideInline({
   return (
     <div
       className={[
-        'min-w-0 text-[10px] leading-snug [overflow-wrap:anywhere]',
-        align === 'end' ? 'text-right' : 'text-left',
+        'flex min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap text-[10px] leading-none',
+        align === 'end' ? 'justify-end' : 'justify-start',
       ].join(' ')}
     >
-      <span className="font-semibold text-text-primary">{name}</span>
+      <span className="shrink-0 font-semibold text-text-primary">{name}</span>
       {deck ? (
         <>
-          <span className="text-text-secondary"> · </span>
-          <DeckLabel deck={deck} showCode className="inline-flex max-w-full items-center gap-0.5 text-[10px] leading-snug text-text-secondary [overflow-wrap:anywhere]" />
+          <span className="shrink-0 text-text-secondary">·</span>
+          <DeckLabel
+            deck={deck}
+            showCode
+            compact
+            className="min-w-0 text-text-secondary"
+          />
         </>
       ) : null}
     </div>
@@ -176,7 +180,7 @@ function CompactCompleteTable({
     <>
       <article className="flex min-h-8 min-w-0 touch-manipulation items-center gap-1 rounded-xl bg-surface-elevated px-1.5 py-1 ring-1 ring-surface-muted">
         <TableNumberBadge slot={slot} />
-        <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <TableSideInline playerId={left.playerId} deckId={left.deckId} players={players} decks={decks} />
         </div>
         <div className="flex shrink-0 items-center gap-1 px-0.5">
@@ -184,7 +188,7 @@ function CompactCompleteTable({
           <span className="text-[8px] font-semibold uppercase text-text-secondary">vs</span>
           <WinButton onClick={() => onComplete(right.playerId)} />
         </div>
-        <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <TableSideInline
             playerId={right.playerId}
             deckId={right.deckId}
@@ -299,7 +303,7 @@ function AssignFieldCell({
           {isPlayer ? (
             <span className="font-semibold">{getPlayerName(players, playerId)}</span>
           ) : deck ? (
-            <DeckLabel deck={deck} showCode className="inline-flex max-w-full items-center gap-0.5 text-[10px] leading-snug text-text-secondary [overflow-wrap:anywhere]" />
+            <DeckLabel deck={deck} showCode compact className="inline-flex min-w-0 text-[10px] leading-none text-text-secondary" />
           ) : null}
         </div>
       ) : (
@@ -581,13 +585,14 @@ export function TableBoard({
           <section className="space-y-1.5">
             <h3 className="text-xs font-semibold text-text-secondary">{t('table.unassigned')}</h3>
             {overflowMatches.map((match) => (
-              <ActiveMatchCard
+              <CompactCompleteTable
                 key={match.id}
+                slot={match.matchNumber}
                 match={match}
                 players={players}
                 decks={decks}
                 matches={matches}
-                compact
+                onClear={() => clearActiveMatch(match.id)}
                 onComplete={(winnerPlayerId) => onComplete(match.id, winnerPlayerId)}
                 onSetFirstPlayer={(firstPlayerId) => onSetFirstPlayer(match.id, firstPlayerId)}
               />

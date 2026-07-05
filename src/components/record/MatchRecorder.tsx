@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { MatchListItem } from '@/components/match/MatchResultRow'
-import { MatchForm } from '@/components/record/MatchForm'
 import { TableBoard } from '@/components/record/TableBoard'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
@@ -182,8 +181,16 @@ export function MatchRecorder() {
   const undoCompletedMatch = useAppStore((state) => state.undoCompletedMatch)
   const setMatchNotes = useAppStore((state) => state.setMatchNotes)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
-  const [rematchInput, setRematchInput] = useState<ActiveMatchInput | null>(null)
   const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
+
+  const placeRematch = (input: ActiveMatchInput) => {
+    try {
+      createActiveMatchOnEmptyTable({ ...input, notes: null })
+      toast.success(t('rematch.placed'))
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : t('rematch.failed'))
+    }
+  }
 
   const rosterPlayers = useMemo(() => {
     if (!currentSessionId) return getListedPlayers(appState)
@@ -255,7 +262,7 @@ export function MatchRecorder() {
               decks={decks}
               sessionId={currentSessionId}
               onRematch={() =>
-                setRematchInput({
+                placeRematch({
                   player1Id: combo.player1Id,
                   deck1Id: combo.deck1Id,
                   player2Id: combo.player2Id,
@@ -268,26 +275,6 @@ export function MatchRecorder() {
           ))}
         </section>
       ) : null}
-
-      <BottomSheet open={rematchInput !== null} title={t('rematch.title')} onClose={() => setRematchInput(null)}>
-        <MatchForm
-          initial={rematchInput ?? undefined}
-          players={rosterPlayers}
-          decks={activeDecks}
-          matches={matches}
-          submitLabel={t('rematch.placeOnTable')}
-          onCancel={() => setRematchInput(null)}
-          onSave={(input) => {
-            try {
-              createActiveMatchOnEmptyTable({ ...input, notes: null })
-              setRematchInput(null)
-              toast.success(t('rematch.placed'))
-            } catch (caught) {
-              toast.error(caught instanceof Error ? caught.message : t('rematch.failed'))
-            }
-          }}
-        />
-      </BottomSheet>
 
       <PostMatchSheet
         key={pendingNotesMatch?.id}

@@ -97,6 +97,23 @@ export function getListedPlayers(
   return state.players.filter((player) => isListedPlayer(state, player, sessionId))
 }
 
+/** Shown in player merge pickers: active players with at least one visible match. */
+export function isMergeEligiblePlayer(
+  state: Pick<AppState, 'matches' | 'activeMatches'>,
+  player: Player,
+): boolean {
+  if (isDeletedPlayer(player)) return false
+  return hasVisibleMatchesForPlayer(state, player.id)
+}
+
+export function getMergeEligiblePlayers(
+  state: Pick<AppState, 'players' | 'matches' | 'activeMatches'>,
+): Player[] {
+  return state.players
+    .filter((player) => isMergeEligiblePlayer(state, player))
+    .sort((left, right) => left.name.localeCompare(right.name, 'zh-Hant'))
+}
+
 export function countListedPlayers(state: AppState): number {
   return getListedPlayers(state).length
 }

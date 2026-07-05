@@ -9,6 +9,32 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.10.3 - 2026-07-06
+
+### Changed
+
+- **Player merge UI**: vertical picker flow with bottom sheets, match counts on each name, and confirm dialog.
+
+### Fixed
+
+- **Player merge list**: excludes deleted players and players with no visible matches (no more duplicate ghost entries).
+- **Deck profile stats**: appearance count and first/second split exclude soft-deleted matches (aligned with win-rate cards).
+
+## V3.10.2 - 2026-07-06
+
+### Changed
+
+- **Stats**: removed standalone 對位 tab; matchup heatmap + cards live under player/deck profiles.
+- **Matchup UI**: wider heatmap columns, shorter rows, single-line deck labels; mobile-friendly matchup cards with win-rate bar.
+- **Rematch**: recent-match tap places directly on an empty table (no legacy form sheet).
+- **Deck label**: compact single-line layout on table rows.
+
+### Fixed
+
+- **Luffy & Ace / Ace & Newgate** Chinese locale names (no longer show English with `*`).
+- **Undo match (還原)**: restored active match goes back to an empty table slot instead of legacy unassigned card UI.
+- **Table deck display**: player + deck on one line with proper truncation.
+
 ## V3.10.1 - 2026-07-06
 
 ### New

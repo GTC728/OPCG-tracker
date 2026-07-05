@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
+import { FilterPickerRow, OptionPickerSheet, useFilterSheet } from '@/components/ui/FilterPicker'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
-import { isDeletedPlayer } from '@/lib/entityVisibility'
+import {
+  countVisibleMatchesForPlayer,
+  getMergeEligiblePlayers,
+  isDeletedPlayer,
+} from '@/lib/entityVisibility'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Player, PlayerInput } from '@/types'
 
@@ -224,72 +229,119 @@ function DeckAliasForm({
 }
 
 function PlayerMergeTool() {
+  const { t } = useI18n()
   const players = useAppStore((state) => state.players)
+  const matches = useAppStore((state) => state.matches)
+  const activeMatches = useAppStore((state) => state.activeMatches)
   const mergePlayers = useAppStore((state) => state.mergePlayers)
   const toast = useToast()
+  const sheet = useFilterSheet()
   const [sourceId, setSourceId] = useState('')
   const [targetId, setTargetId] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+
+  const matchState = useMemo(() => ({ matches, activeMatches }), [activeMatches, matches])
+  const eligiblePlayers = useMemo(
+    () => getMergeEligiblePlayers({ players, matches, activeMatches }),
+    [activeMatches, matches, players],
+  )
+
+  const playerOptions = useMemo(
+    () =>
+      eligiblePlayers.map((player) => {
+        const matchCount = countVisibleMatchesForPlayer(matchState, player.id)
+        return {
+          value: player.id,
+          label: `${player.name} · ${matchCount} 場`,
+        }
+      }),
+    [eligiblePlayers, matchState],
+  )
+
+  const sourcePlayer = eligiblePlayers.find((player) => player.id === sourceId)
+  const targetPlayer = eligiblePlayers.find((player) => player.id === targetId)
+
+  const handleMerge = () => {
+    if (!sourceId || !targetId || sourceId === targetId || !sourcePlayer || !targetPlayer) return
+    const confirmed = window.confirm(
+      `確定將「${sourcePlayer.name}」合併到「${targetPlayer.name}」？\n合併後對局紀錄會指向保留玩家，被合併的玩家會刪除。`,
+    )
+    if (!confirmed) return
+
+    try {
+      mergePlayers(sourceId, targetId)
+      toast.success('玩家已合併')
+      setSourceId('')
+      setTargetId('')
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : '合併失敗')
+    }
+  }
 
   return (
-    <section className="rounded-2xl bg-surface-elevated p-4">
-      <h2 className="text-lg font-semibold">玩家合併</h2>
-      <p className="mt-1 text-sm text-text-secondary">
-        修正重複玩家。合併後歷史對局會指向保留玩家。
-      </p>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <label>
-          <span className="text-sm text-text-secondary">要合併走</span>
-          <select
-            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-            value={sourceId}
-            onChange={(event) => setSourceId(event.target.value)}
-          >
-            <option value="">選玩家</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="text-sm text-text-secondary">保留為</span>
-          <select
-            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-            value={targetId}
-            onChange={(event) => setTargetId(event.target.value)}
-          >
-            <option value="">選玩家</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
-          </select>
-        </label>
+    <section className="rounded-2xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/15 text-lg text-brand-400">
+          ⇄
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold">{t('data.mergePlayers')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('data.mergePlayersDesc')}</p>
+        </div>
       </div>
-      <Button
-        className="mt-3"
-        fullWidth
-        disabled={!sourceId || !targetId || sourceId === targetId}
-        onClick={() => {
-          try {
-            mergePlayers(sourceId, targetId)
-            setMessage('玩家已合併')
-            toast.success('玩家已合併')
-            setSourceId('')
-            setTargetId('')
-          } catch (caught) {
-            const nextMessage = caught instanceof Error ? caught.message : '合併失敗'
-            setMessage(nextMessage)
-            toast.error(nextMessage)
-          }
-        }}
-      >
-        合併玩家
-      </Button>
-      {message ? <p className="mt-3 text-sm text-text-secondary">{message}</p> : null}
+
+      {eligiblePlayers.length < 2 ? (
+        <p className="mt-4 rounded-xl border border-dashed border-surface-muted px-3 py-4 text-center text-sm text-text-secondary">
+          需要至少兩位有對局紀錄的玩家才能合併。
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 space-y-2">
+            <FilterPickerRow
+              label={t('data.mergeSource')}
+              value={sourcePlayer ? sourcePlayer.name : ''}
+              placeholder={t('data.mergePick')}
+              onClick={() => sheet.open('source')}
+            />
+            <div className="flex justify-center py-0.5 text-xs text-text-secondary" aria-hidden>
+              ↓
+            </div>
+            <FilterPickerRow
+              label={t('data.mergeTarget')}
+              value={targetPlayer ? targetPlayer.name : ''}
+              placeholder={t('data.mergePick')}
+              onClick={() => sheet.open('target')}
+            />
+          </div>
+
+          <Button
+            className="mt-4"
+            fullWidth
+            disabled={!sourceId || !targetId || sourceId === targetId}
+            onClick={handleMerge}
+          >
+            {t('data.mergeAction')}
+          </Button>
+        </>
+      )}
+
+      <OptionPickerSheet
+        open={sheet.isOpen('source')}
+        title={t('data.mergeSource')}
+        options={playerOptions.filter((option) => option.value !== targetId)}
+        value={sourceId}
+        allLabel={t('data.mergePick')}
+        onChange={setSourceId}
+        onClose={sheet.close}
+      />
+      <OptionPickerSheet
+        open={sheet.isOpen('target')}
+        title={t('data.mergeTarget')}
+        options={playerOptions.filter((option) => option.value !== sourceId)}
+        value={targetId}
+        allLabel={t('data.mergePick')}
+        onChange={setTargetId}
+        onClose={sheet.close}
+      />
     </section>
   )
 }

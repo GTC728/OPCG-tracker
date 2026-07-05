@@ -7,7 +7,7 @@ export type LeaderLocaleEntry = {
 }
 
 export const LEADER_LOCALE_NAMES: Record<string, LeaderLocaleEntry> = {
-  "Ace & Newgate": { 'zh-Hant': "Ace & Newgate", 'zh-Hans': "Ace & Newgate", ja: "Ace & Newgate", manual: true },
+  "Ace & Newgate": { 'zh-Hant': "艾斯 & 白鬍子", 'zh-Hans': "艾斯 & 白胡子", ja: "エース & 白ひげ" },
   "Arlong": { 'zh-Hant': "阿龍", 'zh-Hans': "阿龙", ja: "アーロン" },
   "Belo Betty": { 'zh-Hant': "貝洛·蓓蒂", 'zh-Hans': "贝洛·蓓蒂", ja: "ベロ・ベティ", manual: true },
   "Boa Hancock": { 'zh-Hant': "女帝", 'zh-Hans': "女帝", ja: "ハンコック" },
@@ -49,7 +49,7 @@ export const LEADER_LOCALE_NAMES: Record<string, LeaderLocaleEntry> = {
   "Kyros": { 'zh-Hant': "居魯士", 'zh-Hans': "居鲁士", ja: "キュロス", manual: true },
   "Lim": { 'zh-Hant': "Lim", 'zh-Hans': "Lim", ja: "Lim", manual: true },
   "Lucy": { 'zh-Hant': "路西", 'zh-Hans': "路西", ja: "ルーシー", manual: true },
-  "Luffy & Ace": { 'zh-Hant': "Luffy & Ace", 'zh-Hans': "Luffy & Ace", ja: "Luffy & Ace", manual: true },
+  "Luffy & Ace": { 'zh-Hant': "魯夫 & 艾斯", 'zh-Hans': "路飞 & 艾斯", ja: "ルフィ & エース" },
   "Magellan": { 'zh-Hant': "麥哲倫", 'zh-Hans': "麦哲伦", ja: "マゼラン" },
   "Marco": { 'zh-Hant': "馬爾科", 'zh-Hans': "马尔科", ja: "マルコ" },
   "Marshall.D.Teach": { 'zh-Hant': "黑鬍子", 'zh-Hans': "黑胡子", ja: "テーチ" },
