@@ -214,6 +214,22 @@ Improve high-friction daily-use flows without changing the underlying data model
 
 - Pending final lint/build/audit.
 
+## 2026-07-05 V3.9 Bottom Chrome, Listed Players, History Filters
+
+### Goal
+
+Unified bottom chrome (drawer + nav in one shell); central player listing rules; history custom date range and app-styled pickers.
+
+### Changed Areas
+
+- `src/components/layout/BottomChrome.tsx`, `AppShell.tsx`, `AssignmentDock.tsx`
+- `src/components/ui/FilterPicker.tsx`, `HistoryPage.tsx`, `SettingsPage.tsx`
+- `src/lib/entityVisibility.ts`, `selectors.ts`, `stats.ts`, `MatchRecorder.tsx`
+
+### Verification
+
+- `npx tsc --noEmit`
+
 ## 2026-07-05 V3.8 Mobile Assignment Drawer And UI Standards
 
 ### Goal
