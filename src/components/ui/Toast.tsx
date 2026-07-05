@@ -57,7 +57,7 @@ export function Toast({
   }
 
   return (
-    <div className="app-above-bottom-nav fixed inset-x-0 z-40 flex justify-center px-4">
+    <div className="app-above-bottom-chrome fixed inset-x-0 z-40 flex justify-center px-4">
       <div className={['flex max-w-md items-center gap-3 rounded-2xl border px-4 py-3 shadow-xl', toneClasses[type]].join(' ')}>
         <p className="flex-1 text-sm">{message}</p>
         {actionLabel && onAction ? (

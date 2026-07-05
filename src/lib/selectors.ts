@@ -1,5 +1,9 @@
 import { buildLegacyDeckView } from '@/lib/dataModel'
-import { isSelectablePlayer } from '@/lib/entityVisibility'
+import {
+  getListedPlayers,
+  isSelectablePlayer,
+  isVisibleMatch,
+} from '@/lib/entityVisibility'
 import type { AppState, Deck, DeckVariant, Leader, Match, Player } from '@/types'
 
 export interface ResolvedDeckQuery {
@@ -56,24 +60,10 @@ export function getPlayerAliases(state: AppState, playerId: string): string[] {
 }
 
 export function getSessionRoster(state: AppState, sessionId: string): Player[] {
-  const sessionPlayerIds = new Set(
-    state.sessionPlayers
-      .filter((sessionPlayer) => sessionPlayer.sessionId === sessionId)
-      .map((sessionPlayer) => sessionPlayer.playerId),
-  )
-
-  if (sessionPlayerIds.size) {
-    return state.players.filter(
-      (player) => sessionPlayerIds.has(player.id) && isSelectablePlayer(player),
-    )
-  }
-
-  return state.players.filter(isSelectablePlayer)
+  return getListedPlayers(state, sessionId)
 }
 
-export function hasExplicitSessionRoster(state: AppState, sessionId: string): boolean {
-  return state.sessionPlayers.some((sessionPlayer) => sessionPlayer.sessionId === sessionId)
-}
+export { hasExplicitSessionRoster } from '@/lib/entityVisibility'
 
 function countPlayerMatches(
   state: AppState,
@@ -90,7 +80,7 @@ function countPlayerMatches(
   }
 
   for (const match of state.matches) {
-    if (match.deletedAt !== null) continue
+    if (!isVisibleMatch(match)) continue
     if (options?.sessionId && match.sessionId !== options.sessionId) continue
     const time = new Date(match.finishedAt).getTime()
     if (options?.sinceMs !== undefined && time < options.sinceMs) continue
@@ -102,7 +92,7 @@ function countPlayerMatches(
 
 export function getSortedPlayersForSession(state: AppState, sessionId: string): Player[] {
   const roster = getSessionRoster(state, sessionId)
-  const pool = roster.length ? roster : state.players.filter(isSelectablePlayer)
+  const pool = roster.length ? roster : getListedPlayers(state, sessionId)
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
 
   return [...pool].sort((left, right) => {
@@ -133,7 +123,9 @@ export function getDefaultRosterPlayerIds(state: AppState): string[] {
     return ranked.slice(0, 8).map((item) => item.id)
   }
 
-  return activePlayers.slice(0, 8).map((player) => player.id)
+  return getListedPlayers(state)
+    .slice(0, 8)
+    .map((player) => player.id)
 }
 
 export function getRecentDistinctDeckIdsForPlayer(

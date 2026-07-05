@@ -15,10 +15,8 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 ## Principles
 
 1. **Mobile-first, compact, scannable** — Record page is used standing at a table; minimize vertical scroll and tap targets should stay readable, not oversized.
-2. **Align fixed chrome** — Bottom assignment drawer and bottom nav must share the same width model and vertical stacking (drawer sits flush on top of nav, never overlapping tab icons).
-3. **Safe-area aware** — Use `env(safe-area-inset-bottom)` for anything fixed above the home indicator (nav, drawer, toasts).
-4. **Single source of truth for layout math** — Bottom nav height and offsets live in `src/lib/layout.ts` + CSS variables in `src/index.css`; do not hard-code mismatched `bottom-*` values in individual components.
-5. **Bidirectional assignment** — User may pick player/deck in the dock first, then tap a table cell; or tap a table cell first, then pick in the dock. Both flows must show clear highlight state.
+2. **Unified bottom chrome** — On mobile Record, assignment drawer and bottom nav live in one `BottomChromeShell` (drawer stacked directly above nav in DOM). Height is measured via `ResizeObserver` → `--bottom-chrome-height`. Do not use separate fixed `bottom-*` offsets for drawer vs nav.
+3. **Safe-area aware** — `safe-bottom` on the chrome shell only; main padding uses `--bottom-chrome-height`.
 
 ---
 
@@ -81,13 +79,12 @@ CSS variable: `--app-bottom-nav-height: 2.75rem`.
 
 ## Mobile Assignment Drawer (`AssignmentDock` variant=`drawer`)
 
-### Position & width
+### Position (unified bottom chrome)
 
-- Fixed above bottom nav: `bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom))`.
-- **Full-width background** (same as nav bar), content column `mx-auto max-w-lg`.
-- **No horizontal inset** (`px-5`) on the drawer shell — that caused left-edge “leak” / misalignment.
-- **No `safe-bottom` on the drawer wrapper** — safe area is already in the bottom offset.
-- Drawer must **not overlap** bottom nav icons.
+- Renders inside `BottomChromeShell` via `useBottomChromePanel` — **stacked directly above nav** in the same fixed container (not a second fixed layer).
+- Shell: `src/components/layout/BottomChrome.tsx`; nav in `AppShell.tsx`.
+- `--bottom-chrome-height` updated by `ResizeObserver` on the shell; main padding and toasts use this variable.
+- Full-width shell, inner `max-w-lg`, `safe-bottom` on shell only.
 
 ### Header
 
@@ -151,18 +148,31 @@ Single compact row: **`# | left name·deck | W vs W | right name·deck | ⋯`**
 ## Fixed Element Offsets (reference)
 
 ```css
---app-bottom-nav-height: 2.75rem;
-
-.app-above-bottom-nav {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
-}
+--bottom-chrome-height: measured by ResizeObserver on BottomChromeShell;
 
 .app-main-bottom-pad {
-  padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+  padding-bottom: calc(var(--bottom-chrome-height, 4.5rem) + 1rem);
+}
+
+.app-above-bottom-chrome {
+  bottom: calc(var(--bottom-chrome-height, 4.5rem) + 0.5rem);
 }
 ```
 
-TypeScript mirrors: `src/lib/layout.ts` (`BOTTOM_NAV_HEIGHT`, `BOTTOM_NAV_OFFSET`, drawer height constants).
+Legacy nav-only constants remain in `src/lib/layout.ts` for drawer body height caps.
+
+## Player listing (`entityVisibility.ts`)
+
+| Helper | Use |
+|--------|-----|
+| `isVisibleMatch` | Not tombstoned — counts toward stats, history, filters |
+| `isListedPlayer` | Shown in assignment, history player filter, settings player count |
+| `getListedPlayers` | Filter lists; roster mode vs session-activity mode |
+| `isSelectablePlayer` | Not deleted/archived — used when **building** roster in SessionRosterSheet |
+
+**Listed rules:** tombstoned players never listed. Explicit session roster → roster members only (0 visible matches OK for first game). No roster → need ≥1 visible match in session (global if no sessionId).
+
+TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, `ASSIGNMENT_DRAWER_EXPANDED`).
 
 ---
 
@@ -171,3 +181,4 @@ TypeScript mirrors: `src/lib/layout.ts` (`BOTTOM_NAV_HEIGHT`, `BOTTOM_NAV_OFFSET
 | Date | Notes |
 |------|--------|
 | 2026-07-05 | Initial preferences from V3.8 mobile assignment drawer + compact table board work |
+| 2026-07-05 | Unified BottomChrome; `isListedPlayer` rules; history custom date range + FilterPicker |

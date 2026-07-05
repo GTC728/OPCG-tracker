@@ -76,12 +76,12 @@ textarea:focus-visible {
   --app-bottom-nav-height: 2.75rem;
 }
 
-.app-above-bottom-nav {
-  bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+.app-main-bottom-pad {
+  padding-bottom: calc(var(--bottom-chrome-height, 4.5rem) + 1rem);
 }
 
-.app-main-bottom-pad {
-  padding-bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+.app-above-bottom-chrome {
+  bottom: calc(var(--bottom-chrome-height, 4.5rem) + 0.5rem);
 }
 
 .scrollbar-none {

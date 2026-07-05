@@ -9,6 +9,28 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.9.0 - 2026-07-05
+
+### New
+
+- **Unified bottom chrome** (`BottomChromeShell`): mobile assignment drawer and bottom nav share one fixed container; height measured via `ResizeObserver` → `--bottom-chrome-height`.
+- **Listed player rules** (`isListedPlayer`, `getListedPlayers`): central visibility for assignment, filters, and settings counts; visible match count excludes tombstoned matches.
+- **History filter UI** (`FilterPicker`): session/player pickers use app-styled rows + BottomSheet; date presets (全部/今日/近7日) plus **custom from–to range**.
+- i18n: `history.dateCustom`, `history.dateFrom`, `history.dateTo`, `history.playerAll`, `history.deckFilter*`.
+
+### Changed
+
+- Assignment drawer registers into bottom chrome via `useBottomChromePanel` (no separate fixed `bottom-*` layer).
+- Settings data overview counts listed players and visible (non-deleted) matches only.
+- Stats player leaderboard excludes tombstoned players.
+- Record assignment roster: explicit session roster, or players with ≥1 visible match in session when no roster.
+
+### Fixed
+
+- Bottom drawer no longer overlaps bottom nav on varying safe-area / device heights.
+- Test/orphan players with zero visible matches no longer appear in assignment or history player filter.
+- Settings match/player counts no longer include tombstoned records.
+
 ## V3.8.0 - 2026-07-05
 
 ### New

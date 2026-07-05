@@ -4,15 +4,30 @@ import { MatchResultRow } from '@/components/match/MatchResultRow'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
+import {
+  DateRangeFilter,
+  FilterPickerRow,
+  OptionPickerSheet,
+  useFilterSheet,
+} from '@/components/ui/FilterPicker'
 import { useToast } from '@/components/ui/Toast'
 import { getPlayerName } from '@/lib/entities'
-import { activeListedSessions } from '@/lib/entityVisibility'
+import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, MatchEditInput, Player } from '@/types'
 
-type DateFilter = 'all' | 'today' | 'week'
+type DatePreset = 'all' | 'today' | 'week' | 'custom'
+
+function startOfDayMs(isoDate: string): number {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day).getTime()
+}
+
+function endOfDayMs(isoDate: string): number {
+  return startOfDayMs(isoDate) + 24 * 60 * 60 * 1000 - 1
+}
 
 function isToday(iso: string): boolean {
   const date = new Date(iso)
@@ -31,6 +46,17 @@ function isThisWeek(iso: string): boolean {
   const diffMs = now.getTime() - date.getTime()
 
   return diffMs >= 0 && diffMs <= 7 * 24 * 60 * 60 * 1000
+}
+
+function matchInDatePreset(match: Match, preset: DatePreset, from: string, to: string): boolean {
+  const time = new Date(match.finishedAt).getTime()
+  if (preset === 'all') return true
+  if (preset === 'today') return isToday(match.finishedAt)
+  if (preset === 'week') return isThisWeek(match.finishedAt)
+  if (!from && !to) return true
+  if (from && time < startOfDayMs(from)) return false
+  if (to && time > endOfDayMs(to)) return false
+  return true
 }
 
 function matchIncludesPlayer(match: Match, playerId: string): boolean {
@@ -250,15 +276,19 @@ function HistoryMatchCard({
 export function HistoryPage() {
   const { t } = useI18n()
   const toast = useToast()
-  const sessions = useAppStore((state) => state.sessions)
-  const players = useAppStore((state) => state.players)
-  const decks = useAppStore((state) => state.decks)
-  const matches = useAppStore((state) => state.matches)
+  const appState = useAppStore()
+  const sessions = appState.sessions
+  const allPlayers = appState.players
+  const decks = appState.decks
+  const matches = appState.matches
   const createActiveMatch = useAppStore((state) => state.createActiveMatch)
   const updateMatch = useAppStore((state) => state.updateMatch)
   const deleteMatch = useAppStore((state) => state.deleteMatch)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const filterSheet = useFilterSheet()
+  const [datePreset, setDatePreset] = useState<DatePreset>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [sessionFilter, setSessionFilter] = useState('')
   const [playerFilter, setPlayerFilter] = useState('')
   const [deckFilter, setDeckFilter] = useState('')
@@ -267,14 +297,21 @@ export function HistoryPage() {
   const [deleteTarget, setDeleteTarget] = useState<Match | null>(null)
 
   const sessionOptions = useMemo(() => activeListedSessions(sessions), [sessions])
+  const listedPlayers = useMemo(() => getListedPlayers(appState), [appState])
+
+  const editPlayers = useMemo(() => {
+    if (!editingMatch) return listedPlayers
+    const ids = new Set([editingMatch.player1Id, editingMatch.player2Id])
+    const extras = allPlayers.filter((player) => ids.has(player.id) && !listedPlayers.some((item) => item.id === player.id))
+    return [...listedPlayers, ...extras]
+  }, [allPlayers, editingMatch, listedPlayers])
 
   const filteredMatches = useMemo(() => {
     return matches
       .filter((match) => {
         if (match.deletedAt !== null) return false
         if (sessionFilter && match.sessionId !== sessionFilter) return false
-        if (dateFilter === 'today' && !isToday(match.finishedAt)) return false
-        if (dateFilter === 'week' && !isThisWeek(match.finishedAt)) return false
+        if (!matchInDatePreset(match, datePreset, dateFrom, dateTo)) return false
         if (playerFilter && !matchIncludesPlayer(match, playerFilter)) return false
         if (deckFilter && !matchIncludesDeck(match, deckFilter)) return false
         return true
@@ -282,7 +319,18 @@ export function HistoryPage() {
       .sort((left, right) => {
         return new Date(right.finishedAt).getTime() - new Date(left.finishedAt).getTime()
       })
-  }, [dateFilter, deckFilter, matches, playerFilter, sessionFilter])
+  }, [dateFrom, datePreset, dateTo, deckFilter, matches, playerFilter, sessionFilter])
+
+  const sessionLabel =
+    sessionOptions.find((session) => session.id === sessionFilter)?.name ?? ''
+  const playerLabel = playerFilter ? getPlayerName(allPlayers, playerFilter) : ''
+
+  const datePresetOptions = [
+    { value: 'all' as const, label: t('history.dateAll') },
+    { value: 'today' as const, label: t('history.dateToday') },
+    { value: 'week' as const, label: t('history.dateWeek') },
+    { value: 'custom' as const, label: t('history.dateCustom') },
+  ]
 
   const copyAsNewMatch = (match: Match) => {
     try {
@@ -307,66 +355,67 @@ export function HistoryPage() {
     <div className="space-y-4">
       <section className="rounded-2xl bg-surface-elevated p-4">
         <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-sm text-text-secondary">{t('history.dateFilter')}</span>
-            <select
-              className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-              value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value as DateFilter)}
-            >
-              <option value="all">{t('history.dateAll')}</option>
-              <option value="today">{t('history.dateToday')}</option>
-              <option value="week">{t('history.dateWeek')}</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm text-text-secondary">{t('history.sessionFilter')}</span>
-            <select
-              className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-              value={sessionFilter}
-              onChange={(event) => setSessionFilter(event.target.value)}
-            >
-              <option value="">{t('history.sessionAll')}</option>
-              {sessionOptions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block col-span-2 sm:col-span-1">
-            <span className="text-sm text-text-secondary">{t('history.playerFilter')}</span>
-            <select
-              className="mt-2 min-h-12 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
-              value={playerFilter}
-              onChange={(event) => setPlayerFilter(event.target.value)}
-            >
-              <option value="">全部玩家</option>
-              {players.map((player) => (
-                <option key={player.id} value={player.id}>
-                  {player.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="col-span-2">
-            <DeckSearchField
-              label="牌組"
-              value={deckFilter}
-              decks={decks}
-              onChange={setDeckFilter}
-              placeholder="搜尋要篩選的牌組"
-              showResultsWhenEmpty={false}
+        <div className="mt-3 space-y-3">
+          <DateRangeFilter
+            presetLabel={t('history.dateFilter')}
+            presetOptions={datePresetOptions}
+            preset={datePreset}
+            onPresetChange={(value) => setDatePreset(value as DatePreset)}
+            fromLabel={t('history.dateFrom')}
+            toLabel={t('history.dateTo')}
+            from={dateFrom}
+            to={dateTo}
+            onFromChange={setDateFrom}
+            onToChange={setDateTo}
+          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <FilterPickerRow
+              label={t('history.sessionFilter')}
+              value={sessionLabel}
+              placeholder={t('history.sessionAll')}
+              onClick={() => filterSheet.open('session')}
             />
-            {deckFilter ? (
-              <Button className="mt-2 min-h-10 py-2 text-sm" variant="ghost" fullWidth onClick={() => setDeckFilter('')}>
-                清除牌組篩選
-              </Button>
-            ) : null}
+            <FilterPickerRow
+              label={t('history.playerFilter')}
+              value={playerLabel}
+              placeholder={t('history.playerAll')}
+              onClick={() => filterSheet.open('player')}
+            />
           </div>
+          <DeckSearchField
+            label={t('history.deckFilter')}
+            value={deckFilter}
+            decks={decks}
+            onChange={setDeckFilter}
+            placeholder={t('history.deckFilterPlaceholder')}
+            showResultsWhenEmpty={false}
+          />
+          {deckFilter ? (
+            <Button className="min-h-10 py-2 text-sm" variant="ghost" fullWidth onClick={() => setDeckFilter('')}>
+              {t('history.clearDeckFilter')}
+            </Button>
+          ) : null}
         </div>
       </section>
+
+      <OptionPickerSheet
+        open={filterSheet.isOpen('session')}
+        title={t('history.sessionFilter')}
+        allLabel={t('history.sessionAll')}
+        value={sessionFilter}
+        options={sessionOptions.map((session) => ({ value: session.id, label: session.name }))}
+        onChange={setSessionFilter}
+        onClose={filterSheet.close}
+      />
+      <OptionPickerSheet
+        open={filterSheet.isOpen('player')}
+        title={t('history.playerFilter')}
+        allLabel={t('history.playerAll')}
+        value={playerFilter}
+        options={listedPlayers.map((player) => ({ value: player.id, label: player.name }))}
+        onChange={setPlayerFilter}
+        onClose={filterSheet.close}
+      />
 
       {message ? (
         <section className="rounded-2xl bg-danger/10 p-4 text-sm text-red-100">
@@ -392,7 +441,7 @@ export function HistoryPage() {
             <HistoryMatchCard
               key={match.id}
               match={match}
-              players={players}
+              players={allPlayers}
               decks={decks}
               onEdit={() => setEditingMatch(match)}
               onCopy={() => copyAsNewMatch(match)}
@@ -410,7 +459,7 @@ export function HistoryPage() {
         {editingMatch ? (
           <EditMatchForm
             match={editingMatch}
-            players={players}
+            players={editPlayers}
             decks={decks}
             onCancel={() => setEditingMatch(null)}
             onSave={(input) => {

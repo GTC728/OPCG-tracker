@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { useI18n } from '@/lib/i18n'
 import type { TabId } from '@/types'
 
@@ -14,11 +15,11 @@ interface BottomNavProps {
   onChange: (tab: TabId) => void
 }
 
-export function BottomNav({ activeTab, onChange }: BottomNavProps) {
+function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const { t } = useI18n()
   return (
-    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-surface-muted bg-surface/95 backdrop-blur">
-      <div className="mx-auto grid max-w-lg grid-cols-4">
+    <nav className="border-t border-surface-muted/80">
+      <div className="grid grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
           return (
@@ -59,16 +60,16 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
-      <header className="sticky top-0 z-20 border-b border-surface-muted bg-surface/95 px-5 py-4 backdrop-blur">
-        <p className="text-xs uppercase tracking-[0.2em] text-brand-500">OPCG Tracker</p>
-        <h1 className="mt-1 text-2xl font-bold">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-text-secondary">{subtitle}</p> : null}
-      </header>
+    <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
+      <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
+        <header className="sticky top-0 z-20 border-b border-surface-muted bg-surface/95 px-5 py-4 backdrop-blur">
+          <p className="text-xs uppercase tracking-[0.2em] text-brand-500">OPCG Tracker</p>
+          <h1 className="mt-1 text-2xl font-bold">{title}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-text-secondary">{subtitle}</p> : null}
+        </header>
 
-      <main className="app-main-bottom-pad flex-1 px-5 pt-4">{children}</main>
-
-      <BottomNav activeTab={activeTab} onChange={onTabChange} />
-    </div>
+        <main className="app-main-bottom-pad flex-1 px-5 pt-4">{children}</main>
+      </div>
+    </BottomChromeShell>
   )
 }

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
-import { isSelectablePlayer } from '@/lib/entityVisibility'
+import { getListedPlayers, isSelectablePlayer } from '@/lib/entityVisibility'
 import {
   getSortedPlayersForSession,
 } from '@/lib/selectors'
@@ -186,9 +186,9 @@ export function MatchRecorder() {
   const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
 
   const rosterPlayers = useMemo(() => {
-    if (!currentSessionId) return players.filter(isSelectablePlayer)
+    if (!currentSessionId) return getListedPlayers(appState)
     return getSortedPlayersForSession(appState, currentSessionId)
-  }, [appState, currentSessionId, players])
+  }, [appState, currentSessionId])
 
   const activeDecks = decks.filter((deck) => !deck.archived)
   const recentCombos = useMemo(

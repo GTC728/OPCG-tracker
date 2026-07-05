@@ -1,3 +1,4 @@
+import { isDeletedPlayer } from '@/lib/entityVisibility'
 import type { Deck, Language, Match, Player } from '@/types'
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
 
@@ -89,6 +90,7 @@ export function buildPlayerStats(players: Player[], matches: Match[]): RecordSta
   const completed = getCompletedMatches(matches)
 
   return players
+    .filter((player) => !isDeletedPlayer(player))
     .map((player) => {
       let wins = 0
       let losses = 0

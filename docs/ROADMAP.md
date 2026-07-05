@@ -28,6 +28,7 @@
 | V3.6 | Mobile Record + Session Mgmt | 完成 | 手機桌在上、Session 管理、永久刪除、備份版本還原 |
 | V3.7 | Tombstone Sync + Archive | 完成 | 統一 tombstone 同步、Session 封存、History 篩選 |
 | V3.8 | Mobile Assignment Drawer | 完成 | 固定底部分配欄、雙向分配、緊湊桌列、UI 設計文件 |
+| V3.9 | Bottom Chrome + Listed Players | 完成 | 統一底欄、玩家可見性規則、歷史自訂日期篩選 |
 | V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
 | V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
 | V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |

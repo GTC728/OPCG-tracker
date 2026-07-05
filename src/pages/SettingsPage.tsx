@@ -5,6 +5,11 @@ import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
 import { SessionManager } from '@/components/session/SessionManager'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
+import {
+  countListedPlayers,
+  countVisibleActiveMatches,
+  countVisibleMatches,
+} from '@/lib/entityVisibility'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -51,14 +56,13 @@ function BackButton({ onClick, label }: { onClick: () => void; label: string }) 
 export function SettingsPage() {
   const { t, language, setLanguage } = useI18n()
   const [section, setSection] = useState<SettingsSection>('home')
-  const players = useAppStore((s) => s.players.length)
-  const decks = useAppStore((s) => s.decks.length)
-  const matches = useAppStore((s) => s.matches.length)
-  const sessions = useAppStore((s) => s.sessions)
-  const currentSessionId = useAppStore((s) => s.currentSessionId)
-  const activeMatches = useAppStore(
-    (s) => s.activeMatches.filter((match) => match.sessionId === s.currentSessionId).length,
-  )
+  const appState = useAppStore()
+  const playerCount = countListedPlayers(appState)
+  const deckCount = appState.decks.filter((deck) => !deck.archived).length
+  const matchCount = countVisibleMatches(appState)
+  const sessions = appState.sessions
+  const currentSessionId = appState.currentSessionId
+  const activeMatches = countVisibleActiveMatches(appState, currentSessionId ?? undefined)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
 
   return (
@@ -70,15 +74,15 @@ export function SettingsPage() {
             <dl className="mt-2 grid grid-cols-4 gap-2 text-center">
               <div>
                 <dt className="text-[10px] text-text-secondary">{t('settings.playersCount')}</dt>
-                <dd className="text-xl font-bold">{players}</dd>
+                <dd className="text-xl font-bold">{playerCount}</dd>
               </div>
               <div>
                 <dt className="text-[10px] text-text-secondary">{t('settings.decksCount')}</dt>
-                <dd className="text-xl font-bold">{decks}</dd>
+                <dd className="text-xl font-bold">{deckCount}</dd>
               </div>
               <div>
                 <dt className="text-[10px] text-text-secondary">{t('settings.matchesCount')}</dt>
-                <dd className="text-xl font-bold">{matches}</dd>
+                <dd className="text-xl font-bold">{matchCount}</dd>
               </div>
               <div>
                 <dt className="text-[10px] text-text-secondary">{t('settings.activeCount')}</dt>
@@ -97,7 +101,7 @@ export function SettingsPage() {
             <SettingsRow
               title={t('settings.players')}
               description={t('settings.playersDesc')}
-              meta={`${players}`}
+              meta={`${playerCount}`}
               onClick={() => setSection('players')}
             />
             <SettingsRow
@@ -114,7 +118,7 @@ export function SettingsPage() {
             <SettingsRow
               title={t('settings.leaders')}
               description={t('settings.leadersDesc')}
-              meta={`${decks}`}
+              meta={`${deckCount}`}
               onClick={() => setSection('leaders')}
             />
             <SettingsRow

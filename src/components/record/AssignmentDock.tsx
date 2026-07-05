@@ -1,11 +1,10 @@
 import {
   ASSIGNMENT_DRAWER_EXPANDED,
   ASSIGNMENT_DRAWER_HEADER,
-  ASSIGNMENT_DRAWER_HEIGHT,
-  BOTTOM_NAV_OFFSET,
 } from '@/lib/layout'
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { useBottomChromePanel } from '@/components/layout/BottomChrome'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
@@ -391,79 +390,71 @@ export function AssignmentDock({
       ? pendingLabel
       : `${selectablePlayers.length} ${t('assignment.playersShort')}`
 
-  if (variant === 'drawer') {
-    const drawerHeight = ASSIGNMENT_DRAWER_HEIGHT(expanded)
-
-    return (
-      <>
-        <div aria-hidden className="shrink-0" style={{ height: drawerHeight }} />
+  const drawerPanel =
+    variant === 'drawer' ? (
+      <div className="overflow-hidden border-t border-surface-muted bg-surface-elevated/98 shadow-[0_-4px_16px_rgba(0,0,0,0.25)] backdrop-blur">
         <div
-          className="pointer-events-none fixed inset-x-0 z-40 border-t border-surface-muted bg-surface-elevated/98 shadow-[0_-6px_20px_rgba(0,0,0,0.3)] backdrop-blur"
-          style={{ bottom: BOTTOM_NAV_OFFSET }}
+          className="flex items-center gap-1.5 border-b border-surface-muted/80 px-2.5"
+          style={{ height: ASSIGNMENT_DRAWER_HEADER }}
         >
-          <div
-            className="pointer-events-auto mx-auto w-full max-w-lg overflow-hidden"
-            style={{ maxHeight: drawerHeight }}
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none"
+            onClick={() => setExpanded(!expanded)}
           >
-            <div
-              className="flex items-center gap-1.5 border-b border-surface-muted/80 px-2.5"
-              style={{ height: ASSIGNMENT_DRAWER_HEADER }}
+            <span className="text-[11px] font-semibold">{t('assignment.title')}</span>
+            <span className="truncate text-[10px] text-text-secondary">{collapsedSummary}</span>
+          </button>
+          {pendingAssignment || pendingTableTarget ? (
+            <button
+              type="button"
+              className="shrink-0 text-[10px] text-brand-400 outline-none"
+              onClick={() => {
+                onClearAssignment()
+                onClearTableTarget?.()
+              }}
             >
-              <button
-                type="button"
-                className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none"
-                onClick={() => setExpanded(!expanded)}
-              >
-                <span className="text-[11px] font-semibold">{t('assignment.title')}</span>
-                <span className="truncate text-[10px] text-text-secondary">{collapsedSummary}</span>
-              </button>
-              {pendingAssignment || pendingTableTarget ? (
-                <button
-                  type="button"
-                  className="shrink-0 text-[10px] text-brand-400 outline-none"
-                  onClick={() => {
-                    onClearAssignment()
-                    onClearTableTarget?.()
-                  }}
-                >
-                  {t('assignment.tapCancel')}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="shrink-0 px-1.5 py-0.5 text-[10px] text-brand-400 outline-none"
-                onClick={() => setExpanded(!expanded)}
-                aria-expanded={expanded}
-              >
-                {expanded ? '▼' : '▲'}
-              </button>
-            </div>
-
-            {expanded ? (
-              <div
-                className="overflow-hidden py-1"
-                style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
-              >
-                <AssignmentPanelBody
-                  sessionId={sessionId}
-                  players={players}
-                  decks={decks}
-                  matches={matches}
-                  pendingAssignment={pendingAssignment}
-                  pendingTableTarget={pendingTableTarget}
-                  onSelectAssignment={onSelectAssignment}
-                  onClearAssignment={onClearAssignment}
-                  recentDeckLimit={recentDeckLimit}
-                  showMoreDecks={hasMoreRecentDecks}
-                  onShowMoreDecks={() => setRecentExpanded(true)}
-                  compact
-                />
-              </div>
-            ) : null}
-          </div>
+              {t('assignment.tapCancel')}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="shrink-0 px-1.5 py-0.5 text-[10px] text-brand-400 outline-none"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+          >
+            {expanded ? '▼' : '▲'}
+          </button>
         </div>
-      </>
-    )
+
+        {expanded ? (
+          <div
+            className="overflow-hidden py-1"
+            style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
+          >
+            <AssignmentPanelBody
+              sessionId={sessionId}
+              players={players}
+              decks={decks}
+              matches={matches}
+              pendingAssignment={pendingAssignment}
+              pendingTableTarget={pendingTableTarget}
+              onSelectAssignment={onSelectAssignment}
+              onClearAssignment={onClearAssignment}
+              recentDeckLimit={recentDeckLimit}
+              showMoreDecks={hasMoreRecentDecks}
+              onShowMoreDecks={() => setRecentExpanded(true)}
+              compact
+            />
+          </div>
+        ) : null}
+      </div>
+    ) : null
+
+  useBottomChromePanel(drawerPanel, variant === 'drawer')
+
+  if (variant === 'drawer') {
+    return null
   }
 
   if (!expanded) {
