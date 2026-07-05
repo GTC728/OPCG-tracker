@@ -1,0 +1,110 @@
+/** Generates src/data/leaderLocaleNames.ts from seed decks + known OPTCG locale names. */
+import { readFileSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const seedSource = readFileSync(join(root, 'src/data/leaderDecks.ts'), 'utf8')
+const names = [...new Set([...seedSource.matchAll(/"leaderName": "([^"]+)"/g)].map((m) => m[1]))].sort()
+
+/** Official or community-standard names; manual=true when not verified against card text. */
+const KNOWN = {
+  'Arlong': { 'zh-Hant': '阿龍', 'zh-Hans': '阿龙', ja: 'アーロン' },
+  'Belo Betty': { 'zh-Hant': '貝洛·蓓蒂', 'zh-Hans': '贝洛·蓓蒂', ja: 'ベロ・ベティ', manual: true },
+  'Boa Hancock': { 'zh-Hant': '女帝', 'zh-Hans': '女帝', ja: 'ハンコック' },
+  'Brook': { 'zh-Hant': '布魯克', 'zh-Hans': '布鲁克', ja: 'ブルック' },
+  'Buggy': { 'zh-Hant': '巴基', 'zh-Hans': '巴基', ja: 'バギー' },
+  'Caesar Clown': { 'zh-Hant': '凱撒', 'zh-Hans': '凯撒', ja: 'シーザー' },
+  'Carrot': { 'zh-Hant': '加洛特', 'zh-Hans': '加洛特', ja: 'キャロット' },
+  'Charlotte Katakuri': { 'zh-Hant': '卡塔庫栗', 'zh-Hans': '卡塔库栗', ja: 'カタクリ' },
+  'Charlotte Linlin': { 'zh-Hant': 'Big Mom', 'zh-Hans': 'Big Mom', ja: 'ビッグ・マム' },
+  'Charlotte Pudding': { 'zh-Hant': '布丁', 'zh-Hans': '布丁', ja: 'プリン' },
+  'Crocodile': { 'zh-Hant': '沙鱷魚', 'zh-Hans': '沙鳄鱼', ja: 'クロコダイル' },
+  'Donquixote Doflamingo': { 'zh-Hant': '多弗朗明哥', 'zh-Hans': '多弗朗明哥', ja: 'ドフラミンゴ' },
+  'Donquixote Rosinante': { 'zh-Hant': '柯拉松', 'zh-Hans': '柯拉松', ja: 'コラソン' },
+  'Dracule Mihawk': { 'zh-Hant': '鷹眼', 'zh-Hans': '鹰眼', ja: 'ミホーク' },
+  'Edward.Newgate': { 'zh-Hant': '白鬍子', 'zh-Hans': '白胡子', ja: '白ひげ' },
+  'Emporio.Ivankov': { 'zh-Hant': '伊娃科夫', 'zh-Hans': '伊娃科夫', ja: 'イワンコフ' },
+  'Enel': { 'zh-Hant': '艾尼路', 'zh-Hans': '艾尼路', ja: 'エネル' },
+  'Eustass"Captain"Kid': { 'zh-Hant': '基德', 'zh-Hans': '基德', ja: 'キッド' },
+  'Foxy': { 'zh-Hant': '福克西', 'zh-Hans': '福克西', ja: 'フォクシー', manual: true },
+  'Gecko Moria': { 'zh-Hant': '莫利亞', 'zh-Hans': '莫利亚', ja: 'ゲッコー･モリア' },
+  'Gol.D.Roger': { 'zh-Hant': '羅傑', 'zh-Hans': '罗杰', ja: 'ロジャー' },
+  'Hannyabal': { 'zh-Hant': '漢尼拔', 'zh-Hans': '汉尼拔', ja: 'ハンニャバル' },
+  'Hody Jones': { 'zh-Hant': '霍迪', 'zh-Hans': '霍迪', ja: 'ホーディ・ジョーンズ', manual: true },
+  'Iceburg': { 'zh-Hant': '艾斯冰山', 'zh-Hans': '艾斯冰山', ja: 'アイスバーグ', manual: true },
+  'Imu': { 'zh-Hant': '伊姆', 'zh-Hans': '伊姆', ja: 'イム', manual: true },
+  'Issho': { 'zh-Hant': '藤虎', 'zh-Hans': '藤虎', ja: 'イッショウ' },
+  'Jinbe': { 'zh-Hant': '甚平', 'zh-Hans': '甚平', ja: 'ジンベエ' },
+  'Jewelry Bonney': { 'zh-Hant': '波妮', 'zh-Hans': '波妮', ja: 'ジュエリー・ボニー' },
+  'Kaido': { 'zh-Hant': '凱多', 'zh-Hans': '凯多', ja: 'カイドウ' },
+  'Kalgara': { 'zh-Hant': '加雅', 'zh-Hans': '加雅', ja: 'カルガラ', manual: true },
+  'King': { 'zh-Hant': '烬', 'zh-Hans': '烬', ja: 'キング' },
+  'Kin\'emon': { 'zh-Hant': '錦衛門', 'zh-Hans': '锦卫门', ja: '錦えもん' },
+  'Koby': { 'zh-Hant': '克比', 'zh-Hans': '克比', ja: 'コビー' },
+  'Koala': { 'zh-Hant': '可拉', 'zh-Hans': '可拉', ja: 'コアラ', manual: true },
+  'Kouzuki Oden': { 'zh-Hant': '御田', 'zh-Hans': '御田', ja: 'おでん' },
+  'Krieg': { 'zh-Hant': '克里克', 'zh-Hans': '克里克', ja: 'クリーク', manual: true },
+  'Kuro': { 'zh-Hant': '克洛', 'zh-Hans': '克洛', ja: 'クロ' },
+  'Kuzan': { 'zh-Hant': '青雉', 'zh-Hans': '青雉', ja: 'クザン' },
+  'Kyros': { 'zh-Hant': '居魯士', 'zh-Hans': '居鲁士', ja: 'キュロス', manual: true },
+  'Lim': { 'zh-Hant': 'Lim', 'zh-Hans': 'Lim', ja: 'Lim', manual: true },
+  'Lucy': { 'zh-Hant': '路西', 'zh-Hans': '路西', ja: 'ルーシー', manual: true },
+  'Magellan': { 'zh-Hant': '麥哲倫', 'zh-Hans': '麦哲伦', ja: 'マゼラン' },
+  'Marco': { 'zh-Hant': '馬爾科', 'zh-Hans': '马尔科', ja: 'マルコ' },
+  'Marshall.D.Teach': { 'zh-Hant': '黑鬍子', 'zh-Hans': '黑胡子', ja: 'テーチ' },
+  'Monkey.D.Dragon': { 'zh-Hant': '龍', 'zh-Hans': '龙', ja: 'ドラゴン', manual: true },
+  'Monkey.D.Garp': { 'zh-Hant': '卡普', 'zh-Hans': '卡普', ja: 'ガープ' },
+  'Monkey.D.Luffy': { 'zh-Hant': '魯夫', 'zh-Hans': '路飞', ja: 'ルフィ' },
+  'Nami': { 'zh-Hant': '娜美', 'zh-Hans': '娜美', ja: 'ナミ' },
+  'Nefeltari Vivi': { 'zh-Hant': '薇薇', 'zh-Hans': '薇薇', ja: 'ビビ' },
+  'Nico Robin': { 'zh-Hant': '羅賓', 'zh-Hans': '罗宾', ja: 'ロビン' },
+  'Perona': { 'zh-Hant': '佩羅娜', 'zh-Hans': '佩罗娜', ja: 'ペローナ' },
+  'Portgas.D.Ace': { 'zh-Hant': '艾斯', 'zh-Hans': '艾斯', ja: 'エース' },
+  'Queen': { 'zh-Hant': '奎因', 'zh-Hans': '奎因', ja: 'クイーン' },
+  'Rebecca': { 'zh-Hant': '蕾貝卡', 'zh-Hans': '蕾贝卡', ja: 'レベッカ' },
+  'Rob Lucci': { 'zh-Hant': '路奇', 'zh-Hans': '路奇', ja: 'ルッチ' },
+  'Roronoa Zoro': { 'zh-Hant': '索隆', 'zh-Hans': '索隆', ja: 'ゾロ' },
+  'Sabo': { 'zh-Hant': '薩博', 'zh-Hans': '萨博', ja: 'サボ' },
+  'Sakazuki': { 'zh-Hant': '赤犬', 'zh-Hans': '赤犬', ja: 'サカズキ' },
+  'Sanji': { 'zh-Hant': '山治', 'zh-Hans': '山治', ja: 'サンジ' },
+  'Shanks': { 'zh-Hant': '香克斯', 'zh-Hans': '香克斯', ja: 'シャンクス' },
+  'Shirahoshi': { 'zh-Hant': '白星', 'zh-Hans': '白星', ja: 'しらほし' },
+  'Silvers Rayleigh': { 'zh-Hant': '雷利', 'zh-Hans': '雷利', ja: 'シルバーズ・レイリー', manual: true },
+  'Smoker': { 'zh-Hant': '斯摩格', 'zh-Hans': '斯摩格', ja: 'スモーカー' },
+  'Sugar': { 'zh-Hant': '砂糖', 'zh-Hans': '砂糖', ja: 'シュガー' },
+  'Tony Tony.Chopper': { 'zh-Hant': '喬巴', 'zh-Hans': '乔巴', ja: 'チョッパー' },
+  'Trafalgar Law': { 'zh-Hant': '羅', 'zh-Hans': '罗', ja: 'ロー' },
+  'Usopp': { 'zh-Hant': '騙人布', 'zh-Hans': '乌索普', ja: 'ウソップ' },
+  'Uta': { 'zh-Hant': '烏塔', 'zh-Hans': '乌塔', ja: 'ウタ' },
+  'Vegapunk': { 'zh-Hant': '貝加龐克', 'zh-Hans': '贝加庞克', ja: 'ベガパンク', manual: true },
+  'Vinsmoke Reiju': { 'zh-Hant': '麗久', 'zh-Hans': '丽久', ja: 'レイジュ' },
+  'Yamato': { 'zh-Hant': '大和', 'zh-Hans': '大和', ja: 'ヤマト' },
+  'Zephyr': { 'zh-Hant': '澤法', 'zh-Hans': '泽法', ja: 'ゼファー', manual: true },
+}
+
+function fallback(name) {
+  return { 'zh-Hant': name, 'zh-Hans': name, ja: name, manual: true }
+}
+
+const lines = names.map((name) => {
+  const entry = KNOWN[name] ?? fallback(name)
+  const manual = entry.manual ? ', manual: true' : ''
+  return `  ${JSON.stringify(name)}: { 'zh-Hant': ${JSON.stringify(entry['zh-Hant'])}, 'zh-Hans': ${JSON.stringify(entry['zh-Hans'])}, ja: ${JSON.stringify(entry.ja)}${manual} },`
+})
+
+const output = `/** Auto-generated by scripts/generate-leader-locales.mjs — do not edit by hand. */
+export type LeaderLocaleEntry = {
+  'zh-Hant': string
+  'zh-Hans': string
+  ja: string
+  manual?: boolean
+}
+
+export const LEADER_LOCALE_NAMES: Record<string, LeaderLocaleEntry> = {
+${lines.join('\n')}
+}
+`
+
+writeFileSync(join(root, 'src/data/leaderLocaleNames.ts'), output, 'utf8')
+console.log(`Wrote ${names.length} leader locale entries`)

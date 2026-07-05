@@ -1,20 +1,28 @@
 import { en } from '@/i18n/en'
 import { ja } from '@/i18n/ja'
-import { zh } from '@/i18n/zh'
+import { zhHans } from '@/i18n/zh-Hans'
+import { zhHant } from '@/i18n/zh-Hant'
 import { useAppStore } from '@/stores/appStore'
 import type { Language } from '@/types'
 
-const dictionaries = { zh, en, ja }
-type TranslationKey = keyof typeof zh
+const dictionaries = {
+  'zh-Hant': zhHant,
+  'zh-Hans': zhHans,
+  en,
+  ja,
+}
+
+type TranslationKey = keyof typeof zhHant
 
 export const languageLabels: Array<{ value: Language; label: string }> = [
-  { value: 'zh', label: '中文' },
+  { value: 'zh-Hant', label: '繁體中文' },
+  { value: 'zh-Hans', label: '简体中文' },
   { value: 'en', label: 'English' },
   { value: 'ja', label: '日本語' },
 ]
 
 export function translate(language: Language, key: TranslationKey): string {
-  return dictionaries[language][key] ?? zh[key] ?? key
+  return dictionaries[language][key] ?? zhHant[key] ?? key
 }
 
 export function useI18n() {

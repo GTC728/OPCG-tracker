@@ -447,6 +447,43 @@ export function buildInsightMessages(
   return insights.slice(0, 4)
 }
 
+export function buildHeadToHeadStats(
+  playerId: string,
+  players: Player[],
+  matches: Match[],
+): Array<RecordStat & { opponentId: string }> {
+  const playerNameById = new Map(players.map((player) => [player.id, player.name]))
+  const stats = new Map<string, { wins: number; losses: number; total: number }>()
+
+  for (const match of getCompletedMatches(matches)) {
+    if (match.player1Id !== playerId && match.player2Id !== playerId) continue
+    const opponentId = match.player1Id === playerId ? match.player2Id : match.player1Id
+    const current = stats.get(opponentId) ?? { wins: 0, losses: 0, total: 0 }
+    if (match.winnerPlayerId === playerId) {
+      current.wins += 1
+    } else {
+      current.losses += 1
+    }
+    current.total = current.wins + current.losses
+    stats.set(opponentId, current)
+  }
+
+  return [...stats.entries()]
+    .map(([opponentId, value]) => ({
+      id: opponentId,
+      opponentId,
+      name: playerNameById.get(opponentId) ?? '未知玩家',
+      wins: value.wins,
+      losses: value.losses,
+      total: value.total,
+      winRate: getWinRate(value.wins, value.total),
+    }))
+    .sort((left, right) => {
+      if (right.total !== left.total) return right.total - left.total
+      return (right.winRate ?? 0) - (left.winRate ?? 0)
+    })
+}
+
 export function buildRecentForm(matches: Match[], playerId?: string): RecentFormStat[] {
   const windows = [5, 10, 20]
   const relevantMatches = getCompletedMatches(matches)

@@ -7,6 +7,7 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 - Theme tokens: `src/index.css` (`@theme`)
 - Layout constants: `src/lib/layout.ts`
 - App shell / bottom nav: `src/components/layout/AppShell.tsx`
+- Sync status banner: `src/components/layout/SyncStatusBanner.tsx`
 - Mobile assignment drawer: `src/components/record/AssignmentDock.tsx`
 - Table rows: `src/components/record/TableBoard.tsx`
 
@@ -41,14 +42,23 @@ Dark theme only for now. Avoid introducing light-mode-specific colors until we e
 
 | Element | Size | Notes |
 |---------|------|--------|
-| Table player/deck inline | `text-[10px]` | Single-line truncate where possible |
+| Table player/deck inline | `text-[10px]` | Prefer `[overflow-wrap:anywhere]` over hard truncate for deck names |
 | Table slot placeholders | `text-[9px]` | 「玩家」「牌組」 |
 | Table number badge | `text-[9px]` in 16×16 badge | Not full 「桌 X」 label |
 | VS separator | `text-[8px]` uppercase | Between sides |
 | Assignment drawer title | `text-[11px]` font-semibold | Header bar |
 | Assignment section labels | `text-[9px]` uppercase | 「玩家」「牌組」 |
 | Assignment chips | `text-[10px]` | Horizontal scroll rows |
-| Bottom nav labels | `text-[10px]` | Under icon |
+| Bottom nav labels | `text-[9px]` | Under SVG icon (V3.10+) |
+
+---
+
+## Sync Status Banner (V3.10+)
+
+- Shown below sticky header when user is in a group (`lastGroupCode`).
+- **Offline:** `bg-warning/10`, neutral copy — local changes still saved.
+- **Pending sync:** `bg-brand-500/10`, shows queue count from IndexedDB outbox.
+- Do not use red for offline (environmental state, not error).
 
 ---
 
@@ -68,12 +78,13 @@ When the user says **「px10」** in chat, use Tailwind **`px-2.5`** / **`gap-2.
 
 ## Bottom Navigation
 
-- Height: **`min-h-11`** (2.75rem / 44px) per tab button — not `min-h-16`.
-- Icons: **`text-base`**; labels: **`text-[10px]`**, `gap-0.5`.
+- Height: **`min-h-9`** per tab button (V3.10; was `min-h-11`).
+- Icons: inline **SVG** 16×16 (`h-4 w-4`); no emoji.
+- Labels: **`text-[9px]`**, `gap-0.5`.
 - Outer shell: full viewport width, `border-t`, `safe-bottom` padding for home indicator.
 - Inner grid: `mx-auto max-w-lg grid-cols-4` (same width constraint as main column).
 
-CSS variable: `--app-bottom-nav-height: 2.75rem`.
+CSS variable: `--app-bottom-nav-height` — measured via `BottomChromeShell` `ResizeObserver` (prefer over fixed rem).
 
 ---
 

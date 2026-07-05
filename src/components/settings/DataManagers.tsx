@@ -302,63 +302,33 @@ function EmptyState({ children }: { children: string }) {
   )
 }
 
-function ArchiveBadge({ archived }: { archived: boolean }) {
-  if (!archived) return null
-
-  return (
-    <span className="rounded-full bg-warning/15 px-2 py-1 text-xs font-medium text-yellow-200">
-      已封存
-    </span>
-  )
-}
-
 function PlayerCard({
   player,
   onEdit,
-  onArchiveChange,
   onDelete,
 }: {
   player: Player
   onEdit: () => void
-  onArchiveChange: (archived: boolean) => void
   onDelete: () => void
 }) {
   return (
     <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{player.name}</h3>
-            <ArchiveBadge archived={player.archived} />
-            {player.deletedAt ? (
-              <span className="rounded-full bg-danger/15 px-2 py-1 text-xs font-medium text-red-200">
-                已刪除
-              </span>
-            ) : null}
-          </div>
+          <h3 className="font-semibold">{player.name}</h3>
           <p className="mt-1 text-sm text-text-secondary">
             {player.aliases.length ? `別名：${formatList(player.aliases)}` : '未設定別名'}
           </p>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEdit} disabled={Boolean(player.deletedAt)}>
+        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEdit}>
           編輯
         </Button>
-        <Button
-          variant={player.archived ? 'ghost' : 'danger'}
-          className="min-h-10 py-2 text-sm"
-          disabled={Boolean(player.deletedAt)}
-          onClick={() => onArchiveChange(!player.archived)}
-        >
-          {player.archived ? '還原' : '封存'}
+        <Button variant="danger" className="min-h-10 py-2 text-sm" onClick={onDelete}>
+          刪除
         </Button>
       </div>
-      {!player.deletedAt ? (
-        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onDelete}>
-          刪除玩家
-        </Button>
-      ) : null}
     </article>
   )
 }
@@ -366,24 +336,19 @@ function PlayerCard({
 function DeckCard({
   deck,
   onEditAliases,
-  onArchiveChange,
-  onPermanentDelete,
+  onDelete,
 }: {
   deck: Deck
   onEditAliases: () => void
-  onArchiveChange: (archived: boolean) => void
-  onPermanentDelete: () => void
+  onDelete: () => void
 }) {
   return (
     <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">
-              <DeckLabel deck={deck} />
-            </h3>
-            <ArchiveBadge archived={deck.archived} />
-          </div>
+          <h3 className="font-semibold">
+            <DeckLabel deck={deck} />
+          </h3>
           <p className="mt-2 text-sm text-text-secondary">
             {deck.aliases.length ? `別名：${formatList(deck.aliases)}` : '未設定別名'}
           </p>
@@ -393,19 +358,10 @@ function DeckCard({
         <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEditAliases}>
           編輯別名
         </Button>
-        <Button
-          variant={deck.archived ? 'ghost' : 'danger'}
-          className="min-h-10 py-2 text-sm"
-          onClick={() => onArchiveChange(!deck.archived)}
-        >
-          {deck.archived ? '還原' : '封存'}
+        <Button variant="danger" className="min-h-10 py-2 text-sm" onClick={onDelete}>
+          刪除
         </Button>
       </div>
-      {deck.archived ? (
-        <Button variant="danger" className="mt-2 min-h-10 w-full py-2 text-sm" onClick={onPermanentDelete}>
-          永久刪除
-        </Button>
-      ) : null}
     </article>
   )
 }
@@ -417,10 +373,8 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const decks = useAppStore((state) => state.decks)
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
-  const setPlayerArchived = useAppStore((state) => state.setPlayerArchived)
   const deletePlayer = useAppStore((state) => state.deletePlayer)
   const permanentlyDeleteDeck = useAppStore((state) => state.permanentlyDeleteDeck)
-  const setDeckArchived = useAppStore((state) => state.setDeckArchived)
   const updateDeckAliases = useAppStore((state) => state.updateDeckAliases)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [editor, setEditor] = useState<EditorState>(null)
@@ -429,14 +383,10 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
 
   const sortedPlayers = [...players]
     .filter((player) => !isDeletedPlayer(player))
-    .sort((left, right) => {
-      if (left.archived !== right.archived) return left.archived ? 1 : -1
-      return left.name.localeCompare(right.name, 'zh-Hant')
-    })
-  const sortedDecks = [...decks].sort((left, right) => {
-    if (left.archived !== right.archived) return left.archived ? 1 : -1
-    return left.displayName.localeCompare(right.displayName, 'zh-Hant')
-  })
+    .sort((left, right) => left.name.localeCompare(right.name, 'zh-Hant'))
+  const sortedDecks = [...decks].sort((left, right) =>
+    left.displayName.localeCompare(right.displayName, 'zh-Hant'),
+  )
 
   return (
     <>
@@ -445,7 +395,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">玩家管理</h2>
-            <p className="mt-1 text-sm text-text-secondary">新增、編輯、別名與封存玩家。</p>
+            <p className="mt-1 text-sm text-text-secondary">新增、編輯、別名與刪除玩家。</p>
           </div>
           <Button className="shrink-0 text-sm" onClick={() => setEditor({ kind: 'player' })}>
             新增
@@ -458,10 +408,6 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                 key={player.id}
                 player={player}
                 onEdit={() => setEditor({ kind: 'player', item: player })}
-                onArchiveChange={(archived) => {
-                  setPlayerArchived(player.id, archived)
-                  toast.success(archived ? '玩家已封存' : '玩家已還原')
-                }}
                 onDelete={() => setPurgePlayer(player)}
               />
             ))
@@ -492,11 +438,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                 key={deck.id}
                 deck={deck}
                 onEditAliases={() => setEditor({ kind: 'deckAliases', item: deck })}
-                onArchiveChange={(archived) => {
-                  setDeckArchived(deck.id, archived)
-                  toast.success(archived ? t('settings.leaderArchived') : t('settings.leaderRestored'))
-                }}
-                onPermanentDelete={() => setPurgeDeck(deck)}
+                onDelete={() => setPurgeDeck(deck)}
               />
             ))
           ) : (

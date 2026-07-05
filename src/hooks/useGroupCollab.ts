@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import {
   bootstrapGroupCollab,
+  flushGroupCollabSyncNow,
   pullGroupCollabState,
   startGroupCollabRealtime,
   stopGroupCollabRealtime,
@@ -9,13 +10,12 @@ import { getAppState, useAppStore } from '@/stores/appStore'
 
 export function useGroupCollab() {
   const hydrated = useAppStore((state) => state.hydrated)
-  const groupCollabEnabled = useAppStore((state) => state.settings.groupCollabEnabled)
   const groupCollabBootstrapped = useAppStore((state) => state.settings.groupCollabBootstrapped)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const updateSettings = useAppStore((state) => state.updateSettings)
 
   useEffect(() => {
-    if (!hydrated || !groupCollabEnabled || !groupCode) {
+    if (!hydrated || !groupCode) {
       stopGroupCollabRealtime()
       return
     }
@@ -27,12 +27,13 @@ export function useGroupCollab() {
         if (!groupCollabBootstrapped) {
           await bootstrapGroupCollab(groupCode!, getAppState())
           if (!cancelled) {
-            updateSettings({ groupCollabBootstrapped: true })
+            updateSettings({ groupCollabBootstrapped: true, groupCollabEnabled: true })
           }
         } else {
           await pullGroupCollabState(groupCode!)
         }
         if (!cancelled) {
+          flushGroupCollabSyncNow(groupCode!)
           await startGroupCollabRealtime(groupCode!)
         }
       } catch (error) {
@@ -44,14 +45,25 @@ export function useGroupCollab() {
 
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !groupCode) return
+      flushGroupCollabSyncNow(groupCode)
+      void pullGroupCollabState(groupCode).catch((error) => {
+        console.error('Group collab pull failed', error)
+      })
+    }
+
+    const onOnline = () => {
+      if (!groupCode) return
+      flushGroupCollabSyncNow(groupCode)
       void pullGroupCollabState(groupCode).catch((error) => {
         console.error('Group collab pull failed', error)
       })
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('online', onOnline)
     const pollId = window.setInterval(() => {
       if (document.visibilityState !== 'visible' || !groupCode) return
+      flushGroupCollabSyncNow(groupCode)
       void pullGroupCollabState(groupCode).catch((error) => {
         console.error('Group collab poll failed', error)
       })
@@ -60,8 +72,9 @@ export function useGroupCollab() {
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('online', onOnline)
       window.clearInterval(pollId)
       stopGroupCollabRealtime()
     }
-  }, [groupCode, groupCollabBootstrapped, groupCollabEnabled, hydrated, updateSettings])
+  }, [groupCode, groupCollabBootstrapped, hydrated, updateSettings])
 }

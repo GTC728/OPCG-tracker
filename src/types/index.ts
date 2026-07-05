@@ -1,6 +1,6 @@
 export type ResultType = 'normal' | 'draw' | 'forfeit'
 export type MatchSource = 'manual' | 'import' | 'manual_edit'
-export type Language = 'zh' | 'en' | 'ja'
+export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
 
 export interface Player {
   id: string

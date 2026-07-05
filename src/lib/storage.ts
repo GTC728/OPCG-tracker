@@ -59,6 +59,30 @@ const migrations: Record<number, Migration> = {
       deletedAt: session.deletedAt ?? null,
     })),
   }),
+  6: (state) => {
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...state.settings }
+        : createDefaultAppState().settings
+    const rawLanguage = settings.language as string | undefined
+    const language =
+      rawLanguage === 'zh' || rawLanguage === 'zh-Hant'
+        ? 'zh-Hant'
+        : rawLanguage === 'zh-Hans'
+          ? 'zh-Hans'
+          : rawLanguage === 'en' || rawLanguage === 'ja'
+            ? rawLanguage
+            : 'zh-Hant'
+    return {
+      ...state,
+      schemaVersion: 6,
+      settings: {
+        ...settings,
+        language,
+        groupCollabEnabled: settings.lastGroupCode ? true : Boolean(settings.groupCollabEnabled),
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

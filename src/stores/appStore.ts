@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { APP_VERSION, createDefaultAppState } from '@/lib/constants'
 import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
-import { createSession, findOpenSessionForToday } from '@/lib/sessions'
+import { createSession, findOpenSessionForToday, mergeSessionsState } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
   notifyGroupCollabChange,
@@ -41,6 +41,7 @@ interface AppStore extends AppState {
   archiveSession: (sessionId: string) => void
   unarchiveSession: (sessionId: string) => void
   deleteSession: (sessionId: string) => void
+  mergeSessions: (sourceSessionId: string, targetSessionId: string) => void
   addPlayer: (input: PlayerInput) => Player
   updatePlayer: (id: string, input: PlayerInput) => void
   setPlayerArchived: (id: string, archived: boolean) => void
@@ -487,6 +488,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
+  mergeSessions: (sourceSessionId, targetSessionId) => {
+    const current = getAppState()
+    const next = persist(mergeSessionsState(current, sourceSessionId, targetSessionId))
+    set({ ...next })
+  },
+
   addPlayer: (input) => {
     const current = getAppState()
     const name = input.name.trim()
@@ -875,7 +882,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const current = getAppState()
     const deck = current.decks.find((item) => item.id === deckId)
     if (!deck) throw new Error('找不到牌組')
-    if (!deck.archived) throw new Error('請先封存牌組')
 
     const next = persist({
       ...current,

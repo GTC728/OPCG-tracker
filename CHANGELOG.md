@@ -9,6 +9,41 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.10.1 - 2026-07-06
+
+### New
+
+- **Session merge** (`mergeSessions`): move matches, roster, table count from source session into target; renumber matches; tombstone source. UI in Session Manager.
+
+## V3.10.0 - 2026-07-06
+
+### New
+
+- **Mandatory group sync**: joining a group auto-enables entity sync; leaving stops Realtime.
+- **Offline sync queue** (`syncQueue.ts` + Dexie): local changes queue when offline; flush on reconnect; `SyncStatusBanner` shows offline / pending count.
+- **Head-to-head stats** on player profile (`buildHeadToHeadStats`).
+- **Leader locale table** for all 76 seed leaders (`leaderLocaleNames.ts`); manual translations marked with `*`.
+- **繁體中文 + 简体中文** (`zh-Hant`, `zh-Hans`); schema migration from legacy `zh`.
+
+### Changed
+
+- Group collab toggle and manual group JSON upload/download removed while in a synced group.
+- Player merge syncs remote delete + target upsert + match rewires in group.
+- Player and leader management: delete-only UI (archive removed from settings cards).
+- Bottom nav: SVG icons, smaller height (`min-h-9`).
+- Matchup rows use anchor deck perspective in deck profile.
+- Matchup heatmap: up to 14 decks, larger cells, word-wrapped labels.
+
+### Fixed
+
+- Table assignment deck names no longer hard-truncated at `8rem`.
+
+### Backlog (documented in `docs/V3.10-RELEASE.md`)
+
+- Session merge → **3.9.2**
+- Recent form denominator investigation
+- Profile-scoped matchup heatmap
+
 ## V3.9.0 - 2026-07-05
 
 ### New

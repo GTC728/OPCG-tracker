@@ -11,7 +11,6 @@ import {
   signOutCloud,
   type GroupCloudState,
   uploadCloudSnapshot,
-  uploadGroupCloudState,
 } from '@/lib/cloudSync'
 import { stopGroupCollabRealtime } from '@/lib/groupSync'
 import { formatDateTime } from '@/lib/utils'
@@ -128,95 +127,7 @@ export function CloudSyncTool() {
                   {t('cloud.groupLabel')}：{connectedGroup}
                   {groupState ? ` · ${t('cloud.updatedAt')}${formatDateTime(groupState.updated_at)}` : ''}
                 </p>
-                <label className="flex items-start gap-3 rounded-xl bg-surface-elevated p-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={settings.groupCollabEnabled}
-                    onChange={async (event) => {
-                      const enabled = event.target.checked
-                      if (!enabled) {
-                        stopGroupCollabRealtime()
-                      }
-                      updateSettings({
-                        groupCollabEnabled: enabled,
-                        groupCollabBootstrapped: enabled ? settings.groupCollabBootstrapped : false,
-                      })
-                      setMessage(enabled ? t('cloud.collabEnabled') : t('cloud.collabDisabled'))
-                    }}
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">{t('cloud.collabTitle')}</span>
-                    <span className="mt-1 block text-xs text-text-secondary">{t('cloud.collabDesc')}</span>
-                  </span>
-                </label>
-                {settings.groupCollabEnabled ? (
-                  <p className="text-xs text-text-secondary">{t('cloud.collabActiveNote')}</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      disabled={busy}
-                      loading={busy}
-                      onClick={async () => {
-                        setBusy(true)
-                        setMessage(null)
-                        try {
-                          await uploadGroupCloudState(connectedGroup, getAppState(), deviceLabel)
-                          const latest = await loadGroupCloudState(connectedGroup)
-                          setGroupState(latest)
-                          setVersionRefreshKey((value) => value + 1)
-                          setMessage(t('cloud.uploadGroupDone'))
-                          toast.success(t('cloud.uploadGroupDone'))
-                        } catch (caught) {
-                          const nextMessage = caught instanceof Error ? caught.message : t('cloud.uploadGroupFailed')
-                          setMessage(nextMessage)
-                          toast.error(nextMessage)
-                        } finally {
-                          setBusy(false)
-                        }
-                      }}
-                    >
-                      {t('cloud.uploadGroup')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      loading={busy}
-                      onClick={async () => {
-                        const confirmed = window.confirm(t('cloud.downloadGroupConfirm'))
-                        if (!confirmed) return
-                        setBusy(true)
-                        setMessage(null)
-                        try {
-                          const latest = await loadGroupCloudState(connectedGroup)
-                          if (!latest) throw new Error(t('cloud.groupEmpty'))
-                          replaceState(latest.state)
-                          setGroupState(latest)
-                          setMessage(t('cloud.downloadGroupDone'))
-                          toast.success(t('cloud.downloadGroupDone'))
-                        } catch (caught) {
-                          const nextMessage = caught instanceof Error ? caught.message : t('cloud.downloadGroupFailed')
-                          setMessage(nextMessage)
-                          toast.error(nextMessage)
-                        } finally {
-                          setBusy(false)
-                        }
-                      }}
-                    >
-                      {t('cloud.downloadGroup')}
-                    </Button>
-                  </div>
-                )}
-                {!settings.groupCollabEnabled ? (
-                  <div className="rounded-2xl bg-surface-elevated p-3">
-                    <BackupVersionList
-                      key={`group-${connectedGroup}-${versionRefreshKey}`}
-                      mode="group"
-                      groupCode={connectedGroup}
-                      onRestored={refreshCloudStatus}
-                    />
-                  </div>
-                ) : null}
+                <p className="rounded-xl bg-brand-500/10 p-3 text-xs text-brand-100">{t('cloud.collabActiveNote')}</p>
                 <Button
                   variant="ghost"
                   fullWidth
@@ -260,7 +171,7 @@ export function CloudSyncTool() {
                       setGroupState(latest)
                       updateSettings({
                         lastGroupCode: code,
-                        groupCollabEnabled: false,
+                        groupCollabEnabled: true,
                         groupCollabBootstrapped: false,
                       })
                       const nextMessage = latest ? '已加入群組' : '新群組，先上傳即可建立資料'

@@ -29,6 +29,8 @@
 | V3.7 | Tombstone Sync + Archive | 完成 | 統一 tombstone 同步、Session 封存、History 篩選 |
 | V3.8 | Mobile Assignment Drawer | 完成 | 固定底部分配欄、雙向分配、緊湊桌列、UI 設計文件 |
 | V3.9 | Bottom Chrome + Listed Players | 完成 | 統一底欄、玩家可見性規則、歷史自訂日期篩選 |
+| V3.10 | Group Sync + Stats + i18n | 完成 | 強制群組同步、離線 queue、繁簡中、對手勝率、heatmap 放大 |
+| V3.10.1 | Session Merge | 完成 | 場次合併、名單/桌數移轉、群組同步 |
 | V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
 | V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
 | V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |
@@ -37,9 +39,8 @@
 ## Next
 
 - **V4.0**：Event / League foundation（見下方規劃）。
-- 補完整三語文件和深層 UI 文案。
-- 先設計 Event / League foundation，不急於做完整 tournament software。
-- Store Tournament 和 League Ruleset 應作為獨立模組整合入 app，不應污染普通 Session 和 Match database。
+- Stats backlog：Recent form 分母調查、Profile heatmap 設計。
+- Group backlog：首次加入群組時本地/雲端衝突合併策略。
 
 ## V4 Event / League Direction
 

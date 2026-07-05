@@ -1,4 +1,11 @@
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
+import {
+  enqueueSyncOp,
+  listSyncQueue,
+  markSyncQueueFailed,
+  removeSyncQueueItem,
+  type SyncQueueOp,
+} from '@/lib/syncQueue'
 import type { ActiveMatch, AppState, Match, Player, Session } from '@/types'
 import { getAppState, updateAppState } from '@/stores/appStore'
 
@@ -91,7 +98,8 @@ function playerPayloadChanged(before: Player, after: Player): boolean {
   return (
     before.name !== after.name ||
     before.archived !== after.archived ||
-    before.deletedAt !== after.deletedAt
+    before.deletedAt !== after.deletedAt ||
+    before.aliases.join('\u0000') !== after.aliases.join('\u0000')
   )
 }
 
@@ -143,8 +151,88 @@ function shouldApplyRemoteSession(
   return !existing
 }
 
+/** Group membership implies entity sync (v3.10+). */
 export function isGroupCollabActive(state: AppState): boolean {
-  return Boolean(state.settings.groupCollabEnabled && state.settings.lastGroupCode)
+  return Boolean(state.settings.lastGroupCode)
+}
+
+function isOnline(): boolean {
+  return typeof navigator !== 'undefined' ? navigator.onLine : true
+}
+
+async function queueOp(op: SyncQueueOp): Promise<void> {
+  await enqueueSyncOp(op)
+  if (isOnline()) {
+    const state = getAppState()
+    const groupCode = state.settings.lastGroupCode
+    if (groupCode) flushGroupCollabSyncNow(groupCode)
+  }
+}
+
+async function executeSyncOp(op: SyncQueueOp, state: AppState): Promise<void> {
+  switch (op.kind) {
+    case 'upsert_active': {
+      const matches = op.matchIds
+        .map((id) => state.activeMatches.find((match) => match.id === id))
+        .filter((match): match is ActiveMatch => Boolean(match))
+      await pushSyncedActiveMatches(op.groupCode, matches)
+      return
+    }
+    case 'delete_active':
+      await deleteRemoteActiveMatch(op.groupCode, op.matchId)
+      return
+    case 'upsert_matches': {
+      const matches = op.matchIds
+        .map((id) => state.matches.find((match) => match.id === id))
+        .filter((match): match is Match => Boolean(match))
+      await pushSyncedMatches(op.groupCode, matches)
+      for (const match of matches) {
+        if (state.activeMatches.some((item) => item.id === match.id)) {
+          await deleteRemoteActiveMatch(op.groupCode, match.id)
+        }
+      }
+      return
+    }
+    case 'upsert_players': {
+      const players = op.playerIds
+        .map((id) => state.players.find((player) => player.id === id))
+        .filter((player): player is Player => Boolean(player))
+      await pushSyncedPlayers(op.groupCode, players)
+      return
+    }
+    case 'delete_player':
+      await deleteRemotePlayer(op.groupCode, op.playerId)
+      return
+    case 'upsert_sessions': {
+      const sessions = op.sessionIds
+        .map((id) => state.sessions.find((session) => session.id === id))
+        .filter((session): session is Session => Boolean(session))
+      await pushSyncedSessions(op.groupCode, sessions)
+      return
+    }
+    case 'merge_players': {
+      const target = state.players.find((player) => player.id === op.targetPlayerId)
+      if (target) {
+        await pushSyncedPlayers(op.groupCode, [target])
+      }
+      await deleteRemotePlayer(op.groupCode, op.sourcePlayerId)
+      const rewiredMatches = state.matches.filter(
+        (match) => match.player1Id === op.targetPlayerId || match.player2Id === op.targetPlayerId,
+      )
+      if (rewiredMatches.length) {
+        await pushSyncedMatches(op.groupCode, rewiredMatches)
+      }
+      const rewiredActive = state.activeMatches.filter(
+        (match) => match.player1Id === op.targetPlayerId || match.player2Id === op.targetPlayerId,
+      )
+      if (rewiredActive.length) {
+        await pushSyncedActiveMatches(op.groupCode, rewiredActive)
+      }
+      return
+    }
+    default:
+      return
+  }
 }
 
 function toActiveRow(groupKey: string, match: ActiveMatch, userId: string): SyncActiveRow {
@@ -269,8 +357,24 @@ export async function deleteRemotePlayer(groupCode: string, playerId: string): P
 }
 
 export async function flushGroupCollabSync(_groupCode: string, _state: AppState): Promise<void> {
-  if (!isGroupCollabActive(_state)) return
-  // Row-level entity changes are pushed by notifyGroupCollabChange().
+  if (!isGroupCollabActive(_state) || !isOnline()) return
+
+  const pending = await listSyncQueue()
+  if (!pending.length) return
+
+  const latestState = getAppState()
+  for (const item of pending) {
+    if (item.op.groupCode !== _groupCode) continue
+    try {
+      await executeSyncOp(item.op, latestState)
+      await removeSyncQueueItem(item.id)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sync failed'
+      await markSyncQueueFailed(item.id, message)
+      console.error('Group collab queue item failed', item.op.kind, error)
+      throw error
+    }
+  }
 }
 
 export async function pushSyncedActiveMatches(groupCode: string, matches: ActiveMatch[]): Promise<void> {
@@ -401,12 +505,12 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
   for (const match of prev.activeMatches) {
     if (!next.activeMatches.some((item) => item.id === match.id)) {
       touchedActive.add(match.id)
-      void deleteRemoteActiveMatch(groupCode, match.id)
+      void queueOp({ kind: 'delete_active', groupCode, matchId: match.id })
     }
   }
-  if (touchedActive.size) {
+  if (changedActive.length) {
     touchLocalActive(touchedActive)
-    void pushSyncedActiveMatches(groupCode, changedActive)
+    void queueOp({ kind: 'upsert_active', groupCode, matchIds: changedActive.map((match) => match.id) })
   }
 
   const prevMatches = new Map(prev.matches.map((match) => [match.id, match]))
@@ -420,12 +524,7 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
 
   if (changedMatches.length) {
     touchLocalMatches(changedMatches.map((match) => match.id))
-    void pushSyncedMatches(groupCode, changedMatches)
-    for (const match of changedMatches) {
-      if (prev.activeMatches.some((item) => item.id === match.id)) {
-        void deleteRemoteActiveMatch(groupCode, match.id)
-      }
-    }
+    void queueOp({ kind: 'upsert_matches', groupCode, matchIds: changedMatches.map((match) => match.id) })
   }
 
   const touchedPlayers = new Set<string>()
@@ -436,10 +535,18 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
       touchedPlayers.add(player.id)
     }
   }
+  for (const player of prev.players) {
+    if (!next.players.some((item) => item.id === player.id)) {
+      void queueOp({ kind: 'delete_player', groupCode, playerId: player.id })
+    }
+  }
   if (touchedPlayers.size) {
     touchLocalPlayers(touchedPlayers)
-    const changedPlayers = next.players.filter((player) => touchedPlayers.has(player.id))
-    void pushSyncedPlayers(groupCode, changedPlayers)
+    void queueOp({
+      kind: 'upsert_players',
+      groupCode,
+      playerIds: [...touchedPlayers],
+    })
   }
 
   const touchedSessions = new Set<string>()
@@ -453,7 +560,13 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
     }
   }
   if (touchedSessions.size) touchLocalSessions(touchedSessions)
-  if (changedSessions.length) void pushSyncedSessions(groupCode, changedSessions)
+  if (changedSessions.length) {
+    void queueOp({
+      kind: 'upsert_sessions',
+      groupCode,
+      sessionIds: changedSessions.map((session) => session.id),
+    })
+  }
 
   flushGroupCollabSyncNow(groupCode)
 }

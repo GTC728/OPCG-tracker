@@ -78,6 +78,66 @@ function SessionRow({
   )
 }
 
+function SessionMergeTool({
+  sessions,
+  onMerge,
+}: {
+  sessions: Session[]
+  onMerge: (sourceId: string, targetId: string) => void
+}) {
+  const { t } = useI18n()
+  const [sourceId, setSourceId] = useState('')
+  const [targetId, setTargetId] = useState('')
+  const eligible = sessions.filter((session) => session.deletedAt === null)
+
+  return (
+    <section className="rounded-2xl bg-surface-elevated p-4">
+      <h2 className="text-lg font-semibold">{t('session.mergeTitle')}</h2>
+      <p className="mt-1 text-sm text-text-secondary">{t('session.mergeDesc')}</p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <label>
+          <span className="text-sm text-text-secondary">{t('session.mergeSource')}</span>
+          <select
+            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+            value={sourceId}
+            onChange={(event) => setSourceId(event.target.value)}
+          >
+            <option value="">{t('session.mergePick')}</option>
+            {eligible.map((session) => (
+              <option key={session.id} value={session.id} disabled={session.id === targetId}>
+                {session.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="text-sm text-text-secondary">{t('session.mergeTarget')}</span>
+          <select
+            className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+            value={targetId}
+            onChange={(event) => setTargetId(event.target.value)}
+          >
+            <option value="">{t('session.mergePick')}</option>
+            {eligible.map((session) => (
+              <option key={session.id} value={session.id} disabled={session.id === sourceId}>
+                {session.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <Button
+        className="mt-3"
+        fullWidth
+        disabled={!sourceId || !targetId || sourceId === targetId}
+        onClick={() => onMerge(sourceId, targetId)}
+      >
+        {t('session.mergeAction')}
+      </Button>
+    </section>
+  )
+}
+
 export function SessionManager({
   open,
   onClose,
@@ -102,6 +162,7 @@ export function SessionManager({
   const archiveSession = useAppStore((s) => s.archiveSession)
   const unarchiveSession = useAppStore((s) => s.unarchiveSession)
   const deleteSession = useAppStore((s) => s.deleteSession)
+  const mergeSessions = useAppStore((s) => s.mergeSessions)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const listedSessions = activeListedSessions(sessions).sort(
     (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
@@ -209,6 +270,30 @@ export function SessionManager({
           ))}
         </div>
       </section>
+
+      <SessionMergeTool
+        sessions={sessions}
+        onMerge={(sourceId, targetId) => {
+          const source = sessions.find((session) => session.id === sourceId)
+          const target = sessions.find((session) => session.id === targetId)
+          if (!source || !target) return
+          const confirmed = window.confirm(
+            t('session.mergeConfirm')
+              .replace('{source}', source.name)
+              .replace('{target}', target.name),
+          )
+          if (!confirmed) return
+          try {
+            mergeSessions(sourceId, targetId)
+            if (currentSessionId === sourceId && target) {
+              setSessionName(target.name)
+            }
+            toast.success(t('session.merged'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('session.mergeFailed'))
+          }
+        }}
+      />
 
       {pastSessions.length ? (
         <section className="rounded-2xl bg-surface-elevated p-4">

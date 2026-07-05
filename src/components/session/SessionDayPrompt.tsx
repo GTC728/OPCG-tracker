@@ -12,7 +12,7 @@ export function SessionDayPrompt() {
   const { t } = useI18n()
   const toast = useToast()
   const hydrated = useAppStore((s) => s.hydrated)
-  const groupCollabEnabled = useAppStore((s) => s.settings.groupCollabEnabled)
+  const groupCode = useAppStore((s) => s.settings.lastGroupCode)
   const groupCollabBootstrapped = useAppStore((s) => s.settings.groupCollabBootstrapped)
   const dismissedFor = useAppStore((s) => s.settings.sessionDayPromptDismissedFor)
   const sessions = useAppStore((s) => s.sessions)
@@ -33,7 +33,7 @@ export function SessionDayPrompt() {
 
   useEffect(() => {
     if (!hydrated) return
-    if (groupCollabEnabled && !groupCollabBootstrapped) return
+    if (groupCode && !groupCollabBootstrapped) return
     if (!currentSession || currentSession.endedAt !== null) {
       setOpen(false)
       return
@@ -51,7 +51,7 @@ export function SessionDayPrompt() {
     currentSession,
     dismissedFor,
     groupCollabBootstrapped,
-    groupCollabEnabled,
+    groupCode,
     hydrated,
     todayLabel,
   ])
