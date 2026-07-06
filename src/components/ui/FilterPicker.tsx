@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { selectPickerOptionClass } from '@/lib/selectSurface'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 
 export function FilterPickerRow({
@@ -91,10 +92,7 @@ export function OptionPickerSheet({
       <div className="max-h-[min(60dvh,20rem)] space-y-1 overflow-y-auto">
         <button
           type="button"
-          className={[
-            'flex w-full rounded-xl px-3 py-2.5 text-left text-sm outline-none',
-            !value ? 'bg-brand-600/20 font-semibold text-brand-300 ring-1 ring-brand-400/50' : 'bg-surface ring-1 ring-surface-muted',
-          ].join(' ')}
+          className={selectPickerOptionClass(!value)}
           onClick={() => {
             onChange('')
             onClose()
@@ -106,12 +104,7 @@ export function OptionPickerSheet({
           <button
             key={option.value}
             type="button"
-            className={[
-              'flex w-full rounded-xl px-3 py-2.5 text-left text-sm outline-none',
-              value === option.value
-                ? 'bg-brand-600/20 font-semibold text-brand-300 ring-1 ring-brand-400/50'
-                : 'bg-surface ring-1 ring-surface-muted',
-            ].join(' ')}
+            className={selectPickerOptionClass(value === option.value)}
             onClick={() => {
               onChange(option.value)
               onClose()

@@ -9,6 +9,24 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.10.4 - 2026-07-06
+
+### New
+
+- **Stats review mode**: environment summary, daily volume chart, global recent form, and full deck usage × win-rate table for post-session analysis.
+- **Player vs player matchup matrix** on the Players tab; **deck vs deck matrix** on the Decks tab.
+
+### Changed
+
+- **MVP / top deck**: both show win rate + W-L; only players/decks with ≥3 matches qualify.
+- **Unified select highlight** (`selectSurface`): inset shadow instead of border+ring stacking — fixes highlight overflow on table cells and assignment chips.
+- **Heatmap labels**: up to 2 lines when names are long.
+- **Profile matchups**: card list only (full matrices live on list tabs).
+
+### Fixed
+
+- **King (OP08)** Traditional Chinese: 燼 (was simplified 烬).
+
 ## V3.10.3 - 2026-07-06
 
 ### Changed

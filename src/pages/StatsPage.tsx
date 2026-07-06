@@ -3,12 +3,15 @@ import { DeckLabel } from '@/components/deck/DeckLabel'
 import { useI18n } from '@/lib/i18n'
 import {
   buildDashboardStats,
+  buildDailyTrendStats,
   buildDeckStats,
   buildFirstSecondStats,
   buildHeadToHeadStats,
   buildInsightMessages,
   buildMatchupStats,
+  buildMetaSummaryStats,
   buildPlayerDeckStats,
+  buildPlayerMatchupStats,
   buildPlayerStats,
   buildRecentForm,
   formatPercent,
@@ -18,6 +21,7 @@ import {
   type FirstSecondStat,
   type MatchupStat,
   type PlayerDeckStat,
+  type PlayerMatchupStat,
   type RecordStat,
 } from '@/lib/stats'
 import { useAppStore } from '@/stores/appStore'
@@ -416,7 +420,7 @@ function MatchupHeatmap({
                     deck={decks.find((deck) => deck.id === entry.id)}
                     showCode
                     compact
-                    className="inline-flex justify-center whitespace-nowrap text-[10px] leading-none"
+                    className="inline-flex max-w-full justify-center text-[10px] leading-tight [overflow-wrap:anywhere] line-clamp-2"
                   />
                 </div>
               ))}
@@ -427,7 +431,7 @@ function MatchupHeatmap({
                       deck={decks.find((deck) => deck.id === rowEntry.id)}
                       showCode
                       compact
-                      className="inline-flex min-w-0 whitespace-nowrap text-[10px] leading-none"
+                      className="inline-flex min-w-0 max-w-full text-[10px] leading-tight [overflow-wrap:anywhere] line-clamp-2"
                     />
                   </div>
                   {rankedDecks.map((columnEntry) => {
@@ -465,19 +469,265 @@ function MatchupHeatmap({
   )
 }
 
+function PlayerMatchupRow({ matchup, anchorPlayerId }: { matchup: PlayerMatchupStat; anchorPlayerId?: string }) {
+  const anchorIsB = anchorPlayerId === matchup.playerBId
+  const selfName = anchorIsB ? matchup.playerBName : matchup.playerAName
+  const oppName = anchorIsB ? matchup.playerAName : matchup.playerBName
+  const selfWinRate =
+    anchorIsB && matchup.playerAWinRate !== null ? 1 - matchup.playerAWinRate : matchup.playerAWinRate
+  const selfWins = anchorIsB ? matchup.playerBWins : matchup.playerAWins
+  const oppWins = anchorIsB ? matchup.playerAWins : matchup.playerBWins
+  const displayWinRate = getDisplayWinRate(selfWinRate, matchup.total)
+  const verdict = getMatchupVerdict(selfWinRate, matchup.total)
+  const rateClass =
+    displayWinRate === null
+      ? 'text-text-secondary'
+      : displayWinRate >= 0.5
+        ? 'text-success'
+        : 'text-text-secondary'
+
+  return (
+    <article className="rounded-2xl bg-surface-elevated p-3">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          {anchorPlayerId ? (
+            <p className="text-xs text-text-secondary">對手</p>
+          ) : (
+            <p className="text-xs text-text-secondary">{selfName}</p>
+          )}
+          <p className="mt-1 font-semibold leading-tight">{oppName}</p>
+        </div>
+        <div className={`shrink-0 text-right ${rateClass}`}>
+          <p className="text-xl font-bold tabular-nums">
+            {selfWins}-{oppWins}
+          </p>
+          <p className="text-sm font-semibold">{formatPercent(displayWinRate)}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-text-secondary">
+        {verdict} · {getSampleLabel(matchup.total)}
+      </p>
+    </article>
+  )
+}
+
+function PlayerMatchupHeatmap({
+  matchups,
+  maxPlayers = 12,
+}: {
+  matchups: PlayerMatchupStat[]
+  maxPlayers?: number
+}) {
+  const playerTotals = new Map<string, { id: string; name: string; total: number }>()
+  const matchupByPair = new Map(matchups.map((matchup) => [matchup.key, matchup]))
+
+  for (const matchup of matchups) {
+    for (const side of [
+      { id: matchup.playerAId, name: matchup.playerAName },
+      { id: matchup.playerBId, name: matchup.playerBName },
+    ]) {
+      playerTotals.set(side.id, {
+        id: side.id,
+        name: side.name,
+        total: (playerTotals.get(side.id)?.total ?? 0) + matchup.total,
+      })
+    }
+  }
+
+  const rankedPlayers = [...playerTotals.values()]
+    .sort((left, right) => right.total - left.total)
+    .slice(0, maxPlayers)
+  const columnWidth = '5.5rem'
+  const rowLabelWidth = '5.5rem'
+
+  function getCell(rowId: string, columnId: string) {
+    if (rowId === columnId) return null
+    const [playerAId, playerBId] = [rowId, columnId].sort()
+    const matchup = matchupByPair.get(`${playerAId}:${playerBId}`)
+    if (!matchup || matchup.playerAWinRate === null) return null
+
+    const rowIsA = rowId === matchup.playerAId
+    const winRate = rowIsA ? matchup.playerAWinRate : 1 - matchup.playerAWinRate
+    return { winRate, total: matchup.total }
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">玩家對位表</h2>
+        <span className="shrink-0 rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
+          玩家 vs 玩家
+        </span>
+      </div>
+      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-3">
+        {rankedPlayers.length >= 2 ? (
+          <div
+            className="min-w-max"
+            style={{ minWidth: `calc(${rowLabelWidth} + ${rankedPlayers.length} * ${columnWidth})` }}
+          >
+            <div
+              className="grid gap-1 text-xs"
+              style={{
+                gridTemplateColumns: `${rowLabelWidth} repeat(${rankedPlayers.length}, ${columnWidth})`,
+              }}
+            >
+              <div />
+              {rankedPlayers.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="px-0.5 pb-1 text-center text-[10px] font-semibold leading-tight text-text-secondary [overflow-wrap:anywhere] line-clamp-2"
+                  title={entry.name}
+                >
+                  {entry.name}
+                </div>
+              ))}
+              {rankedPlayers.map((rowEntry) => (
+                <div key={rowEntry.id} className="contents">
+                  <div className="flex items-center py-1 pr-1 text-[10px] font-semibold leading-tight [overflow-wrap:anywhere] line-clamp-2">
+                    {rowEntry.name}
+                  </div>
+                  {rankedPlayers.map((columnEntry) => {
+                    const cell = getCell(rowEntry.id, columnEntry.id)
+                    const displayWinRate = cell ? getDisplayWinRate(cell.winRate, cell.total) : null
+
+                    return (
+                      <div
+                        key={`${rowEntry.id}:${columnEntry.id}`}
+                        className="grid min-h-11 place-items-center rounded-lg px-0.5 text-center"
+                        style={{ backgroundColor: getWinRateColor(displayWinRate) }}
+                        title={cell ? `${getSampleLabel(cell.total)} ${formatPercent(displayWinRate)}` : '未有對局'}
+                      >
+                        {cell ? (
+                          <span className="text-[10px] font-semibold leading-tight">
+                            {displayWinRate === null ? '不足' : formatPercent(displayWinRate)}
+                            <span className="block font-normal text-text-secondary">{cell.total}場</span>
+                          </span>
+                        ) : (
+                          <span className="text-text-secondary">—</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-text-secondary">完成兩位以上玩家的對局後會顯示對位矩陣。</p>
+        )}
+      </article>
+    </section>
+  )
+}
+
+function MetaSummarySection({ summary }: { summary: ReturnType<typeof buildMetaSummaryStats> }) {
+  if (!summary.totalMatches) return null
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">環境概覽</h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <SummaryCard label="總場數" value={String(summary.totalMatches)} />
+        <SummaryCard label="活躍玩家" value={String(summary.uniquePlayers)} />
+        <SummaryCard label="牌組種類" value={String(summary.uniqueDecks)} />
+        <SummaryCard label="Meta 多樣度" value={`${summary.diversityPercent}%`} detail="牌組數 / 總場數" />
+      </div>
+    </section>
+  )
+}
+
+function DailyVolumeSection({ trends }: { trends: ReturnType<typeof buildDailyTrendStats> }) {
+  const recent = trends.slice(-7)
+  if (!recent.length) return null
+  const max = Math.max(...recent.map((entry) => entry.total), 1)
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">對局量趨勢</h2>
+      <article className="rounded-2xl bg-surface-elevated p-4">
+        <div className="flex items-end gap-2">
+          {recent.map((entry) => (
+            <div key={entry.date} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span className="text-xs font-semibold">{entry.total}</span>
+              <div className="flex h-20 w-full items-end rounded-md bg-surface-muted px-0.5 pb-0.5">
+                <div
+                  className="w-full rounded-sm bg-brand-500"
+                  style={{ height: `${Math.max(8, (entry.total / max) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-text-secondary">{entry.date.slice(5)}</span>
+            </div>
+          ))}
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function DeckMetaTableSection({ stats, decks }: { stats: RecordStat[]; decks: Deck[] }) {
+  const sorted = sortStatsByUsage(stats)
+  const totalAppearances = sorted.reduce((sum, stat) => sum + stat.total, 0)
+  if (!sorted.length || !totalAppearances) return null
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">出場率 × 勝率</h2>
+        <span className="text-xs text-text-secondary">復盤用完整列表</span>
+      </div>
+      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-3">
+        <table className="w-full min-w-[20rem] text-left text-sm">
+          <thead>
+            <tr className="text-xs text-text-secondary">
+              <th className="pb-2 pr-2 font-semibold">牌組</th>
+              <th className="pb-2 pr-2 font-semibold">出場</th>
+              <th className="pb-2 pr-2 font-semibold">勝率</th>
+              <th className="pb-2 font-semibold">W-L</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-muted">
+            {sorted.map((stat) => {
+              const usage = (stat.total / totalAppearances) * 100
+              const tag =
+                stat.total >= 3 && (stat.winRate ?? 0) >= 0.6
+                  ? '強勢'
+                  : stat.total >= 3 && (stat.winRate ?? 0) <= 0.4
+                    ? '弱勢'
+                    : stat.total >= 3
+                      ? '平均'
+                      : '樣本不足'
+
+              return (
+                <tr key={stat.id}>
+                  <td className="py-2 pr-2">
+                    <DeckLabel deck={decks.find((deck) => deck.id === stat.id)} showCode compact className="inline-flex max-w-[10rem] line-clamp-2 leading-tight" />
+                  </td>
+                  <td className="py-2 pr-2 tabular-nums">{usage.toFixed(0)}%</td>
+                  <td className="py-2 pr-2 tabular-nums">{formatPercent(getDisplayWinRate(stat.winRate, stat.total))}</td>
+                  <td className="py-2 tabular-nums text-text-secondary">
+                    {stat.wins}W-{stat.losses}L · {tag}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </article>
+    </section>
+  )
+}
+
 function ProfileMatchupSection({
   title,
   matchups,
   decks,
   anchorDeckId,
-  deckIds,
   playerDeckIds,
 }: {
   title: string
   matchups: MatchupStat[]
   decks: Deck[]
   anchorDeckId?: string
-  deckIds?: string[]
   playerDeckIds?: Set<string>
 }) {
   const sorted = [...matchups].sort((left, right) => right.total - left.total)
@@ -506,17 +756,8 @@ function ProfileMatchupSection({
           {sorted.length} 組
         </span>
       </div>
-      {sorted.length >= 2 ? (
-        <MatchupHeatmap
-          matchups={sorted}
-          decks={decks}
-          maxDecks={8}
-          title="對位表"
-          deckIds={deckIds}
-        />
-      ) : null}
       <div className="space-y-2">
-        {sorted.map((matchup) => (
+        {sorted.slice(0, 12).map((matchup) => (
           <MatchupRow
             key={matchup.key}
             matchup={matchup}
@@ -661,7 +902,7 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
           {stats.length} 組
         </span>
       </div>
-      {stats.slice(0, 12).map((stat) => (
+      {stats.slice(0, 24).map((stat) => (
         <article key={stat.id} className="rounded-2xl bg-surface-elevated p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -785,6 +1026,9 @@ function PlayerProfileView({
     (matchup) => playerDeckIds.has(matchup.deckAId) || playerDeckIds.has(matchup.deckBId),
   )
   const headToHead = buildHeadToHeadStats(player.id, players, matches)
+  const playerH2HMatchups = buildPlayerMatchupStats(players, matches).filter(
+    (matchup) => matchup.playerAId === player.id || matchup.playerBId === player.id,
+  )
 
   return (
     <div className="space-y-4">
@@ -823,12 +1067,19 @@ function PlayerProfileView({
           <EmptyState>{t('stats.noHeadToHead')}</EmptyState>
         )}
       </section>
+      {playerH2HMatchups.length ? (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">玩家對位</h2>
+          {playerH2HMatchups.map((matchup) => (
+            <PlayerMatchupRow key={matchup.key} matchup={matchup} anchorPlayerId={player.id} />
+          ))}
+        </section>
+      ) : null}
       <FirstSecondSection stats={buildFirstSecondStats(playerMatches)} />
       <ProfileMatchupSection
         title="對位分析"
         matchups={relevantMatchups}
         decks={decks}
-        deckIds={[...playerDeckIds]}
         playerDeckIds={playerDeckIds}
       />
     </div>
@@ -894,7 +1145,6 @@ function DeckProfileView({
         matchups={relevantMatchups}
         decks={decks}
         anchorDeckId={deck.id}
-        deckIds={[deck.id, ...relevantMatchups.map((matchup) => (matchup.deckAId === deck.id ? matchup.deckBId : matchup.deckAId))]}
       />
     </div>
   )
@@ -917,6 +1167,12 @@ export function StatsPage() {
   const playerStats = buildPlayerStats(players, scopedMatches)
   const deckStats = buildDeckStats(decks, scopedMatches, language)
   const playerDeckStats = buildPlayerDeckStats(players, decks, scopedMatches, language)
+  const matchupStats = buildMatchupStats(decks, scopedMatches, language)
+  const playerMatchupStats = buildPlayerMatchupStats(players, scopedMatches)
+  const metaSummary = buildMetaSummaryStats(scopedMatches)
+  const dailyTrends = buildDailyTrendStats(scopedMatches)
+  const firstSecondStats = buildFirstSecondStats(scopedMatches)
+  const globalRecentForm = buildRecentForm(scopedMatches)
   const selectedPlayer =
     profileTarget?.type === 'player'
       ? players.find((player) => player.id === profileTarget.id) ?? null
@@ -1004,10 +1260,14 @@ export function StatsPage() {
               <SummaryCard
                 label="MVP"
                 value={dashboard.topPlayer.name}
-                detail={`${dashboard.topPlayer.wins}W`}
+                detail={`${formatPercent(dashboard.topPlayer.winRate)} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
               />
             ) : null}
           </section>
+          <MetaSummarySection summary={metaSummary} />
+          <FirstSecondSection stats={firstSecondStats} />
+          <RecentFormSection recentForm={globalRecentForm} />
+          <DailyVolumeSection trends={dailyTrends} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MiniLeaderboard
               title="玩家 Top 5"
@@ -1048,18 +1308,37 @@ export function StatsPage() {
 
       {activeSection === 'players' ? (
         <>
+          <PlayerMatchupHeatmap matchups={playerMatchupStats} />
+          {playerMatchupStats.length ? (
+            <section className="space-y-2">
+              <h2 className="text-lg font-semibold">常見玩家對位</h2>
+              {playerMatchupStats.slice(0, 16).map((matchup) => (
+                <PlayerMatchupRow key={matchup.key} matchup={matchup} />
+              ))}
+            </section>
+          ) : null}
           <StatSection
             title="玩家列表"
             stats={playerStats}
             onSelect={(stat) => setProfileTarget({ type: 'player', id: stat.id })}
           />
-          <PlayerDeckSection stats={playerDeckStats.slice(0, 8)} decks={decks} />
+          <PlayerDeckSection stats={playerDeckStats} decks={decks} />
         </>
       ) : null}
 
       {activeSection === 'decks' ? (
         <>
           <DonutChart stats={deckStats} decks={decks} />
+          <MatchupHeatmap matchups={matchupStats} decks={decks} title="牌組對位表" />
+          {matchupStats.length ? (
+            <section className="space-y-2">
+              <h2 className="text-lg font-semibold">常見牌組對位</h2>
+              {matchupStats.slice(0, 16).map((matchup) => (
+                <MatchupRow key={matchup.key} matchup={matchup} decks={decks} />
+              ))}
+            </section>
+          ) : null}
+          <DeckMetaTableSection stats={deckStats} decks={decks} />
           <StatSection
             title="牌組列表"
             stats={sortStatsByWeightedWinRate(deckStats)}

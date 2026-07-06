@@ -2,6 +2,27 @@ import { isDeletedPlayer } from '@/lib/entityVisibility'
 import type { Deck, Language, Match, Player } from '@/types'
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
 
+export const MIN_RELIABLE_SAMPLE = 3
+
+export interface PlayerMatchupStat {
+  key: string
+  playerAId: string
+  playerAName: string
+  playerBId: string
+  playerBName: string
+  playerAWins: number
+  playerBWins: number
+  total: number
+  playerAWinRate: number | null
+}
+
+export interface MetaSummaryStats {
+  totalMatches: number
+  uniquePlayers: number
+  uniqueDecks: number
+  diversityPercent: number
+}
+
 export interface RecordStat {
   id: string
   name: string
@@ -212,10 +233,84 @@ export function buildDashboardStats(
     totalMatches: completed.length,
     firstPlayerWinRate: getWinRate(firstPlayerWins, firstPlayerMatches.length),
     firstPlayerSample: firstPlayerMatches.length,
-    topPlayer: playerStats[0] ?? null,
-    topDeck: deckStats[0] ?? null,
+    topPlayer: pickReliableTop(playerStats),
+    topDeck: pickReliableTop(deckStats),
     mostUsedDeck,
   }
+}
+
+function pickReliableTop(stats: RecordStat[]): RecordStat | null {
+  const eligible = sortStatsByWeightedWinRate(stats.filter((stat) => stat.total >= MIN_RELIABLE_SAMPLE))
+  return eligible[0] ?? null
+}
+
+export function buildPlayerMatchupStats(players: Player[], matches: Match[]): PlayerMatchupStat[] {
+  const playerNameById = new Map(
+    players.filter((player) => !isDeletedPlayer(player)).map((player) => [player.id, player.name]),
+  )
+  const stats = new Map<string, PlayerMatchupStat>()
+
+  for (const match of getCompletedMatches(matches)) {
+    if (!playerNameById.has(match.player1Id) || !playerNameById.has(match.player2Id)) continue
+
+    const [playerAId, playerBId] = [match.player1Id, match.player2Id].sort()
+    const key = `${playerAId}:${playerBId}`
+    const current =
+      stats.get(key) ??
+      ({
+        key,
+        playerAId,
+        playerAName: playerNameById.get(playerAId) ?? '未知玩家',
+        playerBId,
+        playerBName: playerNameById.get(playerBId) ?? '未知玩家',
+        playerAWins: 0,
+        playerBWins: 0,
+        total: 0,
+        playerAWinRate: null,
+      } satisfies PlayerMatchupStat)
+
+    if (match.winnerPlayerId === playerAId) current.playerAWins += 1
+    else if (match.winnerPlayerId === playerBId) current.playerBWins += 1
+    current.total = current.playerAWins + current.playerBWins
+    current.playerAWinRate = getWinRate(current.playerAWins, current.total)
+    stats.set(key, current)
+  }
+
+  return [...stats.values()].sort((left, right) => right.total - left.total)
+}
+
+export function buildMetaSummaryStats(matches: Match[]): MetaSummaryStats {
+  const completed = getCompletedMatches(matches)
+  const uniquePlayers = new Set<string>()
+  const uniqueDecks = new Set<string>()
+
+  for (const match of completed) {
+    uniquePlayers.add(match.player1Id)
+    uniquePlayers.add(match.player2Id)
+    uniqueDecks.add(match.deck1Id)
+    uniqueDecks.add(match.deck2Id)
+  }
+
+  return {
+    totalMatches: completed.length,
+    uniquePlayers: uniquePlayers.size,
+    uniqueDecks: uniqueDecks.size,
+    diversityPercent:
+      completed.length > 0 ? Math.round((uniqueDecks.size / completed.length) * 100) : 0,
+  }
+}
+
+export function buildDailyTrendStats(matches: Match[]): DailyTrendStat[] {
+  const counts = new Map<string, number>()
+
+  for (const match of getCompletedMatches(matches)) {
+    const date = match.finishedAt.slice(0, 10)
+    counts.set(date, (counts.get(date) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, total]) => ({ date, total }))
 }
 
 export function buildMatchupStats(decks: Deck[], matches: Match[], language: Language = 'en'): MatchupStat[] {

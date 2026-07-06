@@ -124,7 +124,19 @@ export function RecordPage() {
             </div>
             <div className="rounded-lg bg-surface px-2 py-1.5">
               <dt className="text-text-secondary">{t('record.mvp')}</dt>
-              <dd className="truncate font-semibold">{dashboard.topPlayer?.name ?? '—'}</dd>
+              <dd className="font-semibold">
+                {dashboard.topPlayer ? (
+                  <>
+                    <span className="block truncate">{dashboard.topPlayer.name}</span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
+                      {formatPercent(dashboard.topPlayer.winRate)} · {dashboard.topPlayer.wins}W
+                      {dashboard.topPlayer.losses}L
+                    </span>
+                  </>
+                ) : (
+                  '—'
+                )}
+              </dd>
             </div>
             <div className="rounded-lg bg-surface px-2 py-1.5">
               <dt className="text-text-secondary">{t('record.topDeck')}</dt>

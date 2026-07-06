@@ -15,6 +15,7 @@ import {
   type PendingTableTarget,
   type TableDragPayload,
 } from '@/lib/tableMode'
+import { selectChipClass } from '@/lib/selectSurface'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, Player } from '@/types'
 
@@ -56,17 +57,8 @@ function DraggablePlayerChip({
       onDragStart={onDragStart}
       onClick={onTapSelect}
       className={[
-        'shrink-0 cursor-grab outline-none active:cursor-grabbing text-[10px] leading-tight',
-        compact
-          ? 'rounded-md px-1.5 py-0.5 font-semibold'
-          : 'rounded-lg px-3 py-1.5 text-sm font-semibold',
-        selected
-          ? compact
-            ? 'bg-brand-600 text-white ring-1 ring-brand-400'
-            : 'border-2 border-brand-400 bg-brand-600 text-white'
-          : compact
-            ? 'border border-surface-muted bg-surface text-text-primary'
-            : 'border border-surface-muted bg-surface text-text-primary',
+        'shrink-0 cursor-grab active:cursor-grabbing',
+        selectChipClass(selected ? 'active' : 'default', compact, 'font-semibold leading-tight'),
       ].join(' ')}
     >
       {player.name}
@@ -98,17 +90,11 @@ function DraggableDeckChip({
       onDragStart={onDragStart}
       onClick={onTapSelect}
       className={[
-        'shrink-0 cursor-grab outline-none active:cursor-grabbing text-[10px] leading-tight',
-        compact
-          ? 'max-w-[9rem] rounded-md px-1.5 py-0.5'
-          : 'rounded-lg px-2 py-1 text-xs',
-        selected
-          ? compact
-            ? 'bg-brand-600 text-white ring-1 ring-brand-400'
-            : 'border-2 border-brand-400 bg-brand-600 text-white'
-          : compact
-            ? 'border border-surface-muted bg-surface'
-            : 'border border-surface-muted bg-surface',
+        'shrink-0 cursor-grab active:cursor-grabbing',
+        selectChipClass(selected ? 'active' : 'default', compact, [
+          'leading-tight',
+          compact ? 'max-w-[9rem]' : 'text-xs',
+        ].join(' ')),
       ].join(' ')}
     >
       <DeckLabel deck={deck} showCode className={['inline-flex truncate', compact ? 'gap-0.5 text-[10px]' : ''].join(' ')} />
@@ -197,7 +183,7 @@ function AssignmentPanelBody({
   const hintClass = 'text-xs text-text-secondary'
   const playerZoneActive = pendingTableTarget?.field === 'player'
   const deckZoneActive = pendingTableTarget?.field === 'deck'
-  const zoneHighlightClass = 'rounded-md bg-brand-500/10 ring-2 ring-brand-400'
+  const zoneHighlightClass = 'rounded-md bg-brand-500/10 shadow-[inset_0_0_0_1px] shadow-brand-400/60'
   const compactRowClass = 'flex items-center gap-2.5 px-2.5'
 
   const playerSection = compact ? (

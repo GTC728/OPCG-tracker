@@ -39,7 +39,7 @@ export const LEADER_LOCALE_NAMES: Record<string, LeaderLocaleEntry> = {
   "Kaido": { 'zh-Hant': "凱多", 'zh-Hans': "凯多", ja: "カイドウ" },
   "Kalgara": { 'zh-Hant': "加雅", 'zh-Hans': "加雅", ja: "カルガラ", manual: true },
   "Kin'emon": { 'zh-Hant': "錦衛門", 'zh-Hans': "锦卫门", ja: "錦えもん" },
-  "King": { 'zh-Hant': "烬", 'zh-Hans': "烬", ja: "キング" },
+  "King": { 'zh-Hant': "燼", 'zh-Hans': "烬", ja: "キング" },
   "Koala": { 'zh-Hant': "可拉", 'zh-Hans': "可拉", ja: "コアラ", manual: true },
   "Koby": { 'zh-Hant': "克比", 'zh-Hans': "克比", ja: "コビー" },
   "Kouzuki Oden": { 'zh-Hant': "御田", 'zh-Hans': "御田", ja: "おでん" },

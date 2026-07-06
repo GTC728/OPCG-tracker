@@ -9,6 +9,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
+import { selectSurfaceClass } from '@/lib/selectSurface'
 import {
   decodeTableDragPayload,
   getActiveMatchForTableSlot,
@@ -282,12 +283,10 @@ function AssignFieldCell({
     <button
       type="button"
       className={[
-        'min-h-8 rounded-md px-1 py-0.5 text-left transition outline-none touch-manipulation',
-        highlight
-          ? 'border-2 border-brand-400 bg-brand-600/25 ring-1 ring-brand-400/40'
-          : filled
-            ? 'border border-brand-400/50 bg-brand-500/10'
-            : 'border border-dashed border-surface-muted bg-surface/50',
+        'min-h-8 rounded-md px-1 py-0.5 text-left transition',
+        selectSurfaceClass(
+          highlight ? 'active' : filled ? 'filled' : 'empty',
+        ),
         over && !highlight ? 'border-brand-500 bg-brand-500/10' : '',
       ].join(' ')}
       onClick={onTap}
