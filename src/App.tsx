@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionDayPrompt } from '@/components/session/SessionDayPrompt'
 import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
@@ -13,17 +13,23 @@ import { languageLabels, useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
-function PageContent({ tab }: { tab: TabId }) {
-  switch (tab) {
-    case 'record':
-      return <RecordPage />
-    case 'stats':
-      return <StatsPage />
-    case 'history':
-      return <HistoryPage />
-    case 'settings':
-      return <SettingsPage />
-  }
+function PageContent({ activeTab }: { activeTab: TabId }) {
+  return (
+    <>
+      <div className={activeTab === 'record' ? undefined : 'hidden'} aria-hidden={activeTab !== 'record'}>
+        <RecordPage />
+      </div>
+      <div className={activeTab === 'stats' ? undefined : 'hidden'} aria-hidden={activeTab !== 'stats'}>
+        <StatsPage />
+      </div>
+      <div className={activeTab === 'history' ? undefined : 'hidden'} aria-hidden={activeTab !== 'history'}>
+        <HistoryPage />
+      </div>
+      <div className={activeTab === 'settings' ? undefined : 'hidden'} aria-hidden={activeTab !== 'settings'}>
+        <SettingsPage />
+      </div>
+    </>
+  )
 }
 
 function OnboardingScreen() {
@@ -87,6 +93,15 @@ export default function App() {
   const onboardingCompleted = useAppStore((s) => s.settings.onboardingCompleted)
   const hydrate = useAppStore((s) => s.hydrate)
   const setActiveTab = useAppStore((s) => s.setActiveTab)
+  const scrollPositions = useRef<Partial<Record<TabId, number>>>({})
+
+  const handleTabChange = (tab: TabId) => {
+    scrollPositions.current[activeTab] = window.scrollY
+    setActiveTab(tab)
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollPositions.current[tab] ?? 0)
+    })
+  }
 
   useGroupCollab()
 
@@ -126,9 +141,9 @@ export default function App() {
         title={meta.title}
         subtitle={meta.subtitle}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       >
-        <PageContent tab={activeTab} />
+        <PageContent activeTab={activeTab} />
       </AppShell>
     </ToastProvider>
   )

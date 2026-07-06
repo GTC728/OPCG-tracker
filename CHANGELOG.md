@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.10.5 - 2026-07-06
+
+### Changed
+
+- **Stats UI simplification**: removed redundant「常見玩家/牌組對位」card lists, daily volume trend, donut chart, and separate deck distribution table — heatmaps and unified deck list cover the same data.
+- **Deck tab**: merged usage × win-rate into a single clickable **牌組列表** (tap row → deck profile).
+- **Heatmap cells**: show win rate + W-L per matchup.
+- **Player profile**: merged duplicate「玩家對位」/「對手勝率」into one section; tap opponent to open their profile.
+
+### Fixed
+
+- **Scroll position**: stats tab and sub-sections (總覽/玩家/牌組) remember scroll when switching tabs or opening/closing profiles.
+
 ## V3.10.4 - 2026-07-06
 
 ### New
