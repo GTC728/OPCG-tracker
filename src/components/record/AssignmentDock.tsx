@@ -20,7 +20,7 @@ import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, Player } from '@/types'
 
 const H_SCROLL =
-  'flex flex-nowrap gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+  'flex flex-nowrap items-center gap-1 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase().replace(/[-_\s.]/g, '')
@@ -378,7 +378,7 @@ export function AssignmentDock({
 
   const drawerPanel =
     variant === 'drawer' ? (
-      <div className="overflow-hidden border-t border-surface-muted bg-surface-elevated/98 shadow-[0_-4px_16px_rgba(0,0,0,0.25)] backdrop-blur">
+      <div className="overflow-hidden border-t border-white/[0.06] bg-surface-elevated/98 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <div
           className="flex items-center gap-1.5 border-b border-surface-muted/80 px-2.5"
           style={{ height: ASSIGNMENT_DRAWER_HEADER }}
@@ -415,7 +415,7 @@ export function AssignmentDock({
 
         {expanded ? (
           <div
-            className="overflow-hidden py-1"
+            className="overflow-y-auto py-1.5 scrollbar-none"
             style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
           >
             <AssignmentPanelBody
@@ -437,7 +437,8 @@ export function AssignmentDock({
       </div>
     ) : null
 
-  useBottomChromePanel(drawerPanel, variant === 'drawer')
+  const activeTab = useAppStore((store) => store.activeTab)
+  useBottomChromePanel(drawerPanel, variant === 'drawer' && activeTab === 'record')
 
   if (variant === 'drawer') {
     return null

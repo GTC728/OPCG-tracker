@@ -18,6 +18,28 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 1. **Mobile-first, compact, scannable** — Record page is used standing at a table; minimize vertical scroll and tap targets should stay readable, not oversized.
 2. **Unified bottom chrome** — On mobile Record, assignment drawer and bottom nav live in one `BottomChromeShell` (drawer stacked directly above nav in DOM). Height is measured via `ResizeObserver` → `--bottom-chrome-height`. Do not use separate fixed `bottom-*` offsets for drawer vs nav.
 3. **Safe-area aware** — `safe-bottom` on the chrome shell only; main padding uses `--bottom-chrome-height`.
+4. **V2-inspired clarity (V3.10.6+)** — Reference OPCG Tracker V2 and modern mobile dashboards: clear hierarchy (title → subtitle → data), card-based grouping, segmented filters instead of heavy button grids, left-aligned labels without excessive uppercase tracking.
+5. **Shared surfaces** — Use `src/lib/uiSurface.ts` + `.ui-segment` CSS for cards and toggles; avoid one-off `bg-surface-elevated` without ring/shadow.
+6. **Bottom chrome scope** — Assignment drawer registers via `useBottomChromePanel` **only when `activeTab === 'record'`** so hidden Record page does not leak the panel onto Stats/History.
+
+---
+
+## Visual language (V3.10.6+)
+
+Inspired by V2 (light, airy lists) adapted to our dark theme:
+
+| Pattern | Implementation |
+|---------|----------------|
+| **Card** | `uiCard` — `rounded-2xl`, elevated bg, `ring-white/7%`, subtle shadow |
+| **Interactive card** | `uiCardInteractive` — hover/active tint for list rows & drill-down |
+| **Segmented control** | `SegmentedControl` + `.ui-segment` — pill toggle (scope, stats tabs) |
+| **Section title** | `uiSectionTitle` — `text-base font-semibold`, no ALL CAPS |
+| **Metric label** | `text-xs font-medium text-text-secondary` |
+| **Metric value** | `text-2xl font-bold tracking-tight` |
+
+**Code:** `src/lib/uiSurface.ts`, `src/components/ui/SegmentedControl.tsx`, `src/index.css` (`.ui-segment*`)
+
+**Avoid:** stacked uppercase brand labels, flat cards without edge definition, duplicate fixed layers.
 
 ---
 
@@ -25,16 +47,16 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 
 | Token | Usage |
 |-------|--------|
-| `surface` (`#0f172a`) | Page background |
-| `surface-elevated` (`#1e293b`) | Cards, drawer, elevated panels |
-| `surface-muted` (`#334155`) | Borders, dashed empty slots |
-| `brand-500` / `brand-600` | Primary actions, selected assignment, table highlight |
+| `surface` (`#0b1220`) | Page background |
+| `surface-elevated` (`#151f32`) | Cards, drawer, elevated panels |
+| `surface-muted` (`#2a3548`) | Borders, dashed empty slots, hover fills |
+| `brand-400` / `brand-500` / `brand-600` | Nav active, links, primary actions, selected assignment |
 | `text-primary` | Names, primary labels |
-| `text-secondary` | Placeholders, VS, secondary hints |
+| `text-secondary` | Placeholders, VS, secondary hints, metric labels |
 | `success` | Win button (`W`) tint |
 | `danger` | Clear / remove actions on hover |
 
-Dark theme only for now. Avoid introducing light-mode-specific colors until we explicitly plan dual themes.
+Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead of heavy gray borders for depth on dark bg.
 
 ---
 
@@ -112,7 +134,7 @@ Stacked sections, **not** two-column grid:
 2. **Row 2 — Decks:** label and search input **on one line** (same 10px spacing).
 3. **Row 3 — Recent decks:** **independent row**; horizontal scroll chip strip only.
 
-No vertical scrollbar in drawer body — use `overflow-hidden` and sized `max-height` (`ASSIGNMENT_DRAWER_EXPANDED`).
+Expanded body uses `overflow-y-auto scrollbar-none` with `max-height` cap (`ASSIGNMENT_DRAWER_EXPANDED` = `min(46dvh, 12rem)`) so bottom chip text is never clipped. Chip rows use `items-center` + `min-h-[1.375rem]` on compact chips.
 
 ### Highlight when table slot tapped
 
@@ -191,5 +213,6 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-07-07 | V2-inspired visual language; `uiSurface` + `SegmentedControl`; assignment drawer tab-gated + taller body; refined dark tokens |
 | 2026-07-05 | Initial preferences from V3.8 mobile assignment drawer + compact table board work |
 | 2026-07-05 | Unified BottomChrome; `isListedPlayer` rules; history custom date range + FilterPicker |

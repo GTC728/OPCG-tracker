@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
 import { buildDashboardStats, formatPercent } from '@/lib/stats'
+import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 
@@ -31,11 +32,9 @@ export function RecordPage() {
 
   return (
     <div className="space-y-3">
-      <section className="rounded-xl bg-surface-elevated px-3 py-2.5">
+      <section className={[uiCard, 'px-3 py-2.5'].join(' ')}>
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-500">
-            {t('record.currentSession')}
-          </p>
+          <p className="text-xs font-medium text-text-secondary">{t('record.currentSession')}</p>
           {currentSession ? (
             <p className="mt-0.5 text-sm font-semibold leading-snug">
               {currentSession.name}

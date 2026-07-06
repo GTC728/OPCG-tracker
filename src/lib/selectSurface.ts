@@ -19,10 +19,12 @@ export function selectSurfaceClass(state: SelectSurfaceState, className = ''): s
 type SelectChipState = 'default' | 'active'
 
 const chipBase =
-  'border font-semibold outline-none touch-manipulation box-border transition-colors'
+  'inline-flex items-center border font-semibold outline-none touch-manipulation box-border transition-colors'
 
 export function selectChipClass(state: SelectChipState, compact = false, className = ''): string {
-  const sizeClass = compact ? 'rounded-md px-1.5 py-0.5 text-[10px] leading-tight' : 'rounded-lg px-3 py-1.5 text-sm'
+  const sizeClass = compact
+    ? 'min-h-[1.375rem] items-center rounded-md px-1.5 py-0.5 text-[10px] leading-tight'
+    : 'rounded-lg px-3 py-1.5 text-sm'
   const stateClass =
     state === 'active'
       ? 'border-brand-400/80 bg-brand-600 text-white shadow-[inset_0_0_0_1px] shadow-white/20'

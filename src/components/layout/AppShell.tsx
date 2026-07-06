@@ -59,7 +59,7 @@ interface BottomNavProps {
 function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const { t } = useI18n()
   return (
-    <nav className="border-t border-surface-muted/80">
+    <nav className="border-t border-white/[0.06] bg-surface/95">
       <div className="grid grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
@@ -68,8 +68,8 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
               key={tab.id}
               type="button"
               className={[
-                'flex min-h-9 flex-col items-center justify-center gap-0.5 px-1 py-1 text-[9px] font-medium leading-none transition-colors',
-                active ? 'text-brand-500' : 'text-text-secondary hover:text-text-primary',
+                'flex min-h-10 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-medium leading-none transition-colors',
+                active ? 'text-brand-400' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')}
               onClick={() => onChange(tab.id)}
             >
@@ -102,13 +102,13 @@ export function AppShell({
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
         <SyncStatusBanner />
-        <header className="sticky top-0 z-20 border-b border-surface-muted bg-surface/95 px-5 py-4 backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.2em] text-brand-500">OPCG Tracker</p>
-          <h1 className="mt-1 text-2xl font-bold">{title}</h1>
-          {subtitle ? <p className="mt-1 text-sm text-text-secondary">{subtitle}</p> : null}
+        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-surface/90 px-5 py-3.5 backdrop-blur-md">
+          <p className="text-[11px] font-semibold tracking-wide text-brand-400">OPCG Tracker</p>
+          <h1 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h1>
+          {subtitle ? <p className="mt-0.5 text-sm leading-snug text-text-secondary">{subtitle}</p> : null}
         </header>
 
-        <main className="app-main-bottom-pad flex-1 px-5 pt-4">{children}</main>
+        <main className="app-main-bottom-pad flex-1 space-y-4 px-5 pt-3">{children}</main>
       </div>
     </BottomChromeShell>
   )

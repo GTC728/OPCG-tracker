@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast'
 import { getPlayerName } from '@/lib/entities'
 import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
+import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, MatchEditInput, Player } from '@/types'
@@ -227,7 +228,7 @@ function HistoryMatchCard({
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <article className="rounded-xl bg-surface-elevated ring-1 ring-surface-muted">
+    <article className={uiCard}>
       <button
         type="button"
         className="block w-full px-3 py-2.5 text-left outline-none"
@@ -353,7 +354,7 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl bg-surface-elevated p-4">
+      <section className={[uiCard, 'p-4'].join(' ')}>
         <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
         <div className="mt-3 space-y-3">
           <DateRangeFilter

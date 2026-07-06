@@ -7,8 +7,8 @@ export const BOTTOM_NAV_OFFSET = `calc(${BOTTOM_NAV_HEIGHT} + env(safe-area-inse
 /** Drawer header bar height. */
 export const ASSIGNMENT_DRAWER_HEADER = '2.125rem'
 
-/** Expanded drawer body cap — fits 3 compact rows without vertical scroll. */
-export const ASSIGNMENT_DRAWER_EXPANDED = 'min(40dvh, 9.5rem)'
+/** Expanded drawer body cap — fits 3 compact rows without clipping chip text. */
+export const ASSIGNMENT_DRAWER_EXPANDED = 'min(46dvh, 12rem)'
 
 export const ASSIGNMENT_DRAWER_HEIGHT = (expanded: boolean) =>
   expanded ? ASSIGNMENT_DRAWER_EXPANDED : ASSIGNMENT_DRAWER_HEADER

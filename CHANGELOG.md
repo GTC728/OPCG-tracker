@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V3.10.6 - 2026-07-07
+
+### Changed
+
+- **Visual refresh (V2-inspired)**: refined dark tokens, card rings/shadows, segmented controls for stats filters, cleaner headers and list rows. See `docs/UI-DESIGN.md`.
+- **Shared UI**: `uiSurface.ts`, `SegmentedControl`, `.ui-segment` CSS applied to Record, Stats, History surfaces.
+
+### Fixed
+
+- **Assignment drawer on wrong tab**: bottom chrome panel only active on Record tab (no longer overlays Stats/History).
+- **Assignment drawer clipping**: taller expanded cap + scroll fallback; chip rows aligned so bottom text displays fully.
+
 ## V3.10.5 - 2026-07-06
 
 ### Changed

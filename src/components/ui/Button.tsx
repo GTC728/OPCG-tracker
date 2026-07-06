@@ -10,11 +10,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 active:bg-brand-700',
-  secondary: 'bg-surface-muted text-text-primary hover:bg-slate-500 active:bg-slate-600',
-  ghost: 'bg-transparent text-text-secondary ring-1 ring-surface-muted hover:bg-surface-elevated hover:text-text-primary',
-  danger: 'bg-danger text-white shadow-lg shadow-red-900/20 hover:bg-red-600 active:bg-red-700',
-  success: 'bg-success text-white shadow-lg shadow-green-900/20 hover:bg-green-600 active:bg-green-700',
+  primary: 'bg-brand-600 text-white shadow-md shadow-brand-600/25 hover:bg-brand-700 active:bg-brand-700',
+  secondary: 'bg-surface-elevated text-text-primary ring-1 ring-white/[0.08] hover:bg-surface-muted/50 active:bg-surface-muted/70',
+  ghost: 'bg-transparent text-text-secondary ring-1 ring-white/[0.08] hover:bg-surface-elevated hover:text-text-primary',
+  danger: 'bg-danger text-white shadow-md shadow-red-900/25 hover:bg-red-600 active:bg-red-700',
+  success: 'bg-success text-white shadow-md shadow-green-900/25 hover:bg-green-600 active:bg-green-700',
 }
 
 export function Button({

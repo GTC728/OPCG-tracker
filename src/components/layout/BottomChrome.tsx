@@ -52,7 +52,7 @@ export function BottomChromeShell({ nav, children }: BottomChromeShellProps) {
       {children}
       <div
         ref={chromeRef}
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-muted bg-surface/95 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-surface/95 backdrop-blur-md"
       >
         <div className="safe-bottom mx-auto w-full max-w-lg">
           {panel}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
+import { uiCardInteractive } from '@/lib/uiSurface'
 import type { Deck, Match, Player } from '@/types'
 
 function SideBlock({
@@ -199,8 +200,9 @@ export function MatchListItem({
   )
 
   const classes = [
-    'match-list-item flex w-full flex-col gap-1.5 rounded-xl bg-surface-elevated px-3 py-2 text-left ring-1 ring-surface-muted outline-none transition',
-    onClick ? 'hover:bg-surface-muted/40 active:bg-surface-muted/60' : '',
+    'match-list-item flex w-full flex-col gap-1.5 px-3 py-2.5 text-left outline-none',
+    uiCardInteractive,
+    onClick ? '' : '',
     className,
   ]
     .filter(Boolean)

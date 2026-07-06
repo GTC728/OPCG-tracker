@@ -1,6 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { useI18n } from '@/lib/i18n'
+import { uiCard, uiCardInteractive, uiSectionTitle } from '@/lib/uiSurface'
 import {
   buildDashboardStats,
   buildDeckStats,
@@ -41,10 +43,10 @@ function SummaryCard({
   featured?: boolean
 }) {
   return (
-    <article className={['rounded-2xl bg-surface-elevated', featured ? 'p-4' : 'p-3'].join(' ')}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{label}</p>
-      <p className={['mt-2 font-bold', featured ? 'text-4xl' : 'text-2xl'].join(' ')}>{value}</p>
-      {detail ? <p className="mt-1 text-sm text-text-secondary">{detail}</p> : null}
+    <article className={[uiCard, featured ? 'p-4' : 'p-3'].join(' ')}>
+      <p className="text-xs font-medium text-text-secondary">{label}</p>
+      <p className={['mt-1 font-bold tracking-tight', featured ? 'text-3xl' : 'text-2xl'].join(' ')}>{value}</p>
+      {detail ? <p className="mt-0.5 text-xs text-text-secondary">{detail}</p> : null}
     </article>
   )
 }
@@ -76,7 +78,7 @@ function getMatchupVerdict(winRate: number | null, total: number): string {
 
 function EmptyState({ children }: { children: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
+    <div className={[uiCard, 'border border-dashed border-white/[0.08] p-4 text-center text-sm text-text-secondary'].join(' ')}>
       {children}
     </div>
   )
@@ -89,28 +91,17 @@ function SectionTabs({
   activeSection: StatsSectionId
   onChange: (section: StatsSectionId) => void
 }) {
-  const sections: Array<{ id: StatsSectionId; label: string }> = [
-    { id: 'overview', label: '總覽' },
-    { id: 'players', label: '玩家' },
-    { id: 'decks', label: '牌組' },
-  ]
-
   return (
-    <section className="grid grid-cols-3 gap-2 rounded-2xl bg-surface-elevated p-2">
-      {sections.map((section) => (
-        <button
-          key={section.id}
-          type="button"
-          className={[
-            'rounded-xl px-2 py-3 text-sm font-semibold',
-            activeSection === section.id ? 'bg-brand-600 text-white' : 'text-text-secondary',
-          ].join(' ')}
-          onClick={() => onChange(section.id)}
-        >
-          {section.label}
-        </button>
-      ))}
-    </section>
+    <SegmentedControl
+      className="grid-cols-3"
+      value={activeSection}
+      onChange={onChange}
+      options={[
+        { value: 'overview', label: '總覽' },
+        { value: 'players', label: '玩家' },
+        { value: 'decks', label: '牌組' },
+      ]}
+    />
   )
 }
 
@@ -127,7 +118,7 @@ function StatRow({
   const width = `${Math.round((displayWinRate ?? 0) * 100)}%`
 
   const content = (
-    <article className="rounded-2xl bg-surface-elevated p-4">
+    <article className={[uiCard, 'p-3.5'].join(' ')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-semibold">
@@ -170,7 +161,7 @@ function StatSection({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className={uiSectionTitle}>{title}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
           {stats.length} 項
         </span>
@@ -238,7 +229,7 @@ function MatchupRow({
         : 'text-text-secondary'
 
   return (
-    <article className="rounded-2xl bg-surface-elevated p-3">
+    <article className={[uiCard, 'p-3'].join(' ')}>
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           {anchorDeckId ? (
@@ -339,7 +330,7 @@ function MatchupHeatmap({
           勝率 / W-L
         </span>
       </div>
-      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-3">
+      <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
         {rankedDecks.length >= 2 ? (
           <div
             className="min-w-max"
@@ -466,7 +457,7 @@ function PlayerMatchupHeatmap({
           勝率 / W-L
         </span>
       </div>
-      <article className="overflow-x-auto rounded-2xl bg-surface-elevated p-3">
+      <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
         {rankedPlayers.length >= 2 ? (
           <div
             className="min-w-max"
@@ -576,7 +567,7 @@ function DeckListSection({
           {sorted.length} 項 · 總出場 {totalAppearances}
         </span>
       </div>
-      <article className="divide-y divide-surface-muted overflow-hidden rounded-2xl bg-surface-elevated ring-1 ring-surface-muted">
+      <article className={[uiCard, 'divide-y divide-white/[0.06] overflow-hidden'].join(' ')}>
         {sorted.map((stat) => {
           const usage = (stat.total / totalAppearances) * 100
           const deck = decks.find((item) => item.id === stat.id)
@@ -686,7 +677,7 @@ function MiniLeaderboard({
   if (!top.length) return null
 
   return (
-    <section className="rounded-2xl bg-surface-elevated p-3">
+    <section className={[uiCard, 'p-3'].join(' ')}>
       <h3 className="text-sm font-semibold text-brand-500">{title}</h3>
       <ol className="mt-2 space-y-1.5">
         {top.map((stat, index) => (
@@ -758,7 +749,7 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">先後攻拆分</h2>
-      <article className="rounded-2xl bg-surface-elevated p-4">
+      <article className={[uiCard, 'p-4'].join(' ')}>
         <div className="flex items-center justify-between text-sm">
           <span className="text-text-secondary">先攻勝率</span>
           <strong>{formatPercent(firstWinRate)}</strong>
@@ -778,7 +769,7 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
         {stats.map((stat) => {
           const displayWinRate = getDisplayWinRate(stat.winRate, stat.total)
           return (
-            <article key={stat.label} className="rounded-2xl bg-surface-elevated p-4">
+            <article key={stat.label} className={[uiCard, 'p-4'].join(' ')}>
               <p className="text-sm text-text-secondary">{stat.label}</p>
               <p className="mt-2 text-3xl font-bold">{formatPercent(displayWinRate)}</p>
               <p className="mt-1 text-sm text-text-secondary">
@@ -802,7 +793,7 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
         </span>
       </div>
       {stats.slice(0, 24).map((stat) => (
-        <article key={stat.id} className="rounded-2xl bg-surface-elevated p-4">
+        <article key={stat.id} className={[uiCard, 'p-4'].join(' ')}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold">{stat.playerName}</h3>
@@ -835,7 +826,7 @@ function RecentFormSection({ recentForm }: { recentForm: ReturnType<typeof build
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">近期形態</h2>
-      <article className="rounded-2xl bg-surface-elevated p-4">
+      <article className={[uiCard, 'p-4'].join(' ')}>
         <div className="space-y-3">
           {visibleForms.map((form) => {
             const width = `${Math.round((form.winRate ?? 0) * 100)}%`
@@ -868,14 +859,12 @@ function ProfileHeader({
   onBack: () => void
 }) {
   return (
-    <section className="rounded-2xl bg-surface-elevated p-4">
+    <section className={[uiCard, 'p-4'].join(' ')}>
       <button type="button" className="text-sm font-semibold text-brand-400" onClick={onBack}>
         ← 返回統計
       </button>
-      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">
-        Profile
-      </p>
-      <h2 className="mt-1 text-2xl font-bold">{title}</h2>
+      <p className="mt-3 text-xs font-medium text-text-secondary">Profile</p>
+      <h2 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h2>
       <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
     </section>
   )
@@ -1123,34 +1112,18 @@ export function StatsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-elevated p-2">
-        <button
-          type="button"
-          className={[
-            'rounded-xl px-3 py-3 text-sm font-semibold',
-            scope === 'session' ? 'bg-brand-600 text-white' : 'text-text-secondary',
-          ].join(' ')}
-          onClick={() => {
-            setScope('session')
-            setProfileTarget(null)
-          }}
-        >
-          {t('stats.currentSession')}
-        </button>
-        <button
-          type="button"
-          className={[
-            'rounded-xl px-3 py-3 text-sm font-semibold',
-            scope === 'all' ? 'bg-brand-600 text-white' : 'text-text-secondary',
-          ].join(' ')}
-          onClick={() => {
-            setScope('all')
-            setProfileTarget(null)
-          }}
-        >
-          {t('stats.allData')}
-        </button>
-      </section>
+      <SegmentedControl
+        className="grid-cols-2"
+        value={scope}
+        onChange={(value) => {
+          setScope(value)
+          setProfileTarget(null)
+        }}
+        options={[
+          { value: 'session', label: t('stats.currentSession') },
+          { value: 'all', label: t('stats.allData') },
+        ]}
+      />
 
       <SectionTabs activeSection={activeSection} onChange={changeSection} />
 
@@ -1196,7 +1169,7 @@ export function StatsPage() {
           <section className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              className="rounded-2xl bg-surface-elevated p-3 text-left"
+              className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
               onClick={() => changeSection('players')}
             >
               <p className="text-sm text-text-secondary">深入查看</p>
@@ -1205,7 +1178,7 @@ export function StatsPage() {
             </button>
             <button
               type="button"
-              className="rounded-2xl bg-surface-elevated p-3 text-left"
+              className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
               onClick={() => changeSection('decks')}
             >
               <p className="text-sm text-text-secondary">深入查看</p>
