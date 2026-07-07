@@ -2,12 +2,19 @@ export type ResultType = 'normal' | 'draw' | 'forfeit'
 export type MatchSource = 'manual' | 'import' | 'manual_edit'
 export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
 
+export type ThemeMode = 'dark' | 'light' | 'system'
+export type AccentPreset = 'blue' | 'red' | 'green' | 'purple' | 'gold'
+export type UiDensity = 'compact' | 'comfortable'
+export type StatsDefaultScope = 'session' | 'all' | 'profile'
+
 export interface Player {
   id: string
   name: string
   aliases: string[]
   archived: boolean
   deletedAt: string | null
+  profileClaimDeviceId: string | null
+  profileClaimedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -199,6 +206,12 @@ export interface ImportSummary {
   createdMatches: number
 }
 
+export interface AchievementUnlock {
+  achievementId: string
+  playerId: string
+  unlockedAt: string
+}
+
 export interface AppSettings {
   lastBackupReminder: string | null
   backupReminderIntervalDays: number
@@ -212,6 +225,13 @@ export interface AppSettings {
   groupCollabEnabled: boolean
   groupCollabBootstrapped: boolean
   sessionDayPromptDismissedFor: string | null
+  linkedPlayerId: string | null
+  profileSetupCompleted: boolean
+  theme: ThemeMode
+  accent: AccentPreset
+  density: UiDensity
+  statsDefaultScope: StatsDefaultScope
+  achievementNotifications: boolean
 }
 
 export interface AppState {
@@ -232,6 +252,7 @@ export interface AppState {
   importBatches: ImportBatch[]
   importRows: ImportRow[]
   importRecords: ImportRecord[]
+  achievementUnlocks: AchievementUnlock[]
   settings: AppSettings
 }
 

@@ -9,6 +9,8 @@ import {
   pauseGroupCollabNotify,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
+import { evaluateNewAchievementUnlocks } from '@/lib/achievements'
+import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
 import { loadAppState, saveAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
 import type {
@@ -29,6 +31,7 @@ import type {
 interface AppStore extends AppState {
   hydrated: boolean
   activeTab: TabId
+  pendingAchievementToasts: string[]
   hydrate: () => Promise<void>
   setActiveTab: (tab: TabId) => void
   replaceState: (state: AppState) => void
@@ -61,6 +64,10 @@ interface AppStore extends AppState {
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
+  createAndClaimProfile: (input: PlayerInput) => Player
+  linkProfileToPlayer: (playerId: string, nameConfirmation: string, forceReclaim?: boolean) => void
+  unlinkProfile: () => void
+  clearPendingAchievementToasts: () => void
   setSessionRoster: (sessionId: string, playerIds: string[]) => void
   setMatchNotes: (matchId: string, notes: string | null) => void
   openSessionRosterPrompt: (sessionId: string) => void
@@ -95,8 +102,28 @@ function toPersistedState(store: AppStore): AppState {
     importBatches: store.importBatches,
     importRows: store.importRows,
     importRecords: store.importRecords,
+    achievementUnlocks: store.achievementUnlocks,
     settings: store.settings,
   }
+}
+
+function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state: AppState; unlockedIds: string[] } {
+  const linkedId = state.settings.linkedPlayerId
+  const targets = linkedId && playerIds.includes(linkedId) ? [linkedId] : playerIds
+  const unlockedIds: string[] = []
+  let nextState = state
+
+  for (const playerId of targets) {
+    const fresh = evaluateNewAchievementUnlocks(nextState, playerId)
+    if (!fresh.length) continue
+    unlockedIds.push(...fresh.map((item) => item.achievementId))
+    nextState = {
+      ...nextState,
+      achievementUnlocks: [...nextState.achievementUnlocks, ...fresh],
+    }
+  }
+
+  return { state: nextState, unlockedIds }
 }
 
 let lastPersistedAppState: AppState | null = null
@@ -262,6 +289,8 @@ function findOrCreatePlayer(state: AppState, name: string): { state: AppState; p
     aliases: [],
     archived: false,
     deletedAt: null,
+    profileClaimDeviceId: null,
+    profileClaimedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -289,6 +318,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   ...createDefaultAppState(),
   hydrated: false,
   activeTab: 'record',
+  pendingAchievementToasts: [],
 
   hydrate: async () => {
     try {
@@ -507,6 +537,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       aliases: normalizeUniqueList(input.aliases),
       archived: false,
       deletedAt: null,
+      profileClaimDeviceId: null,
+      profileClaimedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
@@ -753,7 +785,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
       activeMatches: current.activeMatches.filter((item) => item.id !== id),
       matches: [match, ...current.matches],
     })
-    set({ ...next })
+    const achievementResult = applyAchievementUnlocks(next, [
+      match.player1Id,
+      match.player2Id,
+    ])
+    const persisted = persist(achievementResult.state)
+    set({
+      ...persisted,
+      pendingAchievementToasts: [
+        ...get().pendingAchievementToasts,
+        ...achievementResult.unlockedIds,
+      ],
+    })
     return match
   },
 
@@ -1079,6 +1122,59 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
     })
     set({ ...next })
+  },
+
+  createAndClaimProfile: (input) => {
+    const current = getAppState()
+    const name = input.name.trim()
+    if (!name) throw new Error('玩家名稱不能留空')
+    assertUniquePlayerName(current.players, name)
+
+    const timestamp = nowIso()
+    const player: Player = {
+      id: createId(),
+      name,
+      aliases: normalizeUniqueList(input.aliases),
+      archived: false,
+      deletedAt: null,
+      profileClaimDeviceId: null,
+      profileClaimedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    const withPlayer = {
+      ...current,
+      players: [player, ...current.players],
+      playerAliases: [
+        ...createPlayerAliasRecords(player.id, player.aliases, 'manual'),
+        ...current.playerAliases,
+      ],
+    }
+    const claimed = applyProfileClaim(withPlayer, player.id)
+    const persisted = persist(claimed)
+    set({ ...persisted })
+    return player
+  },
+
+  linkProfileToPlayer: (playerId, nameConfirmation, forceReclaim = false) => {
+    const current = getAppState()
+    const player = current.players.find((item) => item.id === playerId)
+    if (!player) throw new ProfileClaimError('player_not_found', '找不到玩家。')
+    assertNameConfirmation(player, nameConfirmation)
+    const claimed = applyProfileClaim(current, playerId, { forceReclaim })
+    const persisted = persist(claimed)
+    set({ ...persisted })
+  },
+
+  unlinkProfile: () => {
+    const current = getAppState()
+    const persisted = persist(unlinkProfileState(current))
+    set({ ...persisted })
+  },
+
+  clearPendingAchievementToasts: () => {
+    set({ pendingAchievementToasts: [] })
   },
 
   setSessionRoster: (sessionId, playerIds) => {

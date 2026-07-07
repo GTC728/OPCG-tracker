@@ -1,11 +1,21 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AchievementsWall } from '@/components/achievements/AchievementsWall'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
+import { PlayerShareCard, SessionShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
+import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
+import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Button } from '@/components/ui/Button'
+import { MatchListItem } from '@/components/match/MatchResultRow'
+import { getPlayerAchievementProgress } from '@/lib/achievements'
+import { getLinkedPlayer } from '@/lib/profileClaim'
 import { useI18n } from '@/lib/i18n'
-import { uiCard, uiCardInteractive, uiSectionTitle } from '@/lib/uiSurface'
+import { uiCard, uiCardInteractive, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 import {
   buildDashboardStats,
   buildDeckStats,
+  buildDeckUsageDistribution,
   buildFirstSecondStats,
   buildHeadToHeadStats,
   buildInsightMessages,
@@ -15,6 +25,8 @@ import {
   buildPlayerMatchupStats,
   buildPlayerStats,
   buildRecentForm,
+  buildWeeklyWinRateStats,
+  buildWinStreakStats,
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
@@ -853,16 +865,26 @@ function ProfileHeader({
   title,
   subtitle,
   onBack,
+  onShare,
 }: {
   title: ReactNode
   subtitle: string
   onBack: () => void
+  onShare?: () => void
 }) {
+  const { t } = useI18n()
   return (
-    <section className={[uiCard, 'p-4'].join(' ')}>
-      <button type="button" className="text-sm font-semibold text-brand-400" onClick={onBack}>
-        ← 返回統計
-      </button>
+    <section className={[uiGlassCard, 'p-4'].join(' ')}>
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" className="text-sm font-semibold text-brand-400" onClick={onBack}>
+          ← {t('stats.backToStats')}
+        </button>
+        {onShare ? (
+          <Button variant="ghost" className="min-h-9 px-3 py-1.5 text-sm" onClick={onShare}>
+            {t('share.exportShort')}
+          </Button>
+        ) : null}
+      </div>
       <p className="mt-3 text-xs font-medium text-text-secondary">Profile</p>
       <h2 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h2>
       <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
@@ -887,27 +909,36 @@ function MiniStatGrid({ stat }: { stat: RecordStat | null }) {
 function PlayerProfileView({
   player,
   matches,
+  allMatches,
   players,
   decks,
   language,
+  achievementUnlocks,
   onBack,
   onOpenDeck,
   onOpenPlayer,
 }: {
   player: Player
   matches: Match[]
+  allMatches: Match[]
   players: Player[]
   decks: Deck[]
   language: Language
+  achievementUnlocks: ReturnType<typeof useAppStore.getState>['achievementUnlocks']
   onBack: () => void
   onOpenDeck: (deckId: string) => void
   onOpenPlayer: (playerId: string) => void
 }) {
   const { t } = useI18n()
+  const [shareOpen, setShareOpen] = useState(false)
   const playerMatches = getCompletedMatches(matches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
   const stat = buildPlayerStats(players, matches).find((item) => item.id === player.id) ?? null
+  const streak = buildWinStreakStats(player.id, matches)
+  const deckUsage = buildDeckUsageDistribution(player.id, decks, matches, language)
+  const weeklyStats = buildWeeklyWinRateStats(player.id, allMatches)
+  const achievements = getPlayerAchievementProgress(player.id, achievementUnlocks)
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -916,16 +947,47 @@ function PlayerProfileView({
     (matchup) => playerDeckIds.has(matchup.deckAId) || playerDeckIds.has(matchup.deckBId),
   )
   const headToHead = buildHeadToHeadStats(player.id, players, matches)
+  const recentMatches = [...playerMatches]
+    .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
+    .slice(0, 8)
 
   return (
     <div className="space-y-4">
       <ProfileHeader
         title={player.name}
-        subtitle={`玩家資料 · ${playerMatches.length} 場對局`}
+        subtitle={`${t('stats.playerProfile')} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
         onBack={onBack}
+        onShare={() => setShareOpen(true)}
       />
       <MiniStatGrid stat={stat} />
+      <WinStreakSummary
+        currentStreak={streak.currentStreak}
+        longestStreak={streak.longestStreak}
+        currentType={streak.currentType}
+      />
+      <DeckUsagePieChart slices={deckUsage} title={t('stats.deckUsagePie')} />
+      <WeeklyWinRateChart stats={weeklyStats} title={t('stats.weeklyWinRate')} />
       <RecentFormSection recentForm={buildRecentForm(matches, player.id)} />
+      <AchievementsWall achievements={achievements} />
+      <section className="space-y-3">
+        <h2 className={uiSectionTitle}>{t('stats.recentMatches')}</h2>
+        {recentMatches.length ? (
+          recentMatches.map((match) => (
+            <MatchListItem
+              key={match.id}
+              match={match}
+              players={players}
+              decks={decks}
+              perspectivePlayerId={player.id}
+              showTurnOrder
+              showWinLossBadge
+              showResultColors={false}
+            />
+          ))
+        ) : (
+          <EmptyState>{t('stats.noRecentMatches')}</EmptyState>
+        )}
+      </section>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">使用牌組</h2>
         {deckStats.length ? (
@@ -963,6 +1025,14 @@ function PlayerProfileView({
         decks={decks}
         playerDeckIds={playerDeckIds}
       />
+      <ShareExportSheet
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        title={player.name}
+        filename={`opcg-profile-${player.name}.png`}
+      >
+        <PlayerShareCard player={player} matches={matches} decks={decks} />
+      </ShareExportSheet>
     </div>
   )
 }
@@ -1033,15 +1103,38 @@ function DeckProfileView({
 
 export function StatsPage() {
   const { language, t } = useI18n()
-  const [scope, setScope] = useState<'session' | 'all'>('session')
+  const settings = useAppStore((state) => state.settings)
+  const linkedPlayer = useAppStore((state) => getLinkedPlayer(state))
+  const achievementUnlocks = useAppStore((state) => state.achievementUnlocks)
+  const sessions = useAppStore((state) => state.sessions)
+  const currentSessionId = useAppStore((state) => state.currentSessionId)
+  const currentSession = sessions.find((session) => session.id === currentSessionId) ?? null
+  const initialScope =
+    settings.statsDefaultScope === 'profile' && linkedPlayer
+      ? 'all'
+      : settings.statsDefaultScope === 'all'
+        ? 'all'
+        : 'session'
+  const [scope, setScope] = useState<'session' | 'all'>(initialScope)
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
-  const [profileTarget, setProfileTarget] = useState<ProfileTarget>(null)
+  const [profileTarget, setProfileTarget] = useState<ProfileTarget>(
+    settings.statsDefaultScope === 'profile' && linkedPlayer
+      ? { type: 'player', id: linkedPlayer.id }
+      : null,
+  )
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false)
+  const [sessionShareOpen, setSessionShareOpen] = useState(false)
   const listScrollY = useRef(0)
   const sectionScrollY = useRef<Partial<Record<StatsSectionId, number>>>({})
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
-  const currentSessionId = useAppStore((state) => state.currentSessionId)
+
+  useEffect(() => {
+    if (!settings.profileSetupCompleted && !linkedPlayer) {
+      setProfileSheetOpen(true)
+    }
+  }, [settings.profileSetupCompleted, linkedPlayer])
   const scopedMatches =
     scope === 'session' && currentSessionId
       ? matches.filter((match) => match.sessionId === currentSessionId)
@@ -1083,16 +1176,21 @@ export function StatsPage() {
 
   if (selectedPlayer) {
     return (
-      <PlayerProfileView
-        player={selectedPlayer}
-        matches={scopedMatches}
-        players={players}
-        decks={decks}
-        language={language}
-        onBack={closeProfile}
-        onOpenDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
-        onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
-      />
+      <>
+        <PlayerProfileView
+          player={selectedPlayer}
+          matches={scopedMatches}
+          allMatches={matches}
+          players={players}
+          decks={decks}
+          language={language}
+          achievementUnlocks={achievementUnlocks}
+          onBack={closeProfile}
+          onOpenDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
+          onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
+        />
+        <ProfileLinkSheet open={profileSheetOpen} onClose={() => setProfileSheetOpen(false)} />
+      </>
     )
   }
 
@@ -1112,6 +1210,32 @@ export function StatsPage() {
 
   return (
     <div className="space-y-4">
+      {linkedPlayer ? (
+        <section className={[uiGlassCard, 'flex items-center justify-between gap-3 p-4'].join(' ')}>
+          <div>
+            <p className="text-xs text-text-secondary">{t('profile.myProfile')}</p>
+            <p className="text-lg font-bold">{linkedPlayer.name}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="min-h-9 px-3 py-1.5 text-sm" onClick={() => openProfile({ type: 'player', id: linkedPlayer.id })}>
+              {t('profile.openProfile')}
+            </Button>
+            {scope === 'session' && currentSession ? (
+              <Button variant="ghost" className="min-h-9 px-3 py-1.5 text-sm" onClick={() => setSessionShareOpen(true)}>
+                {t('share.sessionShort')}
+              </Button>
+            ) : null}
+          </div>
+        </section>
+      ) : (
+        <section className={[uiGlassCard, 'space-y-3 p-4'].join(' ')}>
+          <p className="text-sm text-text-secondary">{t('profile.statsPrompt')}</p>
+          <Button fullWidth onClick={() => setProfileSheetOpen(true)}>
+            {t('profile.setupCta')}
+          </Button>
+        </section>
+      )}
+
       <SegmentedControl
         className="grid-cols-2"
         value={scope}
@@ -1210,6 +1334,24 @@ export function StatsPage() {
             onSelectDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
           />
         </>
+      ) : null}
+
+      <ProfileLinkSheet open={profileSheetOpen} onClose={() => setProfileSheetOpen(false)} />
+      {currentSession && linkedPlayer ? (
+        <ShareExportSheet
+          open={sessionShareOpen}
+          onClose={() => setSessionShareOpen(false)}
+          title={currentSession.name}
+          filename={`opcg-session-${currentSession.name}.png`}
+        >
+          <SessionShareCard
+            session={currentSession}
+            player={linkedPlayer}
+            matches={scopedMatches}
+            players={players}
+            decks={decks}
+          />
+        </ShareExportSheet>
       ) : null}
     </div>
   )

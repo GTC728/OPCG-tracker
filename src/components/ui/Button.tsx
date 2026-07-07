@@ -32,7 +32,7 @@ export function Button({
   return (
     <button
       className={[
-        'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-semibold',
+        'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-semibold',
         'transition duration-150 ease-out active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
         'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',

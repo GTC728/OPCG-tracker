@@ -8,7 +8,9 @@ import { RecordPage } from '@/pages/RecordPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { StatsPage } from '@/pages/StatsPage'
 import { Button } from '@/components/ui/Button'
-import { ToastProvider } from '@/components/ui/Toast'
+import { ToastProvider, useToast } from '@/components/ui/Toast'
+import { formatAchievementToast } from '@/components/achievements/AchievementsWall'
+import { applyThemeSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
@@ -39,7 +41,7 @@ function OnboardingScreen() {
   return (
     <div className="flex min-h-full items-center justify-center bg-surface px-5 py-8">
       <section className="w-full max-w-md rounded-3xl bg-surface-elevated p-6 shadow-2xl ring-1 ring-surface-muted">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">OPCG Tracker V3</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">OPCG Tracker V4</p>
         <h1 className="mt-3 text-3xl font-bold">{t('onboarding.title')}</h1>
         <p className="mt-2 text-sm text-text-secondary">{t('onboarding.subtitle')}</p>
 
@@ -84,6 +86,36 @@ function GlobalSessionRosterPrompt() {
       onClose={dismissSessionRosterPrompt}
     />
   )
+}
+
+function AchievementToastBridge() {
+  const { language, t } = useI18n()
+  const { showToast } = useToast()
+  const pending = useAppStore((state) => state.pendingAchievementToasts)
+  const clear = useAppStore((state) => state.clearPendingAchievementToasts)
+  const enabled = useAppStore((state) => state.settings.achievementNotifications)
+
+  useEffect(() => {
+    if (!enabled || !pending.length) return
+    for (const achievementId of pending) {
+      showToast({
+        type: 'success',
+        message: `${t('achievements.unlocked')}: ${formatAchievementToast(achievementId, language)}`,
+        durationMs: 6500,
+      })
+    }
+    clear()
+  }, [clear, enabled, language, pending, showToast, t])
+
+  return null
+}
+
+function ThemeBridge() {
+  const theme = useAppStore((state) => state.settings.theme)
+  const accent = useAppStore((state) => state.settings.accent)
+
+  useEffect(() => applyThemeSettings(theme, accent), [theme, accent])
+  return null
 }
 
 export default function App() {
@@ -135,6 +167,8 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <ThemeBridge />
+      <AchievementToastBridge />
       <GlobalSessionRosterPrompt />
       <SessionDayPrompt />
       <AppShell

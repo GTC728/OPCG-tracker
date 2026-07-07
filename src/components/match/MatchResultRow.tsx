@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { TurnOrderBadge, WinLossBadge } from '@/components/match/TurnOrderBadge'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import { uiCardInteractive } from '@/lib/uiSurface'
@@ -58,6 +59,9 @@ export function MatchResultRow({
   bare = false,
   meta,
   showResultColors = true,
+  perspectivePlayerId,
+  showTurnOrder = false,
+  showWinLossBadge = false,
 }: {
   match: Match
   players: Player[]
@@ -66,15 +70,29 @@ export function MatchResultRow({
   bare?: boolean
   meta?: string
   showResultColors?: boolean
+  perspectivePlayerId?: string
+  showTurnOrder?: boolean
+  showWinLossBadge?: boolean
 }) {
   const [left, right] = getOrderedMatchSides(match)
+  const badges =
+    perspectivePlayerId && (showTurnOrder || showWinLossBadge) ? (
+      <div className="flex shrink-0 items-center gap-1.5">
+        {showTurnOrder ? (
+          <TurnOrderBadge firstPlayerId={match.firstPlayerId} perspectivePlayerId={perspectivePlayerId} />
+        ) : null}
+        {showWinLossBadge ? (
+          <WinLossBadge won={match.winnerPlayerId === perspectivePlayerId} />
+        ) : null}
+      </div>
+    ) : null
 
   if (compact) {
     return (
       <div
         className={[
           'match-result-row match-result-row--compact grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5',
-          bare ? '' : 'rounded-xl bg-surface px-3 py-2 ring-1 ring-surface-muted',
+          bare ? '' : 'rounded-lg bg-surface/60 px-3 py-2 ring-1 ring-white/[0.06] backdrop-blur-sm',
         ].join(' ')}
       >
         <SideBlock
@@ -86,9 +104,10 @@ export function MatchResultRow({
           showResultColors={showResultColors}
           align="start"
         />
-        <span className="match-result-vs shrink-0 self-center text-[10px] font-semibold uppercase text-text-secondary">
-          vs
-        </span>
+        <div className="flex shrink-0 flex-col items-center gap-1 self-center">
+          <span className="match-result-vs text-[10px] font-semibold uppercase text-text-secondary">vs</span>
+          {badges}
+        </div>
         <SideBlock
           playerId={right.playerId}
           deckId={right.deckId}
@@ -164,6 +183,9 @@ export function MatchListItem({
   meta,
   badge,
   showResultColors = true,
+  perspectivePlayerId,
+  showTurnOrder = false,
+  showWinLossBadge = false,
   onClick,
   className = '',
 }: {
@@ -173,6 +195,9 @@ export function MatchListItem({
   meta?: string
   badge?: ReactNode
   showResultColors?: boolean
+  perspectivePlayerId?: string
+  showTurnOrder?: boolean
+  showWinLossBadge?: boolean
   onClick?: () => void
   className?: string
 }) {
@@ -194,6 +219,9 @@ export function MatchListItem({
           compact
           bare
           showResultColors={showResultColors}
+          perspectivePlayerId={perspectivePlayerId}
+          showTurnOrder={showTurnOrder}
+          showWinLossBadge={showWinLossBadge}
         />
       </div>
     </>

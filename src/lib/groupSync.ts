@@ -746,6 +746,8 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
           aliases: [],
           archived: remote.archived,
           deletedAt: remote.deleted_at ?? null,
+          profileClaimDeviceId: null,
+          profileClaimedAt: null,
           createdAt: now,
           updatedAt: remote.updated_at,
         })
@@ -844,6 +846,8 @@ function applyRemotePlayerRow(row: {
       aliases: [],
       archived: row.archived,
       deletedAt: row.deleted_at ?? null,
+      profileClaimDeviceId: null,
+      profileClaimedAt: null,
       createdAt: now,
       updatedAt: row.updated_at,
     }

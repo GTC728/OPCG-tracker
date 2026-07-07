@@ -9,6 +9,23 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.0.0 - 2026-07-07
+
+### New
+
+- **Personal player profile**: create-or-link flow with device claim and exact-name verification; Settings → 個人玩家.
+- **Profile stats**: current/longest win streak, deck usage pie chart, weekly win-rate line chart (weeks with no games have no dot).
+- **Share cards**: export Profile or Session summary as PNG (Web Share or download).
+- **Achievements**: 15 milestones/streaks/meta badges with unlock toasts.
+- **Appearance settings**: dark/light/system theme, 5 accent colors, UI density, default stats scope.
+- **Turn order badges**: `1st` / `2nd` pills on profile match lists and share cards.
+
+### Changed
+
+- Schema v7 (`linkedPlayerId`, theme settings, `achievementUnlocks`, player claim fields).
+- Card surfaces use selective glassmorphism; border radius reduced (cards 12px, buttons/rows 8px).
+- Event/League roadmap moved to **V5.x**; V4 focuses on personal system & UI.
+
 ## V3.10.6 - 2026-07-07
 
 ### Changed

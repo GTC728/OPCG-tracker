@@ -599,3 +599,156 @@ export function buildRecentForm(matches: Match[], playerId?: string): RecentForm
     }
   })
 }
+
+export interface WinStreakStats {
+  currentStreak: number
+  longestStreak: number
+  currentType: 'win' | 'loss' | 'none'
+}
+
+export function buildWinStreakStats(playerId: string, matches: Match[]): WinStreakStats {
+  const relevant = getCompletedMatches(matches)
+    .filter((match) => match.player1Id === playerId || match.player2Id === playerId)
+    .sort((a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime())
+
+  if (!relevant.length) {
+    return { currentStreak: 0, longestStreak: 0, currentType: 'none' }
+  }
+
+  let longest = 0
+  let run = 0
+  let runType: 'win' | 'loss' | null = null
+
+  for (const match of relevant) {
+    const won = match.winnerPlayerId === playerId
+    const type: 'win' | 'loss' = won ? 'win' : 'loss'
+    if (type === runType) {
+      run += 1
+    } else {
+      runType = type
+      run = 1
+    }
+    if (type === 'win') longest = Math.max(longest, run)
+  }
+
+  const last = relevant[relevant.length - 1]
+  const lastWon = last.winnerPlayerId === playerId
+  let currentStreak = 0
+  for (let i = relevant.length - 1; i >= 0; i -= 1) {
+    const won = relevant[i].winnerPlayerId === playerId
+    if (i === relevant.length - 1) {
+      if (!won) break
+      currentStreak = 1
+      continue
+    }
+    if (won) currentStreak += 1
+    else break
+  }
+
+  let currentLossStreak = 0
+  for (let i = relevant.length - 1; i >= 0; i -= 1) {
+    if (relevant[i].winnerPlayerId === playerId) break
+    currentLossStreak += 1
+  }
+
+  return {
+    currentStreak: lastWon ? currentStreak : 0,
+    longestStreak: longest,
+    currentType: lastWon ? 'win' : currentLossStreak > 0 ? 'loss' : 'none',
+  }
+}
+
+export interface DeckUsageSlice {
+  deckId: string
+  deckName: string
+  count: number
+  percentage: number
+  colors: string[]
+}
+
+export function buildDeckUsageDistribution(
+  playerId: string,
+  decks: Deck[],
+  matches: Match[],
+  language: Language,
+): DeckUsageSlice[] {
+  const counts = new Map<string, number>()
+  for (const match of getCompletedMatches(matches)) {
+    if (match.player1Id !== playerId && match.player2Id !== playerId) continue
+    const deckId = match.player1Id === playerId ? match.deck1Id : match.deck2Id
+    counts.set(deckId, (counts.get(deckId) ?? 0) + 1)
+  }
+  const total = [...counts.values()].reduce((sum, value) => sum + value, 0)
+  if (!total) return []
+
+  const deckById = new Map(decks.map((deck) => [deck.id, deck]))
+  return [...counts.entries()]
+    .map(([deckId, count]) => {
+      const deck = deckById.get(deckId)
+      return {
+        deckId,
+        deckName: deck ? localizedDeckName(deck, language) : '未知牌組',
+        count,
+        percentage: count / total,
+        colors: deck?.colors ?? [],
+      }
+    })
+    .sort((a, b) => b.count - a.count)
+}
+
+export interface WeeklyWinRateStat {
+  weekStart: string
+  label: string
+  wins: number
+  total: number
+  winRate: number | null
+}
+
+function getWeekStart(date: Date): string {
+  const copy = new Date(date)
+  const day = copy.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  copy.setDate(copy.getDate() + diff)
+  copy.setHours(0, 0, 0, 0)
+  return copy.toISOString().slice(0, 10)
+}
+
+function formatWeekLabel(weekStart: string): string {
+  const date = new Date(`${weekStart}T00:00:00`)
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+export function buildWeeklyWinRateStats(
+  playerId: string,
+  matches: Match[],
+  weekCount = 12,
+): WeeklyWinRateStat[] {
+  const now = new Date()
+  const weeks: WeeklyWinRateStat[] = []
+
+  for (let offset = weekCount - 1; offset >= 0; offset -= 1) {
+    const anchor = new Date(now)
+    anchor.setDate(anchor.getDate() - offset * 7)
+    const weekStart = getWeekStart(anchor)
+    const weekStartDate = new Date(`${weekStart}T00:00:00`)
+    const weekEndDate = new Date(weekStartDate)
+    weekEndDate.setDate(weekEndDate.getDate() + 7)
+
+    const weekMatches = getCompletedMatches(matches).filter((match) => {
+      if (match.player1Id !== playerId && match.player2Id !== playerId) return false
+      const finished = new Date(match.finishedAt)
+      return finished >= weekStartDate && finished < weekEndDate
+    })
+
+    const wins = weekMatches.filter((match) => match.winnerPlayerId === playerId).length
+    weeks.push({
+      weekStart,
+      label: formatWeekLabel(weekStart),
+      wins,
+      total: weekMatches.length,
+      winRate: weekMatches.length ? getWinRate(wins, weekMatches.length) : null,
+    })
+  }
+
+  return weeks
+}
