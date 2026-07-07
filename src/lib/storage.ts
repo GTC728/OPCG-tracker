@@ -83,6 +83,33 @@ const migrations: Record<number, Migration> = {
       },
     }
   },
+  7: (state) => {
+    const defaults = createDefaultAppState().settings
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults, ...state.settings }
+        : defaults
+    return {
+      ...state,
+      schemaVersion: 7,
+      players: (Array.isArray(state.players) ? state.players : []).map((player) => ({
+        ...player,
+        profileClaimDeviceId: player.profileClaimDeviceId ?? null,
+        profileClaimedAt: player.profileClaimedAt ?? null,
+      })),
+      achievementUnlocks: Array.isArray(state.achievementUnlocks) ? state.achievementUnlocks : [],
+      settings: {
+        ...settings,
+        linkedPlayerId: settings.linkedPlayerId ?? null,
+        profileSetupCompleted: Boolean(settings.profileSetupCompleted),
+        theme: settings.theme ?? 'dark',
+        accent: settings.accent ?? 'blue',
+        density: settings.density ?? 'compact',
+        statsDefaultScope: settings.statsDefaultScope ?? 'profile',
+        achievementNotifications: settings.achievementNotifications ?? true,
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {
@@ -147,6 +174,8 @@ function normalizeState(raw: Partial<AppState>): AppState {
     players: (Array.isArray(raw.players) ? raw.players : defaults.players).map((player) => ({
       ...player,
       deletedAt: player.deletedAt ?? null,
+      profileClaimDeviceId: player.profileClaimDeviceId ?? null,
+      profileClaimedAt: player.profileClaimedAt ?? null,
     })),
     playerAliases: Array.isArray(raw.playerAliases)
       ? raw.playerAliases
@@ -174,6 +203,9 @@ function normalizeState(raw: Partial<AppState>): AppState {
     importRecords: Array.isArray(raw.importRecords)
       ? raw.importRecords
       : defaults.importRecords,
+    achievementUnlocks: Array.isArray(raw.achievementUnlocks)
+      ? raw.achievementUnlocks
+      : defaults.achievementUnlocks,
     settings: {
       ...defaults.settings,
       ...raw.settings,

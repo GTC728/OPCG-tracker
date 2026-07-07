@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
 import { CloudSyncTool } from '@/components/settings/CloudSyncTool'
+import { ProfileSettings } from '@/components/settings/ProfileSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
 import { SessionManager } from '@/components/session/SessionManager'
@@ -14,7 +16,7 @@ import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud'
+type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud' | 'profile' | 'appearance'
 
 function SettingsRow({
   title,
@@ -93,6 +95,16 @@ export function SettingsPage() {
 
           <section className="space-y-1.5">
             <SettingsRow
+              title={t('settings.profile')}
+              description={t('settings.profileDesc')}
+              onClick={() => setSection('profile')}
+            />
+            <SettingsRow
+              title={t('settings.appearance')}
+              description={t('settings.appearanceDesc')}
+              onClick={() => setSection('appearance')}
+            />
+            <SettingsRow
               title={t('settings.language')}
               description={t('settings.languageDesc')}
               meta={languageLabels.find((item) => item.value === language)?.label}
@@ -167,6 +179,20 @@ export function SettingsPage() {
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
           <CloudSyncTool />
+        </>
+      ) : null}
+
+      {section === 'profile' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <ProfileSettings />
+        </>
+      ) : null}
+
+      {section === 'appearance' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <AppearanceSettings />
         </>
       ) : null}
 

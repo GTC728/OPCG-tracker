@@ -30,7 +30,8 @@ Inspired by V2 (light, airy lists) adapted to our dark theme:
 
 | Pattern | Implementation |
 |---------|----------------|
-| **Card** | `uiCard` — `rounded-2xl`, elevated bg, `ring-white/7%`, subtle shadow |
+| **Card** | `uiCard` — `rounded-xl`, elevated bg + blur, `ring-white/8%`, subtle shadow |
+| **Glass card** | `uiGlassCard` — profile/charts/share hero sections |
 | **Interactive card** | `uiCardInteractive` — hover/active tint for list rows & drill-down |
 | **Segmented control** | `SegmentedControl` + `.ui-segment` — pill toggle (scope, stats tabs) |
 | **Section title** | `uiSectionTitle` — `text-base font-semibold`, no ALL CAPS |
@@ -57,6 +58,51 @@ Inspired by V2 (light, airy lists) adapted to our dark theme:
 | `danger` | Clear / remove actions on hover |
 
 Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead of heavy gray borders for depth on dark bg.
+
+**V4.0+:** Theme is user-configurable via `src/lib/theme.ts` — `dark` / `light` / `system` plus accent presets. CSS variables on `:root` / `[data-theme]` override `@theme` defaults at runtime.
+
+---
+
+## V4 Glass & Radius (2026-07-07)
+
+### Layering (selective glass — not global)
+
+| Surface | Class / token | Where |
+|---------|---------------|--------|
+| **Standard card** | `uiCard` — `rounded-xl`, `bg-surface-elevated/88`, `backdrop-blur-xl` | Stats lists, settings rows |
+| **Glass hero** | `uiGlassCard` — `/72` opacity, `backdrop-blur-2xl`, deeper shadow | Profile header, charts, my-profile banner |
+| **Inset chip** | `uiCardInset` — `rounded-lg`, `/55` opacity | Profile link sheet options |
+| **Record / Table** | Solid surfaces (no blur) | Readability at the table |
+
+**Rule:** Do not apply glass to Record page table rows or assignment drawer chips.
+
+### Border radius (V4)
+
+| Element | V3.10 | V4 |
+|---------|-------|-----|
+| Cards | `rounded-2xl` (16px) | `rounded-xl` (12px) |
+| Buttons / inputs | `rounded-xl` (12px) | `rounded-lg` (8px) |
+| Match rows / share list items | `rounded-xl` | `rounded-lg` |
+| Pills (1st/2nd, badges) | — | `rounded-md` (6px) via `uiPill` |
+| Segmented shell | `0.875rem` | unchanged |
+
+### Turn order & result badges
+
+- **`TurnOrderBadge`**: `1st` / `2nd` from player perspective (`match.firstTurn` / `match.secondTurn` i18n keys).
+- **`WinLossBadge`**: compact `W` / `L` square badge for profile match lists and share cards.
+- Use on Profile recent matches and ShareExport cards — not required on History unless scoped to linked player.
+
+### Share export cards
+
+- Fixed layout in `src/components/share/ShareExportSheet.tsx` — export-safe (no interactive blur).
+- Trigger: Profile header「輸出」、Stats my-profile「場次卡」.
+- PNG via `html-to-image`; Web Share API when available.
+
+### Personal profile UX
+
+- Settings → **個人玩家**：create-or-link sheet with name confirmation.
+- Device claim stored on `Player.profileClaimDeviceId`; settings mirror via `linkedPlayerId`.
+- Stats default scope configurable (`profile` / `session` / `all`).
 
 ---
 
@@ -213,6 +259,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-07-07 | V4 personal system: glass layering, smaller radius, 1st/2nd badges, theme/accent tokens, share cards |
 | 2026-07-07 | V2-inspired visual language; `uiSurface` + `SegmentedControl`; assignment drawer tab-gated + taller body; refined dark tokens |
 | 2026-07-05 | Initial preferences from V3.8 mobile assignment drawer + compact table board work |
 | 2026-07-05 | Unified BottomChrome; `isListedPlayer` rules; history custom date range + FilterPicker |

@@ -31,18 +31,28 @@
 | V3.9 | Bottom Chrome + Listed Players | 完成 | 統一底欄、玩家可見性規則、歷史自訂日期篩選 |
 | V3.10 | Group Sync + Stats + i18n | 完成 | 強制群組同步、離線 queue、繁簡中、對手勝率、heatmap 放大 |
 | V3.10.1 | Session Merge | 完成 | 場次合併、名單/桌數移轉、群組同步 |
-| V4.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
-| V4.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
-| V4.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |
-| V4.3 | Reports + Sharing | 規劃中 | 店賽報告、League leaderboard、Excel / image / read-only link 分享 |
+| **V4.0** | **Personal System & UI** | **完成** | 個人玩家連結（A+C 混合驗證）、連勝/牌組 pie/週勝率線圖、分享卡 PNG 輸出、成就系統、霧面層次 UI、主題/強調色/密度自訂、1st/2nd 先後攻 badge |
+| V5.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
+| V5.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
+| V5.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |
+| V5.3 | Reports + Sharing | 規劃中 | 店賽報告、League leaderboard、Excel / image / read-only link 分享 |
 
 ## Next
 
-- **V4.0**：Event / League foundation（見下方規劃）。
+- **V5.0**：Event / League foundation（見 [`docs/EVENTS-AND-LEAGUES.md`](EVENTS-AND-LEAGUES.md)）。
 - Stats backlog：Recent form 分母調查、Profile heatmap 設計。
-- Group backlog：首次加入群組時本地/雲端衝突合併策略。
+- Group backlog：首次加入群組時本地/雲端衝突合併策略；個人 profile claim 跨裝置 Supabase 同步。
 
-## V4 Event / League Direction
+## V4 Personal System (shipped)
+
+- **Profile linking (A+C hybrid)**：`settings.linkedPlayerId` + 裝置 claim（`profileClaimDeviceId`）。可「建立我的玩家」或「連結已有玩家」；後者需輸入完整名稱確認；若已在其他裝置連結，需額外勾選才能 reclaim。
+- **Stats**：目前/最高連勝、牌組使用率 pie（Profile）、每週勝率線圖（空週無點）。
+- **Share export**：Profile / Session 分享卡 → PNG（Web Share API 或下載）。
+- **Achievements**：15 個 declarative 成就，對局完成後解鎖 + toast。
+- **Appearance**：dark / light / system、5 色 accent、compact/comfortable 密度、統計預設 scope。
+- **UI**：選擇性 glass card（Stats/Profile）、圓角 16→12px（card）、8px（row/pill）、1st/2nd badge。
+
+## V5 Event / League Direction
 
 詳情見 [`docs/EVENTS-AND-LEAGUES.md`](EVENTS-AND-LEAGUES.md)。
 
