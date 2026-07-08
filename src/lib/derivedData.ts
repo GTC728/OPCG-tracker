@@ -243,7 +243,7 @@ export function getPlayerProfileBundle(
     recentForm: buildRecentForm(completed, playerId),
     recentMatches: [...playerMatches]
       .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
-      .slice(0, 10),
+      .slice(0, 20),
   }
   playerProfileCache.set(key, bundle)
   if (playerProfileCache.size > 16) {

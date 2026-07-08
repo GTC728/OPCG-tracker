@@ -453,10 +453,12 @@ function VirtualAchievementList({
   items,
   language,
   onSelect,
+  embedded = false,
 }: {
   items: AchievementProgress[]
   language: Language
   onSelect: (item: AchievementProgress) => void
+  embedded?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -487,7 +489,10 @@ function VirtualAchievementList({
   return (
     <div
       ref={containerRef}
-      className="max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain"
+      className={[
+        'scrollbar-subtle overflow-y-auto overscroll-contain',
+        embedded ? 'min-h-0 flex-1' : 'max-h-[min(70vh,32rem)]',
+      ].join(' ')}
       onScroll={onScroll}
     >
       <div style={{ height: totalHeight, position: 'relative' }}>
@@ -545,15 +550,24 @@ function AchievementGrid({
   language,
   viewMode,
   onSelect,
+  embedded = false,
 }: {
   items: AchievementProgress[]
   language: Language
   viewMode: 'grid' | 'list'
   onSelect: (item: AchievementProgress) => void
+  embedded?: boolean
 }) {
   if (viewMode === 'list') {
     if (items.length >= VIRTUAL_LIST_THRESHOLD) {
-      return <VirtualAchievementList items={items} language={language} onSelect={onSelect} />
+      return (
+        <VirtualAchievementList
+          items={items}
+          language={language}
+          onSelect={onSelect}
+          embedded={embedded}
+        />
+      )
     }
     return (
       <div className="space-y-2">
@@ -645,11 +659,13 @@ export function AchievementsWall({
   playerCompletionRate,
   peerRates = [],
   peerContext,
+  embedded = false,
 }: {
   achievements: AchievementProgress[]
   playerCompletionRate?: number
   peerRates?: AchievementPeerRate[]
   peerContext?: AchievementPeerContext
+  embedded?: boolean
 }) {
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
@@ -686,7 +702,7 @@ export function AchievementsWall({
     : null
 
   return (
-    <section className="space-y-3">
+    <section className={embedded ? 'flex min-h-0 flex-1 flex-col gap-3' : 'space-y-3'}>
       {peerViewId && peerName ? (
         <button
           type="button"
@@ -742,7 +758,7 @@ export function AchievementsWall({
       />
 
       {grouped ? (
-        <div className="space-y-3">
+        <div className={embedded ? 'min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-subtle' : 'space-y-3'}>
           {grouped.map((group) => {
             const unlockedCount = group.items.filter((item) => item.currentLevel > 0).length
             const inProgress = group.items.some(
@@ -761,13 +777,22 @@ export function AchievementsWall({
                   language={language}
                   viewMode={viewMode}
                   onSelect={setDetail}
+                  embedded={embedded}
                 />
               </CollapsibleAchievementGroup>
             )
           })}
         </div>
       ) : (
-        <AchievementGrid items={filtered} language={language} viewMode={viewMode} onSelect={setDetail} />
+        <div className={embedded && viewMode === 'list' && filtered.length >= VIRTUAL_LIST_THRESHOLD ? 'flex min-h-0 flex-1 flex-col' : undefined}>
+          <AchievementGrid
+            items={filtered}
+            language={language}
+            viewMode={viewMode}
+            onSelect={setDetail}
+            embedded={embedded}
+          />
+        </div>
       )}
 
       <AchievementDetailSheet

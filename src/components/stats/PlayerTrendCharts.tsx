@@ -10,7 +10,15 @@ import {
 import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 import { formatPercent, type WeeklyWinRateStat } from '@/lib/stats'
 
-export function WeeklyWinRateChart({ stats, title }: { stats: WeeklyWinRateStat[]; title: string }) {
+export function WeeklyWinRateChart({
+  stats,
+  title,
+  compact = false,
+}: {
+  stats: WeeklyWinRateStat[]
+  title: string
+  compact?: boolean
+}) {
   const chartData = stats.map((item) => ({
     label: item.label,
     winRate: item.total > 0 && item.winRate !== null ? Math.round(item.winRate * 100) : null,
@@ -18,12 +26,12 @@ export function WeeklyWinRateChart({ stats, title }: { stats: WeeklyWinRateStat[
   }))
 
   return (
-    <section className={[uiGlassCard, 'space-y-3 p-4'].join(' ')}>
+    <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
       <div className="flex items-end justify-between gap-2">
         <h2 className={uiSectionTitle}>{title}</h2>
-        <p className="text-xs text-text-secondary">無對局週次不顯示數據點</p>
+        {!compact ? <p className="text-xs text-text-secondary">無對局週次不顯示數據點</p> : null}
       </div>
-      <div className="h-52">
+      <div className={compact ? 'h-36' : 'h-52'}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid stroke="color-mix(in srgb, white 6%, transparent)" vertical={false} />

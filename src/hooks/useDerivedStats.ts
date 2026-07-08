@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   backlogExtrasFromState,
@@ -60,60 +60,33 @@ export function useAchievementPanelData(
 ) {
   const slice = useAppDataSlice()
   const backlogExtras = useMemo(() => backlogExtrasFromState(slice as AppState), [slice])
-  const [data, setData] = useState<AchievementPanelData | null>(null)
 
-  useEffect(() => {
-    if (!enabled) {
-      setData(null)
-      return
-    }
+  return useMemo(() => {
+    if (!enabled) return null
+    const { globalRates, peerRateByPlayer } = getCachedAchievementLeaderboards(slice)
+    const achievements = getCachedPlayerAchievementProgress(
+      slice,
+      playerId,
+      linkedPlayerId,
+      globalRates,
+      backlogExtras,
+    )
+    const peerRates = slice.players
+      .filter((p) => !p.archived && p.id !== playerId)
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        rate: peerRateByPlayer.get(p.id) ?? 0,
+      }))
+      .sort((a, b) => b.rate - a.rate)
 
-    let cancelled = false
-    setData(null)
-
-    const compute = () => {
-      if (cancelled) return
-      const { globalRates, peerRateByPlayer } = getCachedAchievementLeaderboards(slice)
-      const achievements = getCachedPlayerAchievementProgress(
-        slice,
-        playerId,
-        linkedPlayerId,
-        globalRates,
-        backlogExtras,
-      )
-      const peerRates = slice.players
-        .filter((p) => !p.archived && p.id !== playerId)
-        .map((p) => ({
-          playerId: p.id,
-          name: p.name,
-          rate: peerRateByPlayer.get(p.id) ?? 0,
-        }))
-        .sort((a, b) => b.rate - a.rate)
-
-      setData({
-        achievements,
-        globalRates,
-        peerRates,
-        summary: computeAchievementSummary(achievements),
-      })
-    }
-
-    const idleId =
-      typeof requestIdleCallback === 'function'
-        ? requestIdleCallback(compute, { timeout: 120 })
-        : window.setTimeout(compute, 0)
-
-    return () => {
-      cancelled = true
-      if (typeof requestIdleCallback === 'function' && typeof idleId === 'number') {
-        cancelIdleCallback(idleId)
-      } else {
-        clearTimeout(idleId)
-      }
+    return {
+      achievements,
+      globalRates,
+      peerRates,
+      summary: computeAchievementSummary(achievements),
     }
   }, [enabled, slice, playerId, linkedPlayerId, backlogExtras])
-
-  return data
 }
 
 export function useAchievementPreview(

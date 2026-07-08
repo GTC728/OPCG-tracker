@@ -5,9 +5,11 @@ interface BottomSheetProps {
   title: string
   onClose: () => void
   children: ReactNode
+  /** When true, panel body does not scroll — child manages its own scroll region. */
+  manageScroll?: boolean
 }
 
-export function BottomSheet({ open, title, onClose, children }: BottomSheetProps) {
+export function BottomSheet({ open, title, onClose, children, manageScroll = false }: BottomSheetProps) {
   useEffect(() => {
     if (!open) return
 
@@ -27,15 +29,20 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 pt-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:overflow-y-auto sm:p-3 sm:pt-4">
       <button
         type="button"
         aria-label="關閉"
-        className="fixed inset-0 bg-black/60"
+        className="ui-sheet-backdrop fixed inset-0 bg-black/60"
         onClick={onClose}
       />
-      <div className="safe-bottom relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-hidden rounded-3xl bg-surface-elevated shadow-2xl">
-        <div className="flex items-center justify-between border-b border-surface-muted px-5 py-4">
+      <div
+        className={[
+          'ui-sheet-panel safe-bottom relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface-elevated shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl',
+          manageScroll ? 'max-h-[92dvh]' : 'max-h-[92dvh] sm:max-h-[calc(100dvh-2rem)]',
+        ].join(' ')}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-muted px-5 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             type="button"
@@ -45,7 +52,15 @@ export function BottomSheet({ open, title, onClose, children }: BottomSheetProps
             取消
           </button>
         </div>
-        <div className="max-h-[calc(100dvh-6rem)] overflow-y-auto px-5 py-4">{children}</div>
+        <div
+          className={
+            manageScroll
+              ? 'flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4'
+              : 'scrollbar-subtle max-h-[calc(92dvh-4.5rem)] overflow-y-auto px-5 py-4 sm:max-h-[calc(100dvh-6rem)]'
+          }
+        >
+          {children}
+        </div>
       </div>
     </div>
   )

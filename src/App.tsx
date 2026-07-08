@@ -17,8 +17,12 @@ import { languageLabels, useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
+const TAB_ORDER: TabId[] = ['record', 'stats', 'history', 'settings']
+
 function PageContent({ activeTab }: { activeTab: TabId }) {
   const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(() => new Set(['record']))
+  const prevTabRef = useRef<TabId>(activeTab)
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'none'>('none')
 
   useEffect(() => {
     setMountedTabs((prev) => {
@@ -29,25 +33,43 @@ function PageContent({ activeTab }: { activeTab: TabId }) {
     })
   }, [activeTab])
 
+  useEffect(() => {
+    const prevIndex = TAB_ORDER.indexOf(prevTabRef.current)
+    const nextIndex = TAB_ORDER.indexOf(activeTab)
+    if (prevIndex >= 0 && nextIndex >= 0 && prevTabRef.current !== activeTab) {
+      setSlideDirection(nextIndex > prevIndex ? 'left' : 'right')
+    } else {
+      setSlideDirection('none')
+    }
+    prevTabRef.current = activeTab
+  }, [activeTab])
+
+  const tabClass = (tab: TabId) => {
+    if (activeTab !== tab) return 'hidden'
+    if (slideDirection === 'left') return 'ui-tab-enter-from-right'
+    if (slideDirection === 'right') return 'ui-tab-enter-from-left'
+    return 'ui-tab-enter'
+  }
+
   return (
     <>
       {mountedTabs.has('record') ? (
-        <div className={activeTab === 'record' ? undefined : 'hidden'} aria-hidden={activeTab !== 'record'}>
+        <div className={tabClass('record')} aria-hidden={activeTab !== 'record'}>
           <RecordPage />
         </div>
       ) : null}
       {mountedTabs.has('stats') ? (
-        <div className={activeTab === 'stats' ? undefined : 'hidden'} aria-hidden={activeTab !== 'stats'}>
+        <div className={tabClass('stats')} aria-hidden={activeTab !== 'stats'}>
           <StatsPage />
         </div>
       ) : null}
       {mountedTabs.has('history') ? (
-        <div className={activeTab === 'history' ? undefined : 'hidden'} aria-hidden={activeTab !== 'history'}>
+        <div className={tabClass('history')} aria-hidden={activeTab !== 'history'}>
           <HistoryPage />
         </div>
       ) : null}
       {mountedTabs.has('settings') ? (
-        <div className={activeTab === 'settings' ? undefined : 'hidden'} aria-hidden={activeTab !== 'settings'}>
+        <div className={tabClass('settings')} aria-hidden={activeTab !== 'settings'}>
           <SettingsPage />
         </div>
       ) : null}

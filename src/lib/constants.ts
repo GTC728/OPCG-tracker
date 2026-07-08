@@ -4,7 +4,7 @@ import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/data
 import type { AppState, Deck } from '@/types'
 
 export const SCHEMA_VERSION = 9
-export const APP_VERSION = '4.7.1'
+export const APP_VERSION = '4.7.3'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
 export const GITHUB_REPO_URL = 'https://github.com/GTC728/OPCG-tracker'
 export const GITHUB_CREDIT_HANDLE = 'GTC728'

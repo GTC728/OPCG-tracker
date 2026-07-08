@@ -151,6 +151,36 @@ textarea:focus-visible {
   display: none;
 }
 
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-text-secondary) 55%, transparent);
+  background-clip: padding-box;
+}
+
+[data-theme='light'] .scrollbar-subtle {
+  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 70%, transparent) transparent;
+}
+
 /* ── Glass / card surfaces ── */
 .ui-card,
 .ui-glass-card {
@@ -347,9 +377,91 @@ textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .ui-pop-in,
   .ui-slide-up,
-  .ui-nav-active .ui-nav-icon {
+  .ui-nav-active .ui-nav-icon,
+  .ui-tab-enter,
+  .ui-tab-enter-from-left,
+  .ui-tab-enter-from-right,
+  .ui-sheet-panel,
+  .ui-sheet-backdrop,
+  .ui-pressable,
+  .ui-pressable:active {
     animation: none;
+    transform: none;
+    transition: none;
   }
+}
+
+@keyframes ui-tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-tab-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ui-tab-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ui-sheet-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-sheet-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ui-tab-enter {
+  animation: ui-tab-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-tab-enter-from-right {
+  animation: ui-tab-from-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-tab-enter-from-left {
+  animation: ui-tab-from-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-sheet-backdrop {
+  animation: ui-sheet-backdrop-in 200ms ease both;
+}
+
+.ui-sheet-panel {
+  animation: ui-sheet-panel-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ── Achievement global-rate row (BG3-inspired) ── */

@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
+import { AppCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
-import { GITHUB_CREDIT_HANDLE, GITHUB_REPO_URL } from '@/lib/constants'
 import { uiBottomNav, uiHeaderBar, uiLink } from '@/lib/uiSurface'
 import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
@@ -108,31 +108,22 @@ export function AppShell({
   onTabChange,
   children,
 }: AppShellProps) {
-  const { t } = useI18n()
-
   return (
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
         <SyncStatusBanner />
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="text-base font-bold tracking-tight">{title}</h1>
               {subtitle ? (
                 <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-text-secondary">{subtitle}</p>
               ) : null}
-              <a
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={['mt-1 inline-block text-[10px] font-medium text-text-secondary hover:text-brand-400', uiLink].join(' ')}
-              >
-                {t('app.credit').replace('{handle}', GITHUB_CREDIT_HANDLE)}
-              </a>
             </div>
-            <p className={['shrink-0 pt-0.5 text-[11px] font-semibold tracking-wide', uiLink].join(' ')}>
-              OPCG Tracker
-            </p>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <p className={['text-[11px] font-semibold tracking-wide', uiLink].join(' ')}>OPCG Tracker</p>
+              <AppCredit showVersion />
+            </div>
           </div>
         </header>
 

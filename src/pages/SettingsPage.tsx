@@ -8,6 +8,7 @@ import { DataTools } from '@/components/settings/DataTools'
 import { SystemStatusPanel } from '@/components/settings/SystemStatusPanel'
 import { SessionManager } from '@/components/session/SessionManager'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
+import { AppCredit } from '@/components/layout/AppCredit'
 import {
   countListedPlayers,
   countVisibleActiveMatches,
@@ -147,8 +148,13 @@ export function SettingsPage() {
           </section>
           <section className="rounded-xl bg-surface-elevated p-3 text-sm text-text-secondary">
             <h2 className="text-sm font-semibold text-text-primary">{t('settings.about')}</h2>
-            <p className="mt-2">App v{APP_VERSION}</p>
-            <p>Schema v{SCHEMA_VERSION}</p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div>
+                <p>App v{APP_VERSION}</p>
+                <p>Schema v{SCHEMA_VERSION}</p>
+              </div>
+              <AppCredit />
+            </div>
           </section>
         </>
       ) : null}

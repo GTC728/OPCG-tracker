@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { AchievementsPreviewRail, AchievementsWall, AchievementsWallSkeleton } from '@/components/achievements/AchievementsWall'
+import { AchievementsPreviewRail, AchievementsWall } from '@/components/achievements/AchievementsWall'
 import { MatchListItem } from '@/components/match/MatchResultRow'
 import { DeckPreviewCard } from '@/components/profile/DeckPreviewCard'
 import { ProfileIdentityCard } from '@/components/profile/ProfileIdentityCard'
@@ -31,15 +31,17 @@ function PanelSheet({
   title,
   onClose,
   children,
+  manageScroll = false,
 }: {
   open: boolean
   title: string
   onClose: () => void
   children: ReactNode
+  manageScroll?: boolean
 }) {
   return (
-    <BottomSheet open={open} onClose={onClose} title={title}>
-      <div className="space-y-4">{children}</div>
+    <BottomSheet open={open} onClose={onClose} title={title} manageScroll={manageScroll}>
+      <div className={manageScroll ? 'flex min-h-0 flex-1 flex-col' : 'space-y-4'}>{children}</div>
     </BottomSheet>
   )
 }
@@ -135,6 +137,8 @@ export function PlayerProfileHub({
         stat={stat}
         streak={streak}
         recentForm={recentForm}
+        recentMatches={recentMatches}
+        playerId={player.id}
         onBack={onBack}
         onShare={onShare}
         onViewDetails={() => setPanel('overview')}
@@ -148,6 +152,9 @@ export function PlayerProfileHub({
       />
 
       <ProfileSection title={t('profile.panel.decks')} onViewAll={() => setPanel('decks')}>
+        {deckUsage.length ? (
+          <DeckUsagePieChart slices={deckUsage} title={t('profile.deckUsagePreview')} compact />
+        ) : null}
         <div className={uiHorizontalRail}>
           {deckStats.length ? (
             deckStats.slice(0, PREVIEW_LIMIT).map((item) => {
@@ -189,8 +196,12 @@ export function PlayerProfileHub({
         </div>
       </ProfileSection>
 
-      <ProfileSection title={t('profile.panel.trends')} onViewAll={() => setPanel('trends')}>
-        <RecentFormBars recentForm={recentForm} />
+      <ProfileSection title={t('profile.panel.trendsChart')} onViewAll={() => setPanel('trends')}>
+        {weeklyStats.some((item) => item.total > 0) ? (
+          <WeeklyWinRateChart stats={weeklyStats} title={t('stats.weeklyWinRate')} compact />
+        ) : (
+          <p className="text-sm text-text-secondary">{t('stats.noRecentMatches')}</p>
+        )}
       </ProfileSection>
 
       <ProfileSection title={t('stats.recentMatches')} onViewAll={() => setPanel('matches')}>
@@ -277,17 +288,16 @@ export function PlayerProfileHub({
         )}
       </PanelSheet>
 
-      <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close}>
+      <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close} manageScroll>
         {achievementPanelData ? (
           <AchievementsWall
             achievements={achievementPanelData.achievements}
             playerCompletionRate={achievementPanelData.summary.tierRate}
             peerRates={achievementPanelData.peerRates}
             peerContext={peerContext}
+            embedded
           />
-        ) : (
-          <AchievementsWallSkeleton />
-        )}
+        ) : null}
       </PanelSheet>
 
       <PanelSheet open={panel === 'rivals'} title={t('profile.panel.rivals')} onClose={close}>

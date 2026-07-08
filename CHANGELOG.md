@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.3 - 2026-07-09
+
+### Changed
+
+- **Achievement panel stability**: removed async skeleton reload that flashed every ~5s during group sync; achievement data now stays mounted while recomputing.
+- **Header credit**: GitHub `@GTC728` link moved to the right beside version; same credit shown in Settings → About.
+- **Profile hub**: last-20 win-rate bar + per-match strip in identity card; weekly trend chart as its own section; compact deck usage pie preview on hub.
+- **Motion**: tab slide transitions (left/right), bottom-sheet popup animation, themed scrollbars on desktop.
+
+### Fixed
+
+- Double scrollbar on achievement wall (panel vs virtual list); styled thin scrollbars for dark UI.
+
 ## V4.7.1 - 2026-07-09
 
 ### Changed

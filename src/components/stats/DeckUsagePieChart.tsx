@@ -79,23 +79,25 @@ export function DeckUsagePieChart({
       </div>
 
       <ul className="space-y-2">
-        {slices.map((slice, index) => (
-          <li key={slice.deckId} className="flex items-center justify-between gap-2 text-sm">
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                className="size-3 shrink-0 rounded-full ring-2 ring-white/20"
-                style={{ background: getDeckSliceFill(slice, index, slices) }}
-              />
-              <ColorDots colors={slice.colors} />
-              <span className="truncate font-medium">{slice.deckName}</span>
-            </span>
-            <span className="shrink-0 tabular-nums text-text-secondary">
-              {slice.count} · {Math.round(slice.percentage * 100)}%
-            </span>
-          </li>
-        ))}
+        {!compact
+          ? slices.map((slice, index) => (
+              <li key={slice.deckId} className="flex items-center justify-between gap-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="size-3 shrink-0 rounded-full ring-2 ring-white/20"
+                    style={{ background: getDeckSliceFill(slice, index, slices) }}
+                  />
+                  <ColorDots colors={slice.colors} />
+                  <span className="truncate font-medium">{slice.deckName}</span>
+                </span>
+                <span className="shrink-0 tabular-nums text-text-secondary">
+                  {slice.count} · {Math.round(slice.percentage * 100)}%
+                </span>
+              </li>
+            ))
+          : null}
       </ul>
-      <p className={uiLabel}>{t('stats.deckColorHint')}</p>
+      {!compact ? <p className={uiLabel}>{t('stats.deckColorHint')}</p> : null}
     </section>
   )
 }

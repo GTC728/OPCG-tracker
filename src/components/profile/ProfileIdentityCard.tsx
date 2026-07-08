@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/Button'
+import { Recent20WinRateBar, RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
 import { formatStreakLine } from '@/components/profile/RecentFormBars'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecentFormStat, type RecordStat, type WinStreakStats } from '@/lib/stats'
 import { uiGlassCard, uiLink } from '@/lib/uiSurface'
+import type { Match } from '@/types'
 
 function getDisplayWinRate(winRate: number | null, total: number): number | null {
   return total > 0 ? winRate : null
@@ -17,6 +19,8 @@ export function ProfileIdentityCard({
   stat,
   streak,
   recentForm,
+  recentMatches,
+  playerId,
   onBack,
   onShare,
   onViewDetails,
@@ -25,12 +29,14 @@ export function ProfileIdentityCard({
   stat: RecordStat | null
   streak: WinStreakStats
   recentForm: RecentFormStat[]
+  recentMatches: Match[]
+  playerId: string
   onBack: () => void
   onShare?: () => void
   onViewDetails: () => void
 }) {
   const { t } = useI18n()
-  const recent10 = getRecentWindowStat(recentForm, 10)
+  const recent20 = getRecentWindowStat(recentForm, 20)
 
   return (
     <section className={[uiGlassCard, 'px-3 py-2.5'].join(' ')}>
@@ -71,14 +77,22 @@ export function ProfileIdentityCard({
           <p className="text-sm font-bold">{streak.longestStreak > 0 ? streak.longestStreak : '0'}</p>
         </article>
         <article className="rounded-lg border border-[var(--ui-border)] bg-surface/40 px-2 py-1.5 text-center">
-          <p className="text-[10px] text-text-secondary">{t('profile.recentFormShort')}</p>
+          <p className="text-[10px] text-text-secondary">{t('profile.recent20WinRateShort')}</p>
           <p className="text-sm font-bold">
-            {recent10?.total ? formatPercent(recent10.winRate) : '—'}
+            {recent20?.total ? formatPercent(recent20.winRate) : '—'}
           </p>
-          {recent10?.total ? (
-            <p className="text-[9px] text-text-secondary">{recent10.wins}/{recent10.total}</p>
+          {recent20?.total ? (
+            <p className="text-[9px] text-text-secondary">{recent20.wins}/{recent20.total}</p>
           ) : null}
         </article>
+      </div>
+      <div className="mt-2.5 space-y-2 rounded-lg border border-[var(--ui-border)] bg-surface/30 px-2.5 py-2">
+        <Recent20WinRateBar
+          wins={recent20?.wins ?? 0}
+          total={recent20?.total ?? 0}
+          winRate={recent20?.winRate ?? null}
+        />
+        <RecentMatchWinStrip matches={recentMatches} playerId={playerId} />
       </div>
       <button type="button" className={['mt-2 text-xs font-semibold', uiLink].join(' ')} onClick={onViewDetails}>
         {t('profile.viewOverview')} ›
