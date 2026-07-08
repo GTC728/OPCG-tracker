@@ -28,6 +28,17 @@ export const uiPill =
 
 export const uiBorder = 'border border-[var(--ui-border)]'
 
+/** Theme-aware link / accent text — readable in light and dark mode */
+export const uiLink = 'text-[var(--color-link)]'
+
+export const uiCalloutWarning =
+  'rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
+
+export const uiHorizontalRail =
+  '-mx-[var(--ui-page-px)] flex gap-2.5 overflow-x-auto px-[var(--ui-page-px)] pb-1 scrollbar-none snap-x snap-mandatory'
+
+export const uiHorizontalRailItem = 'w-[9.5rem] shrink-0 snap-start'
+
 export const uiHeaderBar = 'ui-header-bar sticky top-0 z-20 border-b px-5 py-3.5 backdrop-blur-md'
 
 export const uiBottomNav = 'ui-bottom-nav border-t backdrop-blur-md'

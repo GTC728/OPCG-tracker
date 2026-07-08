@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
+import { uiCalloutWarning } from '@/lib/uiSurface'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
 import { useAppStore } from '@/stores/appStore'
 
@@ -31,10 +32,7 @@ export function SyncStatusBanner() {
 
   if (!online) {
     return (
-      <div
-        className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs text-yellow-100"
-        role="status"
-      >
+      <div className={[uiCalloutWarning, 'border-b px-4 py-2 text-center text-xs'].join(' ')} role="status">
         {t('sync.offline')}
         {pendingCount > 0 ? ` · ${t('sync.pendingCount').replace('{n}', String(pendingCount))}` : null}
       </div>
@@ -44,7 +42,7 @@ export function SyncStatusBanner() {
   if (pendingCount > 0) {
     return (
       <div
-        className="border-b border-brand-500/30 bg-brand-500/10 px-4 py-2 text-center text-xs text-brand-100"
+        className="border-b border-brand-500/30 bg-brand-500/10 px-4 py-2 text-center text-xs text-[var(--color-link)]"
         role="status"
       >
         {t('sync.pendingCount').replace('{n}', String(pendingCount))}

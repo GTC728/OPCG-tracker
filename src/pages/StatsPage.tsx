@@ -7,7 +7,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { getLinkedPlayer } from '@/lib/profileClaim'
 import { useI18n } from '@/lib/i18n'
-import { uiCard, uiCardInteractive, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
+import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import {
   buildDashboardStats,
   buildDeckStats,
@@ -866,20 +866,21 @@ function ProfileHeader({
 }) {
   const { t } = useI18n()
   return (
-    <section className={[uiGlassCard, 'p-4'].join(' ')}>
-      <div className="flex items-center justify-between gap-2">
-        <button type="button" className="text-sm font-semibold text-brand-400" onClick={onBack}>
+    <section className={[uiGlassCard, 'px-3 py-2.5'].join(' ')}>
+      <div className="flex items-center gap-2">
+        <button type="button" className={['shrink-0 text-xs font-semibold', uiLink].join(' ')} onClick={onBack}>
           ← {t('stats.backToStats')}
         </button>
         {onShare ? (
-          <Button variant="ghost" className="min-h-9 px-3 py-1.5 text-sm" onClick={onShare}>
+          <Button variant="ghost" className="ml-auto min-h-8 px-2.5 py-1 text-xs" onClick={onShare}>
             {t('share.exportShort')}
           </Button>
         ) : null}
       </div>
-      <p className="mt-3 text-xs font-medium text-text-secondary">Profile</p>
-      <h2 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h2>
-      <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
+      <div className="mt-1.5 min-w-0">
+        <h2 className="truncate text-base font-bold tracking-tight">{title}</h2>
+        <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-text-secondary">{subtitle}</p>
+      </div>
     </section>
   )
 }
@@ -926,6 +927,7 @@ function PlayerProfileView({
   const playerMatches = getCompletedMatches(matches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
+  const playerStat = buildPlayerStats(players, matches).find((item) => item.id === player.id)
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -947,7 +949,7 @@ function PlayerProfileView({
         header={
           <ProfileHeader
             title={player.name}
-            subtitle={`${t('stats.playerProfile')} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
+            subtitle={`${playerStat?.wins ?? 0}W-${playerStat?.losses ?? 0}L · ${formatPercent(playerStat?.winRate ?? null)} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
             onBack={onBack}
             onShare={() => setShareOpen(true)}
           />

@@ -24,7 +24,7 @@ const lightSurfaces = {
   elevated: '#ffffff',
   muted: '#cbd5e1',
   textPrimary: '#0f172a',
-  textSecondary: '#64748b',
+  textSecondary: '#475569',
 }
 
 function resolveThemeMode(theme: ThemeMode): 'dark' | 'light' {
@@ -52,6 +52,23 @@ export function applyThemeSettings(theme: ThemeMode, accent: AccentPreset): () =
   root.style.setProperty('--color-brand-600', palette[600])
   root.style.setProperty('--color-brand-700', palette[700])
   root.style.setProperty('--color-brand-100', palette[100])
+
+  const linkColor = resolved === 'light' ? palette[600] : palette[400]
+  const linkSoftColor = resolved === 'light' ? palette[700] : palette[400]
+  root.style.setProperty('--color-link', linkColor)
+  root.style.setProperty('--color-link-soft', linkSoftColor)
+  root.style.setProperty(
+    '--color-warning-fg',
+    resolved === 'light' ? '#92400e' : '#fef3c7',
+  )
+  root.style.setProperty(
+    '--color-warning-bg',
+    resolved === 'light' ? 'color-mix(in srgb, #f59e0b 14%, white)' : 'color-mix(in srgb, #f59e0b 12%, transparent)',
+  )
+  root.style.setProperty(
+    '--color-warning-border',
+    resolved === 'light' ? 'color-mix(in srgb, #f59e0b 35%, transparent)' : 'color-mix(in srgb, #f59e0b 28%, transparent)',
+  )
 
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', surfaces.surface)

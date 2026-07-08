@@ -13,6 +13,7 @@ import {
 import type { AchievementPeerRate } from '@/lib/achievements'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
 import { useI18n } from '@/lib/i18n'
+import { uiPopIn, uiPressable } from '@/lib/motion'
 import {
   buildDeckUsageDistribution,
   buildHeadToHeadStats,
@@ -25,12 +26,18 @@ import {
   getCompletedMatches,
   type RecordStat,
 } from '@/lib/stats'
-import { uiCard, uiCardInteractive, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
+import {
+  uiCard,
+  uiGlassCard,
+  uiHorizontalRail,
+  uiHorizontalRailItem,
+  uiSectionTitle,
+} from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 type ProfilePanel = 'overview' | 'trends' | 'decks' | 'matches' | 'achievements' | 'rivals' | null
 
-function ProfilePreviewCard({
+function ProfileDetailPreviewCard({
   title,
   value,
   detail,
@@ -44,13 +51,14 @@ function ProfilePreviewCard({
   return (
     <button
       type="button"
-      className={[uiCardInteractive, 'flex h-full min-w-[8.5rem] shrink-0 flex-col p-3 text-left'].join(' ')}
+      className={[uiHorizontalRailItem, uiGlassCard, uiPopIn, uiPressable, 'flex h-full flex-col overflow-hidden p-3 text-left'].join(
+        ' ',
+      )}
       onClick={onClick}
     >
       <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">{title}</p>
-      <p className="mt-1 text-xl font-bold tracking-tight">{value}</p>
-      {detail ? <p className="mt-1 line-clamp-2 text-[11px] text-text-secondary">{detail}</p> : null}
-      <span className="mt-auto pt-2 text-[10px] font-semibold text-brand-400">詳情 ›</span>
+      <p className="mt-1.5 line-clamp-1 text-lg font-bold tracking-tight">{value}</p>
+      {detail ? <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-text-secondary">{detail}</p> : null}
     </button>
   )
 }
@@ -142,7 +150,8 @@ export function PlayerProfileHub({
       rate: peerRateMap.get(p.id) ?? 0,
     }))
     .sort((a, b) => b.rate - a.rate)
-  const playerCompletionRate = computeAchievementSummary(achievements).tierRate
+  const achievementSummary = computeAchievementSummary(achievements)
+  const playerCompletionRate = achievementSummary.tierRate
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -152,7 +161,6 @@ export function PlayerProfileHub({
     .slice(0, 12)
   const topDeck = deckStats[0]
   const topRival = headToHead[0]
-  const achievementUnlocked = achievements.filter((a) => a.currentLevel > 0).length
 
   const close = () => setPanel(null)
 
@@ -160,60 +168,22 @@ export function PlayerProfileHub({
     <div className="space-y-4">
       {header}
 
-      <section className="space-y-2">
-        <h2 className={uiSectionTitle}>{t('profile.hubSections')}</h2>
-        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 scrollbar-none">
-          <ProfilePreviewCard
-            title={t('profile.panel.overview')}
-            value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
-            detail={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L`}
-            onClick={() => setPanel('overview')}
-          />
-          <ProfilePreviewCard
-            title={t('profile.panel.trends')}
-            value={streak.currentStreak > 0 ? `${streak.currentStreak}🔥` : `↑${streak.longestStreak}`}
-            detail={t('profile.panel.trendsDetail')}
-            onClick={() => setPanel('trends')}
-          />
-          <ProfilePreviewCard
-            title={t('profile.panel.decks')}
-            value={topDeck ? `${Math.round((topDeck.total / Math.max(stat?.total ?? 1, 1)) * 100)}%` : '—'}
-            detail={topDeck?.deckName}
-            onClick={() => setPanel('decks')}
-          />
-          <ProfilePreviewCard
-            title={t('profile.panel.matches')}
-            value={String(recentMatches.length)}
-            detail={t('profile.panel.matchesDetail')}
-            onClick={() => setPanel('matches')}
-          />
-          <ProfilePreviewCard
-            title={t('profile.panel.achievements')}
-            value={`${achievementUnlocked}/${achievements.length}`}
-            detail={t('profile.panel.achievementsDetail')}
-            onClick={() => setPanel('achievements')}
-          />
-          <ProfilePreviewCard
-            title={t('profile.panel.rivals')}
-            value={topRival?.name ?? '—'}
-            detail={topRival ? `${topRival.wins}W-${topRival.losses}L` : undefined}
-            onClick={() => setPanel('rivals')}
-          />
-        </div>
-      </section>
-
-      <AchievementsPreviewRail achievements={achievements} onOpenAll={() => setPanel('achievements')} />
+      <AchievementsPreviewRail
+        achievements={achievements}
+        variant="profile"
+        onOpenAll={() => setPanel('achievements')}
+      />
 
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className={uiSectionTitle}>{t('stats.recentMatches')}</h2>
-          <button type="button" className="text-xs font-semibold text-brand-400" onClick={() => setPanel('matches')}>
+          <button type="button" className="text-xs font-semibold text-[var(--color-link)]" onClick={() => setPanel('matches')}>
             {t('achievements.viewAll')}
           </button>
         </div>
-        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 scrollbar-none">
+        <div className={uiHorizontalRail}>
           {recentMatches.slice(0, 4).map((match) => (
-            <div key={match.id} className="min-w-[17rem] shrink-0">
+            <div key={match.id} className="min-w-[16rem] shrink-0 snap-start">
               <MatchListItem
                 match={match}
                 players={players}
@@ -225,6 +195,42 @@ export function PlayerProfileHub({
               />
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className={uiSectionTitle}>{t('profile.detailSections')}</h2>
+        <div className={uiHorizontalRail}>
+          <ProfileDetailPreviewCard
+            title={t('profile.panel.overview')}
+            value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
+            detail={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${stat?.total ?? 0}場`}
+            onClick={() => setPanel('overview')}
+          />
+          <ProfileDetailPreviewCard
+            title={t('profile.panel.trends')}
+            value={streak.currentStreak > 0 ? `${streak.currentStreak}🔥` : `↑${streak.longestStreak}`}
+            detail={t('profile.panel.trendsDetail')}
+            onClick={() => setPanel('trends')}
+          />
+          <ProfileDetailPreviewCard
+            title={t('profile.panel.decks')}
+            value={topDeck ? `${Math.round((topDeck.total / Math.max(stat?.total ?? 1, 1)) * 100)}%` : '—'}
+            detail={topDeck?.deckName}
+            onClick={() => setPanel('decks')}
+          />
+          <ProfileDetailPreviewCard
+            title={t('profile.panel.matches')}
+            value={String(recentMatches.length)}
+            detail={t('profile.panel.matchesDetail')}
+            onClick={() => setPanel('matches')}
+          />
+          <ProfileDetailPreviewCard
+            title={t('profile.panel.rivals')}
+            value={topRival?.name ?? '—'}
+            detail={topRival ? `${topRival.wins}W-${topRival.losses}L` : undefined}
+            onClick={() => setPanel('rivals')}
+          />
         </div>
       </section>
 

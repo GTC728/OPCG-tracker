@@ -9,6 +9,15 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.3 - 2026-07-08
+
+### Changed
+
+- **Light mode contrast**: semantic `--color-link` and warning callout tokens; accent text readable on white backgrounds.
+- **Profile layout**: compact header with W/L + win rate; achievements first (title「成就」);「詳細資訊」preview cards at bottom (glass style like achievements).
+- **Achievement rail**: fixed card edge overlap (snap scroll, no glow bleed in compact mode).
+- **Bottom nav**: icons only with accessible labels (`aria-label`).
+
 ## V4.3.2 - 2026-07-08
 
 ### New

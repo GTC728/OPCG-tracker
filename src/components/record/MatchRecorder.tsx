@@ -12,6 +12,7 @@ import {
   getSortedPlayersForSession,
 } from '@/lib/selectors'
 import { formatDateTime } from '@/lib/utils'
+import { uiCalloutWarning } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
 import type { ActiveMatchInput, Deck, Match, Player, RecentCombo } from '@/types'
 
@@ -221,7 +222,7 @@ export function MatchRecorder() {
   return (
     <>
       {!canAssign ? (
-        <section className="rounded-xl bg-warning/10 p-2 text-xs text-yellow-100">
+        <section className={[uiCalloutWarning, 'p-2 text-xs'].join(' ')}>
           {rosterPlayers.length < 2 ? t('record.needPlayers') : t('record.needDecks')}
           <button type="button" className="ml-2 font-semibold underline" onClick={() => setActiveTab('settings')}>
             {t('record.goSettings')}
