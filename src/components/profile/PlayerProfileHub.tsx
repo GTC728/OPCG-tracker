@@ -10,6 +10,7 @@ import {
   getPlayerAchievementProgress,
 } from '@/lib/achievements'
 import type { AchievementPeerRate } from '@/lib/achievements'
+import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
 import { useI18n } from '@/lib/i18n'
 import {
   buildDeckUsageDistribution,
@@ -319,6 +320,13 @@ export function PlayerProfileHub({
           achievements={achievements}
           playerCompletionRate={playerCompletionRate}
           peerRates={peerRates}
+          peerContext={{
+            players,
+            decks,
+            matches,
+            achievementUnlocks,
+            currentPlayerId: player.id,
+          } satisfies AchievementPeerContext}
         />
       </PanelSheet>
 

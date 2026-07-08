@@ -1,38 +1,71 @@
 import type { DeckUsageSlice } from '@/lib/stats'
 
-const colorHue: Record<string, number> = {
-  Red: 0,
-  Green: 142,
-  Blue: 217,
-  Purple: 271,
-  Black: 215,
-  Yellow: 45,
+const COLOR_HSL: Record<string, { h: number; s: number; l: number }> = {
+  Red: { h: 4, s: 72, l: 52 },
+  Green: { h: 142, s: 52, l: 40 },
+  Blue: { h: 215, s: 76, l: 54 },
+  Purple: { h: 271, s: 58, l: 54 },
+  Black: { h: 220, s: 8, l: 22 },
+  Yellow: { h: 45, s: 90, l: 54 },
 }
 
-/** Distinct fill per deck: hue from leader colors, lightness steps for same-hue decks. */
+function hslString(color: string): string {
+  const tone = COLOR_HSL[color] ?? COLOR_HSL.Blue
+  return `hsl(${tone.h} ${tone.s}% ${tone.l}%)`
+}
+
+/** Blend two deck colors 50/50 for dual-color leaders. */
+export function blendDeckColors(colors: string[]): string {
+  const unique = [...new Set(colors.filter(Boolean))]
+  if (unique.length >= 2) {
+    return `color-mix(in srgb, ${hslString(unique[0])} 50%, ${hslString(unique[1])} 50%)`
+  }
+  return hslString(unique[0] ?? 'Blue')
+}
+
+/** Distinct fill per deck slice; dual-color decks use a 50/50 blend. */
 export function getDeckSliceFill(slice: DeckUsageSlice, index: number, slices: DeckUsageSlice[]): string {
-  const primary = slice.colors[0] ?? 'Blue'
-  const hue = colorHue[primary] ?? 217
-  const sameHueBefore = slices
+  const base = blendDeckColors(slice.colors)
+
+  if (slice.colors.length <= 1) {
+    const primary = slice.colors[0] ?? 'Blue'
+    const sameBefore = slices
+      .slice(0, index)
+      .filter((item) => item.colors.length === 1 && (item.colors[0] ?? 'Blue') === primary).length
+    const tone = COLOR_HSL[primary] ?? COLOR_HSL.Blue
+    const lightnessOffsets = [0, -10, 12, -18, 20]
+    const l = Math.min(88, Math.max(16, tone.l + lightnessOffsets[sameBefore % lightnessOffsets.length]))
+    return `hsl(${tone.h} ${tone.s}% ${l}%)`
+  }
+
+  const sameBlendBefore = slices
     .slice(0, index)
-    .filter((item) => (item.colors[0] ?? 'Blue') === primary).length
-  const lightnessSteps = [58, 46, 68, 38, 76]
-  const lightness = lightnessSteps[sameHueBefore % lightnessSteps.length]
-  const saturation = slice.colors.length > 1 ? 72 : 64
-  return `hsl(${hue} ${saturation}% ${lightness}%)`
+    .filter(
+      (item) =>
+        item.colors.length >= 2 &&
+        item.colors[0] === slice.colors[0] &&
+        item.colors[1] === slice.colors[1],
+    ).length
+  if (sameBlendBefore === 0) return base
+  return `color-mix(in srgb, ${base} 78%, white ${8 + sameBlendBefore * 6}%)`
 }
 
-/** Ring stroke to separate adjacent same-color slices in the legend. */
-export function getDeckSliceStroke(slice: DeckUsageSlice, index: number): string {
-  const fill = getDeckSliceFill(slice, index, [])
-  return `color-mix(in srgb, ${fill} 55%, white)`
-}
-
-export function summarizeColorPreference(slices: DeckUsageSlice[]): Array<{ color: string; count: number; pct: number }> {
+export function summarizeColorPreference(
+  slices: DeckUsageSlice[],
+): Array<{ color: string; count: number; pct: number }> {
   const totals = new Map<string, number>()
   let grand = 0
   for (const slice of slices) {
-    const key = slice.colors[0] ?? 'Other'
+    const colors = slice.colors.filter(Boolean)
+    if (colors.length >= 2) {
+      const share = slice.count / 2
+      for (const color of colors.slice(0, 2)) {
+        totals.set(color, (totals.get(color) ?? 0) + share)
+      }
+      grand += slice.count
+      continue
+    }
+    const key = colors[0] ?? 'Other'
     totals.set(key, (totals.get(key) ?? 0) + slice.count)
     grand += slice.count
   }

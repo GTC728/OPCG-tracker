@@ -247,6 +247,28 @@ textarea:focus-visible {
 }
 
 /* ── Motion (V4.2.1) ── */
+.ui-pressable {
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 140ms ease,
+    box-shadow 140ms ease;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.ui-pressable:active {
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-pressable,
+  .ui-pressable:active {
+    transform: none;
+    transition: none;
+  }
+}
+
 @keyframes ui-pop-in {
   from {
     opacity: 0;
@@ -325,4 +347,16 @@ textarea:focus-visible {
 .achievement-rate-content {
   position: relative;
   z-index: 1;
+}
+
+.share-export-root,
+.share-export-card {
+  background: var(--color-surface-elevated);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.share-export-card * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

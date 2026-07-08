@@ -47,8 +47,7 @@ export function playInteractionSound(kind: InteractionSound = 'tap'): void {
   osc.stop(now + preset.duration)
 }
 
-export const uiPressable =
-  'ui-pressable transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transform-none motion-reduce:transition-none'
+export const uiPressable = 'ui-pressable'
 
 export const uiPopIn = 'ui-pop-in'
 

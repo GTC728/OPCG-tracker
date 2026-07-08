@@ -1,5 +1,5 @@
 import { accentOptions, applyAppearanceSettings } from '@/lib/theme'
-import { playInteractionSound } from '@/lib/motion'
+import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
@@ -26,6 +26,7 @@ export function AppearanceSettings() {
               type="button"
               className={[
                 uiCardInset,
+                uiPressable,
                 'p-3 text-sm font-semibold',
                 settings.theme === theme ? 'ring-brand-500/40' : '',
               ].join(' ')}
@@ -49,10 +50,14 @@ export function AppearanceSettings() {
               type="button"
               title={t(option.labelKey as 'appearance.accentBlue')}
               className={[
-                'flex h-12 flex-col items-center justify-center rounded-lg ring-1 ring-white/[0.08]',
-                settings.accent === option.value ? 'ring-brand-500/50' : '',
+                'flex h-12 flex-col items-center justify-center rounded-lg border border-[var(--ui-border)]',
+                uiPressable,
+                settings.accent === option.value ? 'ring-2 ring-brand-500/50' : '',
               ].join(' ')}
-              onClick={() => updateSettings({ accent: option.value as AccentPreset })}
+              onClick={() => {
+                playInteractionSound('toggle')
+                updateSettings({ accent: option.value as AccentPreset })
+              }}
             >
               <span className="size-5 rounded-full" style={{ background: option.swatch }} />
             </button>
@@ -69,10 +74,14 @@ export function AppearanceSettings() {
               type="button"
               className={[
                 uiCardInset,
+                uiPressable,
                 'p-3 text-sm font-semibold',
                 settings.density === density ? 'ring-brand-500/40' : '',
               ].join(' ')}
-              onClick={() => updateSettings({ density })}
+              onClick={() => {
+                playInteractionSound('toggle')
+                updateSettings({ density })
+              }}
             >
               {t(`appearance.density.${density}` as 'appearance.density.compact')}
             </button>
@@ -89,10 +98,14 @@ export function AppearanceSettings() {
               type="button"
               className={[
                 uiCardInset,
+                uiPressable,
                 'p-3 text-xs font-semibold',
                 settings.statsDefaultScope === scope ? 'ring-brand-500/40' : '',
               ].join(' ')}
-              onClick={() => updateSettings({ statsDefaultScope: scope })}
+              onClick={() => {
+                playInteractionSound('toggle')
+                updateSettings({ statsDefaultScope: scope })
+              }}
             >
               {t(`appearance.statsDefault.${scope}` as 'appearance.statsDefault.profile')}
             </button>
