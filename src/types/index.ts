@@ -245,9 +245,27 @@ export interface ImportSummary {
 
 export interface AchievementUnlock {
   achievementId: string
+  /** @deprecated Use profileIdentityId — kept for migration */
   playerId: string
+  profileIdentityId: string
   level: number
   unlockedAt: string
+  /** Test-group unlocks — discarded when leaving a TEST* group */
+  provisional?: boolean
+}
+
+export interface ProfileLifetimeStats {
+  profileIdentityId: string
+  totalMatches: number
+  totalWins: number
+  longestWinStreak: number
+  maxDeckWins: number
+  uniqueDeckIds: string[]
+  uniqueOpponentNames: string[]
+  maxSessionMatches: number
+  notesMatches: number
+  recentOutcomes: ('w' | 'l')[]
+  updatedAt: string
 }
 
 export interface AppSettings {
@@ -265,6 +283,8 @@ export interface AppSettings {
   sessionDayPromptDismissedFor: string | null
   linkedPlayerId: string | null
   profileSetupCompleted: boolean
+  /** Stable cross-group profile key for achievements and lifetime stats */
+  profileIdentityId: string | null
   theme: ThemeMode
   accent: AccentPreset
   density: UiDensity
@@ -299,6 +319,7 @@ export interface AppState {
   importRows: ImportRow[]
   importRecords: ImportRecord[]
   achievementUnlocks: AchievementUnlock[]
+  profileLifetime: ProfileLifetimeStats | null
   settings: AppSettings
 }
 

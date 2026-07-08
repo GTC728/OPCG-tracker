@@ -560,7 +560,14 @@ export function buildBacklogStats(
   const secretExodiaWeekVal = maxWeeklyGames >= 10 && wins >= 8 ? 1 : 0
   secretExodiaWeek = secretExodiaWeekVal
 
-  const unlocks = extras.achievementUnlocks.filter((u) => u.playerId === playerId)
+  const unlocks =
+    extras.linkedPlayerId === playerId && extras.settings.profileIdentityId
+      ? extras.achievementUnlocks.filter(
+          (u) =>
+            (u.profileIdentityId ?? u.playerId) === extras.settings.profileIdentityId &&
+            !u.provisional,
+        )
+      : extras.achievementUnlocks.filter((u) => u.playerId === playerId && !u.provisional)
   const maxTierFamilies = new Set(unlocks.map((u) => u.achievementId)).size
 
   return {

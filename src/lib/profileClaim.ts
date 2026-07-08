@@ -87,6 +87,7 @@ export function applyProfileClaim(
   }
 
   const claimed = claimPlayerRecord(player, options?.forceReclaim)
+  const profileIdentityId = state.settings.profileIdentityId ?? crypto.randomUUID()
   return {
     ...state,
     players: state.players.map((item) => (item.id === playerId ? claimed : item)),
@@ -94,6 +95,7 @@ export function applyProfileClaim(
       ...state.settings,
       linkedPlayerId: playerId,
       profileSetupCompleted: true,
+      profileIdentityId,
     },
   }
 }

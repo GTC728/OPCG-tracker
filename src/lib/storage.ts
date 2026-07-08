@@ -2,12 +2,30 @@ import { getLocaleAliasesForLeader } from '@/data/leaderLocaleAliases'
 import { createDefaultAppState, SCHEMA_VERSION, STORAGE_KEY } from '@/lib/constants'
 import { migrateLegacyUnlocks } from '@/lib/achievements'
 import {
+  emptyGroupSnapshot,
+  groupStorageKey,
+  mergePersonalAndGroup,
+  splitAppState,
+} from '@/lib/appStateLayers'
+import { isTestGroupCode } from '@/lib/groupTest'
+import {
+  clearLegacyMonolithState,
+  loadGroupScopedState,
+  loadLegacyMonolithState,
+  loadOfflineGroupState,
+  loadPersonalState,
+  saveGroupScopedState,
+  saveOfflineGroupState,
+  savePersonalState,
+} from '@/lib/indexedDb'
+import { ensureProfileIdentityId } from '@/lib/profileIdentity'
+import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
+import {
   buildDefaultVariantsFromDecks,
   buildLeadersFromDecks,
   buildLegacyDeckView,
   playerAliasesFromPlayers,
 } from '@/lib/dataModel'
-import { loadIndexedAppState, saveIndexedAppState } from '@/lib/indexedDb'
 import { getSessionDateLabel } from '@/lib/sessions'
 import type { AppState, Deck, Session } from '@/types'
 
@@ -120,7 +138,9 @@ const migrations: Record<number, Migration> = {
         unlocks.map((item) => ({
           ...item,
           level: typeof item.level === 'number' ? item.level : 1,
+          profileIdentityId: item.profileIdentityId ?? item.playerId,
         })),
+        null,
       ),
     }
   },
@@ -182,6 +202,32 @@ const migrations: Record<number, Migration> = {
         ...settings,
         groupDataBoundCode: null,
         groupCollabBootstrapped: inGroup ? false : settings.groupCollabBootstrapped,
+      },
+    }
+  },
+  12: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    const profileIdentityId = settings.profileIdentityId ?? crypto.randomUUID()
+    const unlocks = Array.isArray(state.achievementUnlocks) ? state.achievementUnlocks : []
+    let profileLifetime = state.profileLifetime ?? null
+    const linkedId = settings.linkedPlayerId
+    const matches = Array.isArray(state.matches) ? state.matches : []
+    const players = Array.isArray(state.players) ? state.players : []
+    if (!profileLifetime && linkedId && !isTestGroupCode(settings.lastGroupCode)) {
+      profileLifetime = rebuildLifetimeFromMatches(profileIdentityId, linkedId, players, matches)
+    }
+    return {
+      ...state,
+      schemaVersion: 12,
+      profileLifetime,
+      achievementUnlocks: migrateLegacyUnlocks(unlocks, profileIdentityId),
+      settings: {
+        ...settings,
+        profileIdentityId,
       },
     }
   },
@@ -283,6 +329,7 @@ function normalizeState(raw: Partial<AppState>): AppState {
     achievementUnlocks: Array.isArray(raw.achievementUnlocks)
       ? raw.achievementUnlocks
       : defaults.achievementUnlocks,
+    profileLifetime: raw.profileLifetime ?? defaults.profileLifetime,
     settings: {
       ...defaults.settings,
       ...raw.settings,
@@ -323,33 +370,76 @@ function loadLocalAppState(): AppState | null {
 }
 
 export function saveAppState(state: AppState): void {
+  const normalized = ensureProfileIdentityId(state)
+  const { personal, group } = splitAppState(normalized)
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
   } catch (error) {
     console.error('Failed to save OPCG Tracker state', error)
   }
 
-  saveIndexedAppState(state).catch((error) => {
-    console.error('Failed to save OPCG Tracker IndexedDB state', error)
-  })
+  void (async () => {
+    try {
+      await savePersonalState(personal)
+      if (normalized.settings.lastGroupCode) {
+        await saveGroupScopedState(groupStorageKey(normalized.settings.lastGroupCode), group)
+      } else {
+        await saveOfflineGroupState(group)
+      }
+    } catch (error) {
+      console.error('Failed to save OPCG Tracker layered state', error)
+    }
+  })()
+}
+
+async function loadLayeredAppState(): Promise<AppState | null> {
+  const personal = await loadPersonalState()
+  if (personal) {
+    const groupCode = personal.settings.lastGroupCode
+    const group = groupCode
+      ? (await loadGroupScopedState(groupStorageKey(groupCode))) ?? emptyGroupSnapshot()
+      : (await loadOfflineGroupState()) ?? emptyGroupSnapshot()
+    return migrateState(mergePersonalAndGroup(personal, group))
+  }
+  return null
+}
+
+async function migrateMonolithToLayers(state: Partial<AppState>): Promise<AppState> {
+  const migrated = migrateState(state)
+  const { personal, group } = splitAppState(migrated)
+  await savePersonalState(personal)
+  if (migrated.settings.lastGroupCode) {
+    await saveGroupScopedState(groupStorageKey(migrated.settings.lastGroupCode), group)
+  } else {
+    await saveOfflineGroupState(group)
+  }
+  await clearLegacyMonolithState()
+  return migrated
 }
 
 export async function loadAppState(): Promise<AppState> {
   try {
-    const indexedState = await loadIndexedAppState()
-    if (indexedState) {
-      return migrateState(indexedState)
+    const layered = await loadLayeredAppState()
+    if (layered) {
+      return layered
     }
   } catch (error) {
-    console.error('Failed to load OPCG Tracker IndexedDB state', error)
+    console.error('Failed to load OPCG Tracker layered state', error)
+  }
+
+  try {
+    const legacyRaw = await loadLegacyMonolithState()
+    if (legacyRaw) {
+      return migrateMonolithToLayers(legacyRaw as Partial<AppState>)
+    }
+  } catch (error) {
+    console.error('Failed to load legacy IndexedDB state', error)
   }
 
   const localState = loadLocalAppState()
   if (localState) {
-    saveIndexedAppState(localState).catch((error) => {
-      console.error('Failed to migrate OPCG Tracker state to IndexedDB', error)
-    })
-    return localState
+    return migrateMonolithToLayers(localState)
   }
 
   const defaults = createDefaultAppState()

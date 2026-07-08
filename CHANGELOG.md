@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.10.0 - 2026-07-09
+
+### Changed
+
+- **Personal lifetime stats (Model B)**: cross-group cumulative counters (`profileLifetime`) drive veteran, streak, and related achievements; stable `profileIdentityId` binds unlocks to your profile, not group player UUIDs.
+- **Layered IndexedDB storage**: personal data (achievements, lifetime, settings, deck catalog) and group data (matches, players, sessions) persist in separate keys; each group code gets its own IndexedDB slot.
+- **Achievement reconcile**: deleting or reverting matches can lower achievement tiers; TEST* group matches skip lifetime/unlocks (provisional), discarded when leaving test groups.
+
+### Fixed
+
+- Test imports no longer permanently dirty cross-group achievement progress when leaving a TEST* group.
+- Re-linking profile in a new group shows the same achievement wall via `profileIdentityId`.
+
 ## V4.9.0 - 2026-07-09
 
 ### Changed

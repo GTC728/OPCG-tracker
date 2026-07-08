@@ -23,15 +23,24 @@ import {
   resumeGroupCollabNotify,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
-import { stripGroupScopedEntities } from '@/lib/groupScope'
+import { isTestGroupCode } from '@/lib/groupTest'
+import {
+  applyCompletedMatchToLifetime,
+  getOrCreateLifetime,
+  removeCompletedMatchFromLifetime,
+} from '@/lib/profileLifetime'
+import { groupStorageKey, stripProvisionalUnlocks } from '@/lib/appStateLayers'
+import { captureGroupScopedSnapshot, stripGroupScopedEntities } from '@/lib/groupScope'
+import { saveGroupScopedState } from '@/lib/indexedDb'
 import { clearSyncQueue } from '@/lib/syncQueue'
 import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
 import { appendAuditEntry } from '@/lib/auditLog'
-import { evaluateNewAchievementUnlocks, mergeAchievementUnlocks } from '@/lib/achievements'
+import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
+import { ensureProfileIdentityId } from '@/lib/profileIdentity'
 import { loadAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
 import type {
@@ -129,25 +138,63 @@ function toPersistedState(store: AppStore): AppState {
     importRows: store.importRows,
     importRecords: store.importRecords,
     achievementUnlocks: store.achievementUnlocks,
+    profileLifetime: store.profileLifetime,
     auditLog: store.auditLog,
     settings: store.settings,
+  }
+}
+
+function applyLifetimeForCompletedMatch(state: AppState, match: Match): AppState {
+  const linkedId = state.settings.linkedPlayerId
+  if (!linkedId || isTestGroupCode(state.settings.lastGroupCode)) return state
+  if (match.player1Id !== linkedId && match.player2Id !== linkedId) return state
+  const withProfile = ensureProfileIdentityId(state)
+  const lifetime = getOrCreateLifetime(withProfile)
+  if (!lifetime) return withProfile
+  return {
+    ...withProfile,
+    profileLifetime: applyCompletedMatchToLifetime(
+      lifetime,
+      match,
+      linkedId,
+      withProfile.players,
+      [match, ...withProfile.matches],
+    ),
+  }
+}
+
+function applyLifetimeForRemovedMatch(state: AppState, match: Match): AppState {
+  const linkedId = state.settings.linkedPlayerId
+  if (!linkedId || isTestGroupCode(state.settings.lastGroupCode)) return state
+  if (match.player1Id !== linkedId && match.player2Id !== linkedId) return state
+  const lifetime = getOrCreateLifetime(state)
+  if (!lifetime) return state
+  const remaining = state.matches.filter(
+    (item) => item.id !== match.id && item.deletedAt === null,
+  )
+  return {
+    ...state,
+    profileLifetime: removeCompletedMatchFromLifetime(
+      lifetime,
+      match,
+      linkedId,
+      state.players,
+      remaining,
+    ),
   }
 }
 
 function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state: AppState; fresh: AchievementUnlock[] } {
   const linkedId = state.settings.linkedPlayerId
   const targets = linkedId && playerIds.includes(linkedId) ? [linkedId] : playerIds
+  const provisional = isTestGroupCode(state.settings.lastGroupCode)
   const fresh: AchievementUnlock[] = []
-  let nextState = state
+  let nextState = ensureProfileIdentityId(state)
 
   for (const playerId of targets) {
-    const earned = evaluateNewAchievementUnlocks(nextState, playerId)
-    if (!earned.length) continue
-    fresh.push(...earned)
-    nextState = {
-      ...nextState,
-      achievementUnlocks: mergeAchievementUnlocks(nextState.achievementUnlocks, earned),
-    }
+    const result = reconcileAchievementUnlocks(nextState, playerId, { provisional })
+    nextState = result.state
+    fresh.push(...result.fresh)
   }
 
   return { state: nextState, fresh }
@@ -835,7 +882,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     afterMatchAdded(match)
 
-    const next = appendAuditEntry(
+    let next = appendAuditEntry(
       persist({
         ...current,
         activeMatches: current.activeMatches.filter((item) => item.id !== id),
@@ -844,6 +891,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       'match_complete',
       `#${match.matchNumber} ${getPlayerName(current.players, winnerPlayerId)} 勝`,
     )
+    next = applyLifetimeForCompletedMatch(next, match)
     const achievementResult = applyAchievementUnlocks(next, [
       match.player1Id,
       match.player2Id,
@@ -974,10 +1022,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     afterMatchRemoved(current, match)
 
+    let nextState = applyLifetimeForRemovedMatch(current, match)
     const next = appendAuditEntry(
       persist({
-        ...current,
-        matches: current.matches.map((item) =>
+        ...nextState,
+        matches: nextState.matches.map((item) =>
           item.id === matchId
             ? { ...item, deletedAt: nowIso(), source: 'manual_edit' as const }
             : item,
@@ -986,7 +1035,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
       'match_delete',
       `#${match.matchNumber} 已刪除`,
     )
-    set({ ...next })
+    const achievementResult = applyAchievementUnlocks(next, [
+      match.player1Id,
+      match.player2Id,
+    ])
+    const persisted = persist(achievementResult.state)
+    set({ ...persisted })
   },
 
   deletePlayer: (playerId) => {
@@ -1229,21 +1283,35 @@ export const useAppStore = create<AppStore>((set, get) => ({
     pauseGroupCollabNotify()
     try {
       const timestamp = nowIso()
-      const next = appendAuditEntry(
+      const revertedMatches = current.matches.filter(
+        (match) => matchIds.has(match.id) && match.deletedAt === null,
+      )
+      let working = current
+      for (const match of revertedMatches) {
+        working = applyLifetimeForRemovedMatch(working, match)
+      }
+      let next = appendAuditEntry(
         {
-          ...current,
-          matches: current.matches.map((match) =>
+          ...working,
+          matches: working.matches.map((match) =>
             matchIds.has(match.id) && match.deletedAt === null
               ? { ...match, deletedAt: timestamp, source: 'manual_edit' as const }
               : match,
           ),
-          importBatches: current.importBatches.map((item) =>
+          importBatches: working.importBatches.map((item) =>
             item.id === batchId ? { ...item, revertedAt: timestamp } : item,
           ),
         },
         'import_revert',
         `撤銷匯入 ${batch.filename}：${matchIds.size} 場`,
       )
+      const playerIds = new Set<string>()
+      for (const match of revertedMatches) {
+        playerIds.add(match.player1Id)
+        playerIds.add(match.player2Id)
+      }
+      const achievementResult = applyAchievementUnlocks(next, [...playerIds])
+      next = achievementResult.state
       syncMaterializedFromState(next)
       const persisted = persist(next)
       set({ ...persisted })
@@ -1278,10 +1346,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
     try {
       if (groupCode) {
         await flushGroupCollabSyncNowAsync(groupCode)
+        await saveGroupScopedState(groupStorageKey(groupCode), captureGroupScopedSnapshot(current))
       }
       await clearSyncQueue()
       invalidateDerivedCache()
-      const stripped = stripGroupScopedEntities(current)
+      let stripped = stripGroupScopedEntities(current)
+      if (isTestGroupCode(groupCode)) {
+        stripped = stripProvisionalUnlocks(stripped)
+      }
       const next = appendAuditEntry(
         {
           ...stripped,

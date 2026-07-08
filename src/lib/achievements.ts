@@ -9,6 +9,9 @@ import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '
 import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
+import { mergeLifetimeAchievementMetrics } from '@/lib/profileLifetime'
+import { unlockProfileId, unlocksForProfile } from '@/lib/profileIdentity'
+import type { ProfileLifetimeStats } from '@/types'
 
 export type AchievementCategory = 'milestone' | 'streak' | 'meta' | 'social' | 'fun' | 'skill'
 export type AchievementKind = 'grind' | 'skill' | 'special'
@@ -478,19 +481,19 @@ export function getAchievementDefinition(id: string): AchievementDefinition | un
   return ACHIEVEMENT_DEFINITIONS.find((item) => item.id === id)
 }
 
-function playerMatches(playerId: string, matches: Match[]): Match[] {
+export function playerMatches(playerId: string, matches: Match[]): Match[] {
   return getCompletedMatches(matches).filter(
     (match) => match.player1Id === playerId || match.player2Id === playerId,
   )
 }
 
-function sortByFinished(matches: Match[]): Match[] {
+export function sortByFinished(matches: Match[]): Match[] {
   return [...matches].sort(
     (a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime(),
   )
 }
 
-function getLongestWinStreak(sortedMatches: Match[], playerId: string): number {
+export function getLongestWinStreak(sortedMatches: Match[], playerId: string): number {
   let longest = 0
   let current = 0
   for (const match of sortedMatches) {
@@ -834,6 +837,7 @@ export function evaluateAchievementMetrics(
   matches: Match[],
   linkedPlayerId: string | null = null,
   extras?: BacklogExtras,
+  lifetime: ProfileLifetimeStats | null = null,
 ): Record<string, number> {
   const relevant = playerMatches(playerId, matches)
   const sorted = sortByFinished(relevant)
@@ -855,37 +859,43 @@ export function evaluateAchievementMetrics(
     backlogExtras,
   )
 
-  return {
-    veteran: relevant.length,
-    first_win: wins >= 1 ? 1 : 0,
-    win_streak: getLongestWinStreak(sorted, playerId),
-    deck_specialist: Math.max(0, ...deckWins.values()),
-    meta_explorer: decksUsedByPlayer(playerId, matches).size,
-    set_collector: setsUsedByPlayer(playerId, matches, decks).size,
-    mono_maniac: maxMonoDeckWins(playerId, decks, matches),
-    rival_bond: maxOpponentMatches(playerId, matches),
-    group_star: uniqueOpponents(playerId, matches),
-    session_marathon: maxSessionMatches(playerId, matches),
-    note_poet: countMatchesWithNotes(playerId, matches),
-    comeback: countComebacks(sorted, playerId),
-    perfect_session: countPerfectSessions(playerId, matches),
-    first_player_king:
-      firstStats.total >= 20 && firstStats.wins / firstStats.total >= 0.55 ? 1 : 0,
-    giant_slayer: countGiantSlayerWins(playerId, players, matches),
-    color_spectrum: colorsWonCount(playerId, decks, matches),
-    second_striker: secondPlayerWins(playerId, matches),
-    upset_alarm: countUpsetAlarms(playerId, matches),
-    mirror_master: countMirrorWins(playerId, decks, matches),
-    meta_breaker: countMetaBreakerWins(playerId, decks, matches),
-    revenge_win: countRevengeWins(playerId, matches),
-    underdog: countUnderdogWins(playerId, matches),
-    weekend_warrior: countWeekendWins(playerId, matches),
-    rainbow_session: countRainbowSessions(playerId, decks, matches),
-    achievement_hunter: 0,
-    ...extra,
-    ...batch,
-    ...remaining,
-  }
+  return mergeLifetimeAchievementMetrics(
+    {
+      veteran: relevant.length,
+      first_win: wins >= 1 ? 1 : 0,
+      win_streak: getLongestWinStreak(sorted, playerId),
+      deck_specialist: Math.max(0, ...deckWins.values()),
+      meta_explorer: decksUsedByPlayer(playerId, matches).size,
+      set_collector: setsUsedByPlayer(playerId, matches, decks).size,
+      mono_maniac: maxMonoDeckWins(playerId, decks, matches),
+      rival_bond: maxOpponentMatches(playerId, matches),
+      group_star: uniqueOpponents(playerId, matches),
+      session_marathon: maxSessionMatches(playerId, matches),
+      note_poet: countMatchesWithNotes(playerId, matches),
+      comeback: countComebacks(sorted, playerId),
+      perfect_session: countPerfectSessions(playerId, matches),
+      first_player_king:
+        firstStats.total >= 20 && firstStats.wins / firstStats.total >= 0.55 ? 1 : 0,
+      giant_slayer: countGiantSlayerWins(playerId, players, matches),
+      color_spectrum: colorsWonCount(playerId, decks, matches),
+      second_striker: secondPlayerWins(playerId, matches),
+      upset_alarm: countUpsetAlarms(playerId, matches),
+      mirror_master: countMirrorWins(playerId, decks, matches),
+      meta_breaker: countMetaBreakerWins(playerId, decks, matches),
+      revenge_win: countRevengeWins(playerId, matches),
+      underdog: countUnderdogWins(playerId, matches),
+      weekend_warrior: countWeekendWins(playerId, matches),
+      rainbow_session: countRainbowSessions(playerId, decks, matches),
+      achievement_hunter: 0,
+      ...extra,
+      ...batch,
+      ...remaining,
+    },
+    lifetime,
+    playerId,
+    linkedPlayerId,
+    matches,
+  )
 }
 
 export function evaluateAchievementState(
@@ -895,8 +905,17 @@ export function evaluateAchievementState(
   matches: Match[],
   linkedPlayerId: string | null = null,
   extras?: BacklogExtras,
+  lifetime: ProfileLifetimeStats | null = null,
 ): { metrics: Record<string, number>; levels: Record<string, number> } {
-  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId, extras)
+  const metrics = evaluateAchievementMetrics(
+    playerId,
+    players,
+    decks,
+    matches,
+    linkedPlayerId,
+    extras,
+    lifetime,
+  )
   const levels: Record<string, number> = {}
   for (const definition of ACHIEVEMENT_DEFINITIONS) {
     if (definition.id === 'achievement_hunter') continue
@@ -918,8 +937,17 @@ export function evaluateAchievementLevels(
   matches: Match[],
   linkedPlayerId: string | null = null,
   extras?: BacklogExtras,
+  lifetime: ProfileLifetimeStats | null = null,
 ): Record<string, number> {
-  return evaluateAchievementState(playerId, players, decks, matches, linkedPlayerId, extras).levels
+  return evaluateAchievementState(
+    playerId,
+    players,
+    decks,
+    matches,
+    linkedPlayerId,
+    extras,
+    lifetime,
+  ).levels
 }
 
 /** One full evaluation pass per eligible player (shared by global + peer rate helpers). */
@@ -990,10 +1018,17 @@ export function computeAchievementLeaderboards(
   }
 }
 
-export function evaluateNewAchievementUnlocks(
+export function reconcileAchievementUnlocks(
   state: AppState,
   playerId: string,
-): AchievementUnlock[] {
+  options?: { provisional?: boolean },
+): { state: AppState; fresh: AchievementUnlock[] } {
+  const profileId =
+    playerId === state.settings.linkedPlayerId && state.settings.profileIdentityId
+      ? state.settings.profileIdentityId
+      : playerId
+  const lifetime =
+    playerId === state.settings.linkedPlayerId ? state.profileLifetime : null
   const earned = evaluateAchievementLevels(
     playerId,
     state.players,
@@ -1001,50 +1036,86 @@ export function evaluateNewAchievementUnlocks(
     state.matches,
     state.settings.linkedPlayerId,
     backlogExtrasFromState(state),
+    lifetime,
   )
-  const existing = new Map(
-    state.achievementUnlocks
-      .filter((item) => item.playerId === playerId)
-      .map((item) => [item.achievementId, item]),
+  const existingForProfile = state.achievementUnlocks.filter(
+    (item) => unlockProfileId(item) === profileId && !item.provisional,
   )
   const now = new Date().toISOString()
   const fresh: AchievementUnlock[] = []
+  const nextForProfile: AchievementUnlock[] = []
 
   for (const [achievementId, level] of Object.entries(earned)) {
     if (level <= 0) continue
-    const prev = existing.get(achievementId)
-    const prevLevel = prev?.level ?? 0
-    if (level > prevLevel) {
-      fresh.push({ achievementId, playerId, level, unlockedAt: now })
+    const prev = existingForProfile.find((item) => item.achievementId === achievementId)
+    const unlock: AchievementUnlock = {
+      achievementId,
+      playerId,
+      profileIdentityId: profileId,
+      level,
+      unlockedAt: prev && prev.level >= level ? prev.unlockedAt : now,
+      provisional: options?.provisional || undefined,
+    }
+    nextForProfile.push(unlock)
+    if (!prev || level > prev.level) {
+      fresh.push(unlock)
     }
   }
-  return fresh
+
+  const others = state.achievementUnlocks.filter((item) => unlockProfileId(item) !== profileId)
+  return {
+    state: {
+      ...state,
+      achievementUnlocks: [...others, ...nextForProfile],
+    },
+    fresh,
+  }
+}
+
+/** @deprecated Use reconcileAchievementUnlocks */
+export function evaluateNewAchievementUnlocks(
+  state: AppState,
+  playerId: string,
+): AchievementUnlock[] {
+  return reconcileAchievementUnlocks(state, playerId).fresh
 }
 
 export function mergeAchievementUnlocks(
   unlocks: AchievementUnlock[],
   incoming: AchievementUnlock[],
 ): AchievementUnlock[] {
-  const map = new Map(unlocks.map((item) => [`${item.playerId}:${item.achievementId}`, item]))
+  const map = new Map(
+    unlocks.map((item) => [`${unlockProfileId(item)}:${item.achievementId}`, item]),
+  )
   for (const item of incoming) {
-    const key = `${item.playerId}:${item.achievementId}`
+    const key = `${unlockProfileId(item)}:${item.achievementId}`
     const prev = map.get(key)
     if (!prev || item.level > prev.level) map.set(key, item)
   }
   return [...map.values()]
 }
 
-export function migrateLegacyUnlocks(unlocks: AchievementUnlock[]): AchievementUnlock[] {
+export function migrateLegacyUnlocks(
+  unlocks: AchievementUnlock[],
+  profileIdentityId: string | null,
+): AchievementUnlock[] {
   const map = new Map<string, AchievementUnlock>()
   for (const unlock of unlocks) {
     const level = unlock.level ?? 1
     const mapped = LEGACY_ACHIEVEMENT_MAP[unlock.achievementId]
     const id = mapped?.id ?? unlock.achievementId
     const mappedLevel = mapped ? Math.max(mapped.level, level) : level
-    const key = `${unlock.playerId}:${id}`
+    const profileId = unlock.profileIdentityId ?? profileIdentityId ?? unlock.playerId
+    const key = `${profileId}:${id}`
     const prev = map.get(key)
     if (!prev || mappedLevel > (prev.level ?? 1)) {
-      map.set(key, { ...unlock, achievementId: id, level: mappedLevel })
+      map.set(key, {
+        ...unlock,
+        achievementId: id,
+        level: mappedLevel,
+        profileIdentityId: profileId,
+        playerId: unlock.playerId,
+      })
     }
   }
   return [...map.values()]
@@ -1145,7 +1216,10 @@ export function getPlayerAchievementProgress(
     evaluateAchievementState(playerId, players, decks, matches, linkedPlayerId, backlogExtras)
   const rates = globalRates ?? computeGlobalAchievementRates(players, decks, matches)
   const unlockMap = new Map(
-    unlocks.filter((item) => item.playerId === playerId).map((item) => [item.achievementId, item]),
+    (playerId === linkedPlayerId && backlogExtras.settings.profileIdentityId
+      ? unlocksForProfile(unlocks, backlogExtras.settings.profileIdentityId)
+      : unlocks.filter((item) => item.playerId === playerId && !item.provisional)
+    ).map((item) => [item.achievementId, item]),
   )
 
   return ACHIEVEMENT_DEFINITIONS.map((definition) => {

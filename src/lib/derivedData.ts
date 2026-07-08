@@ -46,6 +46,7 @@ export interface AppDataSlice {
   players: Player[]
   decks: Deck[]
   achievementUnlocks: AchievementUnlock[]
+  profileLifetime: AppState['profileLifetime']
   matchRevisions: AppState['matchRevisions']
   auditLog: AppState['auditLog']
   settings: AppState['settings']
@@ -58,6 +59,7 @@ export function pickAppDataSlice(state: AppState): AppDataSlice {
     players: state.players,
     decks: state.decks,
     achievementUnlocks: state.achievementUnlocks,
+    profileLifetime: state.profileLifetime,
     matchRevisions: state.matchRevisions,
     auditLog: state.auditLog,
     settings: state.settings,
@@ -86,6 +88,8 @@ export function computeAppDataFingerprint(slice: AppDataSlice): string {
     slice.players.length,
     slice.decks.length,
     slice.achievementUnlocks.length,
+    slice.profileLifetime?.updatedAt ?? '',
+    slice.profileLifetime?.totalMatches ?? 0,
     slice.matchRevisions.length,
     slice.auditLog.length,
     slice.settings.linkedPlayerId ?? '',
@@ -289,6 +293,8 @@ export function getCachedAchievementState(
   const cached = playerAchievementCache.get(key)
   if (cached) return cached
 
+  const lifetime =
+    playerId === linkedPlayerId ? slice.profileLifetime ?? null : null
   const state = evaluateAchievementState(
     playerId,
     slice.players,
@@ -296,6 +302,7 @@ export function getCachedAchievementState(
     slice.matches,
     linkedPlayerId,
     backlogExtras,
+    lifetime,
   )
   playerAchievementCache.set(key, state)
   if (playerAchievementCache.size > 32) {
