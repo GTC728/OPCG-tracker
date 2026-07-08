@@ -3,10 +3,11 @@ import { SEEDED_LEADER_DECKS } from '@/data/leaderDecks'
 import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/dataModel'
 import type { AppState, Deck } from '@/types'
 
-export const SCHEMA_VERSION = 8
-export const APP_VERSION = '4.3.5'
+export const SCHEMA_VERSION = 9
+export const APP_VERSION = '4.5.0'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
 export const GITHUB_REPO_URL = 'https://github.com/GTC728/OPCG-tracker'
+export const GITHUB_CREDIT_HANDLE = 'GTC728'
 export const STORAGE_KEY = 'opcg-tracker-state'
 
 function seedDecksWithLocale(): Deck[] {
@@ -63,7 +64,10 @@ export function createDefaultAppState(): AppState {
       density: 'comfortable',
       statsDefaultScope: 'profile',
       achievementNotifications: true,
+      lastGroupSyncAt: null,
+      lastGroupSyncError: null,
     },
+    auditLog: [],
     achievementUnlocks: [],
   }
 }

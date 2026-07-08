@@ -124,6 +124,29 @@ const migrations: Record<number, Migration> = {
       ),
     }
   },
+  9: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    return {
+      ...state,
+      schemaVersion: 9,
+      auditLog: Array.isArray(state.auditLog) ? state.auditLog : [],
+      activeMatches: Array.isArray(state.activeMatches)
+        ? state.activeMatches.map((match) => ({
+            ...match,
+            startedAt: match.startedAt ?? null,
+          }))
+        : [],
+      settings: {
+        ...settings,
+        lastGroupSyncAt: settings.lastGroupSyncAt ?? null,
+        lastGroupSyncError: settings.lastGroupSyncError ?? null,
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {
@@ -202,10 +225,12 @@ function normalizeState(raw: Partial<AppState>): AppState {
     sessionDecks: Array.isArray(raw.sessionDecks) ? raw.sessionDecks : defaults.sessionDecks,
     decks: mergeSeedDecks(decks, defaults.decks),
     sessions: Array.isArray(raw.sessions) ? raw.sessions.map(normalizeSessionName) : defaults.sessions,
+    auditLog: Array.isArray(raw.auditLog) ? raw.auditLog : defaults.auditLog,
     activeMatches: Array.isArray(raw.activeMatches)
       ? raw.activeMatches.map((match) => ({
           ...match,
           tableSlot: typeof match.tableSlot === 'number' ? match.tableSlot : null,
+          startedAt: match.startedAt ?? null,
         }))
       : defaults.activeMatches,
     matches: Array.isArray(raw.matches) ? raw.matches : defaults.matches,

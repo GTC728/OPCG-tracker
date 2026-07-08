@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { TurnOrderBadge, WinLossBadge } from '@/components/match/TurnOrderBadge'
 import { getDeck, getPlayerName } from '@/lib/entities'
+import { formatMatchDuration, getMatchDurationMs } from '@/lib/matchTimer'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import { uiCardInteractive } from '@/lib/uiSurface'
 import type { Deck, Match, Player } from '@/types'
@@ -186,6 +187,7 @@ export function MatchListItem({
   perspectivePlayerId,
   showTurnOrder = false,
   showWinLossBadge = false,
+  showDuration = false,
   onClick,
   className = '',
 }: {
@@ -198,16 +200,21 @@ export function MatchListItem({
   perspectivePlayerId?: string
   showTurnOrder?: boolean
   showWinLossBadge?: boolean
+  showDuration?: boolean
   onClick?: () => void
   className?: string
 }) {
+  const durationMs = showDuration ? getMatchDurationMs(match.startedAt, match.finishedAt) : null
+  const durationLabel = durationMs !== null ? formatMatchDuration(durationMs) : null
+  const resolvedMeta = meta ?? durationLabel
+
   const content = (
     <>
-      {(badge || meta) && (
+      {(badge || resolvedMeta) && (
         <div className="match-list-item__header flex w-full items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">{badge}</div>
-          {meta ? (
-            <span className="match-list-item__meta shrink-0 text-xs tabular-nums text-text-secondary">{meta}</span>
+          {resolvedMeta ? (
+            <span className="match-list-item__meta shrink-0 text-xs tabular-nums text-text-secondary">{resolvedMeta}</span>
           ) : null}
         </div>
       )}

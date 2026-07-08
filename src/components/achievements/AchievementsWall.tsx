@@ -32,6 +32,7 @@ export interface AchievementPeerContext {
   matches: Match[]
   achievementUnlocks: AchievementUnlock[]
   currentPlayerId: string
+  linkedPlayerId?: string | null
 }
 
 function AchievementCard({
@@ -369,13 +370,21 @@ function AchievementFilters({
 
 function useFilteredAchievements(achievements: AchievementProgress[]) {
   const [category, setCategory] = useState<AchievementCategory | 'all'>('all')
-  const [sortMode, setSortMode] = useState<AchievementSortMode>('progress')
+  const [sortMode, setSortMode] = useState<AchievementSortMode>('category')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filtered = useMemo(() => {
     const scoped = filterAchievementProgress(achievements, category)
-    return sortAchievementProgress(scoped, sortMode)
-  }, [achievements, category, sortMode])
+    const sorted = sortAchievementProgress(scoped, sortMode)
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return sorted
+    return sorted.filter((item) => {
+      const title = item.definition.title['zh-Hant'].toLowerCase()
+      const id = item.definition.id.toLowerCase()
+      return title.includes(query) || id.includes(query)
+    })
+  }, [achievements, category, sortMode, searchQuery])
 
   const grouped = useMemo(() => {
     if (category !== 'all' || sortMode !== 'category') return null
@@ -385,7 +394,53 @@ function useFilteredAchievements(achievements: AchievementProgress[]) {
     })).filter((group) => group.items.length > 0)
   }, [category, sortMode, filtered])
 
-  return { category, sortMode, viewMode, setCategory, setSortMode, setViewMode, filtered, grouped }
+  return {
+    category,
+    sortMode,
+    viewMode,
+    searchQuery,
+    setCategory,
+    setSortMode,
+    setViewMode,
+    setSearchQuery,
+    filtered,
+    grouped,
+  }
+}
+
+function CollapsibleAchievementGroup({
+  title,
+  count,
+  unlockedCount,
+  defaultOpen,
+  children,
+}: {
+  title: string
+  count: number
+  unlockedCount: number
+  defaultOpen: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <section className="rounded-xl border border-[var(--ui-border)] bg-surface-muted/20">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+        onClick={() => {
+          playInteractionSound('toggle')
+          setOpen(!open)
+        }}
+      >
+        <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{title}</span>
+        <span className="text-[11px] text-text-secondary">
+          {unlockedCount}/{count} {open ? '▼' : '▶'}
+        </span>
+      </button>
+      {open ? <div className="border-t border-[var(--ui-border)] px-3 pb-3 pt-2">{children}</div> : null}
+    </section>
+  )
 }
 
 function AchievementGrid({
@@ -515,10 +570,11 @@ export function AchievementsWall({
       peerContext.matches,
       peerContext.achievementUnlocks,
       globalRates,
+      peerViewId === peerContext.currentPlayerId ? peerContext.linkedPlayerId ?? null : null,
     )
   }, [achievements, globalRates, peerContext, peerViewId])
 
-  const { category, sortMode, viewMode, setCategory, setSortMode, setViewMode, filtered, grouped } =
+  const { category, sortMode, viewMode, searchQuery, setCategory, setSortMode, setViewMode, setSearchQuery, filtered, grouped } =
     useFilteredAchievements(activeAchievements)
 
   const summary = computeAchievementSummary(activeAchievements)
@@ -568,6 +624,14 @@ export function AchievementsWall({
         onOpenCommunity={() => setCommunityOpen(true)}
       />
 
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        placeholder={t('achievements.searchPlaceholder')}
+        className="w-full rounded-lg border border-[var(--ui-border)] bg-surface-muted/40 px-3 py-2 text-sm outline-none"
+      />
+
       <AchievementCommunitySheet
         open={communityOpen}
         onClose={() => setCommunityOpen(false)}
@@ -577,20 +641,29 @@ export function AchievementsWall({
       />
 
       {grouped ? (
-        <div className="space-y-4">
-          {grouped.map((group) => (
-            <div key={group.category} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                {t(CATEGORY_LABEL_KEY[group.category])}
-              </h3>
-              <AchievementGrid
-                items={group.items}
-                language={language}
-                viewMode={viewMode}
-                onSelect={setDetail}
-              />
-            </div>
-          ))}
+        <div className="space-y-3">
+          {grouped.map((group) => {
+            const unlockedCount = group.items.filter((item) => item.currentLevel > 0).length
+            const inProgress = group.items.some(
+              (item) => item.currentLevel > 0 && item.currentLevel < item.maxLevel,
+            )
+            return (
+              <CollapsibleAchievementGroup
+                key={group.category}
+                title={t(CATEGORY_LABEL_KEY[group.category])}
+                count={group.items.length}
+                unlockedCount={unlockedCount}
+                defaultOpen={inProgress}
+              >
+                <AchievementGrid
+                  items={group.items}
+                  language={language}
+                  viewMode={viewMode}
+                  onSelect={setDetail}
+                />
+              </CollapsibleAchievementGroup>
+            )
+          })}
         </div>
       ) : (
         <AchievementGrid items={filtered} language={language} viewMode={viewMode} onSelect={setDetail} />

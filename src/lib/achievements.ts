@@ -1,3 +1,4 @@
+import { BACKLOG_BATCH_DEFINITIONS, evaluateBacklogBatchMetrics } from '@/lib/achievementsBacklogBatch'
 import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '@/lib/achievementsExtra'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
@@ -541,6 +542,7 @@ export const CORE_ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
 export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   ...CORE_ACHIEVEMENT_DEFINITIONS,
   ...(EXTRA_ACHIEVEMENT_DEFINITIONS as AchievementDefinition[]),
+  ...BACKLOG_BATCH_DEFINITIONS,
 ]
 
 const LEGACY_ACHIEVEMENT_MAP: Record<string, { id: string; level: number }> = {
@@ -921,6 +923,7 @@ export function evaluateAchievementMetrics(
   players: Player[],
   decks: Deck[],
   matches: Match[],
+  linkedPlayerId: string | null = null,
 ): Record<string, number> {
   const relevant = playerMatches(playerId, matches)
   const sorted = sortByFinished(relevant)
@@ -928,6 +931,7 @@ export function evaluateAchievementMetrics(
   const deckWins = deckWinsForPlayer(playerId, matches)
   const firstStats = firstPlayerWinRate(playerId, matches)
   const extra = evaluateExtraAchievementMetrics(playerId, players, decks, matches)
+  const batch = evaluateBacklogBatchMetrics(playerId, players, decks, matches, linkedPlayerId)
 
   return {
     veteran: relevant.length,
@@ -957,6 +961,7 @@ export function evaluateAchievementMetrics(
     rainbow_session: countRainbowSessions(playerId, decks, matches),
     achievement_hunter: 0,
     ...extra,
+    ...batch,
   }
 }
 
@@ -965,8 +970,9 @@ export function evaluateAchievementLevels(
   players: Player[],
   decks: Deck[],
   matches: Match[],
+  linkedPlayerId: string | null = null,
 ): Record<string, number> {
-  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches)
+  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId)
   const levels: Record<string, number> = {}
   for (const definition of ACHIEVEMENT_DEFINITIONS) {
     if (definition.id === 'achievement_hunter') continue
@@ -985,7 +991,7 @@ export function evaluateNewAchievementUnlocks(
   state: AppState,
   playerId: string,
 ): AchievementUnlock[] {
-  const earned = evaluateAchievementLevels(playerId, state.players, state.decks, state.matches)
+  const earned = evaluateAchievementLevels(playerId, state.players, state.decks, state.matches, state.settings.linkedPlayerId)
   const existing = new Map(
     state.achievementUnlocks
       .filter((item) => item.playerId === playerId)
@@ -1138,9 +1144,10 @@ export function getPlayerAchievementProgress(
   matches: Match[],
   unlocks: AchievementUnlock[],
   globalRates?: Map<string, AchievementGlobalRate>,
+  linkedPlayerId: string | null = null,
 ): AchievementProgress[] {
-  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches)
-  const levels = evaluateAchievementLevels(playerId, players, decks, matches)
+  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId)
+  const levels = evaluateAchievementLevels(playerId, players, decks, matches, linkedPlayerId)
   const rates = globalRates ?? computeGlobalAchievementRates(players, decks, matches)
   const unlockMap = new Map(
     unlocks.filter((item) => item.playerId === playerId).map((item) => [item.achievementId, item]),

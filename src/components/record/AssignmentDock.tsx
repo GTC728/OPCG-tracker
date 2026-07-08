@@ -350,7 +350,7 @@ export function AssignmentDock({
 
   const drawerPanel =
     variant === 'drawer' ? (
-      <div className="overflow-hidden border-t border-white/[0.06] bg-surface-elevated/98 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <div className="overflow-hidden rounded-t-2xl border-t border-white/[0.06] bg-surface-elevated/98 shadow-[0_-4px_20px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <div
           className="flex items-center gap-1.5 border-b border-surface-muted/80 px-2.5"
           style={{ height: ASSIGNMENT_DRAWER_HEADER }}

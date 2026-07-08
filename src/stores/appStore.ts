@@ -9,7 +9,9 @@ import {
   pauseGroupCollabNotify,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
+import { appendAuditEntry } from '@/lib/auditLog'
 import { evaluateNewAchievementUnlocks, mergeAchievementUnlocks } from '@/lib/achievements'
+import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
 import { loadAppState, saveAppState } from '@/lib/storage'
@@ -104,6 +106,7 @@ function toPersistedState(store: AppStore): AppState {
     importRows: store.importRows,
     importRecords: store.importRecords,
     achievementUnlocks: store.achievementUnlocks,
+    auditLog: store.auditLog,
     settings: store.settings,
   }
 }
@@ -274,6 +277,11 @@ function assertActiveMatchFields(state: AppState, input: ActiveMatchInput): void
 
 function isCompleteActiveMatchInput(input: ActiveMatchInput): boolean {
   return Boolean(input.player1Id && input.player2Id && input.deck1Id && input.deck2Id)
+}
+
+function resolveMatchStartedAt(existingStartedAt: string | null, input: ActiveMatchInput): string | null {
+  if (!isCompleteActiveMatchInput(input)) return null
+  return existingStartedAt ?? nowIso()
 }
 
 function findOrCreatePlayer(state: AppState, name: string): { state: AppState; player: Player } {
@@ -688,7 +696,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       player2Id: input.player2Id,
       deck2Id: input.deck2Id,
       firstPlayerId: input.firstPlayerId,
-      startedAt: nowIso(),
+      startedAt: resolveMatchStartedAt(null, input),
       notes: input.notes?.trim() || null,
     }
 
@@ -774,18 +782,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
       winnerDeckId,
       firstPlayerId: activeMatch.firstPlayerId,
       resultType: 'normal',
-      startedAt: activeMatch.startedAt,
+      startedAt: activeMatch.startedAt ?? nowIso(),
       finishedAt: nowIso(),
       source: 'manual',
       deletedAt: null,
       notes: activeMatch.notes,
     }
 
-    const next = persist({
-      ...current,
-      activeMatches: current.activeMatches.filter((item) => item.id !== id),
-      matches: [match, ...current.matches],
-    })
+    const next = appendAuditEntry(
+      persist({
+        ...current,
+        activeMatches: current.activeMatches.filter((item) => item.id !== id),
+        matches: [match, ...current.matches],
+      }),
+      'match_complete',
+      `#${match.matchNumber} ${getPlayerName(current.players, winnerPlayerId)} 勝`,
+    )
     const achievementResult = applyAchievementUnlocks(next, [
       match.player1Id,
       match.player2Id,
@@ -843,21 +855,25 @@ export const useAppStore = create<AppStore>((set, get) => ({
       notes: input.notes?.trim() || null,
       source: 'manual_edit',
     }
-    const next = persist({
-      ...current,
-      matches: current.matches.map((match) => (match.id === id ? afterMatch : match)),
-      matchRevisions: [
-        {
-          id: createId(),
-          matchId: id,
-          editedAt: nowIso(),
-          before: beforeMatch,
-          after: afterMatch,
-          reason: 'manual_edit',
-        },
-        ...current.matchRevisions,
-      ],
-    })
+    const next = appendAuditEntry(
+      persist({
+        ...current,
+        matches: current.matches.map((match) => (match.id === id ? afterMatch : match)),
+        matchRevisions: [
+          {
+            id: createId(),
+            matchId: id,
+            editedAt: nowIso(),
+            before: beforeMatch,
+            after: afterMatch,
+            reason: 'manual_edit',
+          },
+          ...current.matchRevisions,
+        ],
+      }),
+      'match_edit',
+      `#${afterMatch.matchNumber} 已編輯`,
+    )
     set({ ...next })
   },
 
@@ -889,11 +905,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
       notes: match.notes,
     }
 
-    const next = persist({
-      ...current,
-      matches: current.matches.filter((item) => item.id !== matchId),
-      activeMatches: [activeMatch, ...current.activeMatches],
-    })
+    const next = appendAuditEntry(
+      persist({
+        ...current,
+        matches: current.matches.filter((item) => item.id !== matchId),
+        activeMatches: [activeMatch, ...current.activeMatches],
+      }),
+      'match_undo',
+      `#${match.matchNumber} 已還原為進行中`,
+    )
     set({ ...next })
   },
 
@@ -903,14 +923,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!match) throw new Error('找不到對局')
     if (match.deletedAt !== null) return
 
-    const next = persist({
-      ...current,
-      matches: current.matches.map((item) =>
-        item.id === matchId
-          ? { ...item, deletedAt: nowIso(), source: 'manual_edit' as const }
-          : item,
-      ),
-    })
+    const next = appendAuditEntry(
+      persist({
+        ...current,
+        matches: current.matches.map((item) =>
+          item.id === matchId
+            ? { ...item, deletedAt: nowIso(), source: 'manual_edit' as const }
+            : item,
+        ),
+      }),
+      'match_delete',
+      `#${match.matchNumber} 已刪除`,
+    )
     set({ ...next })
   },
 
@@ -1259,6 +1283,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
               player2Id: merged.player2Id,
               deck2Id: merged.deck2Id,
               firstPlayerId: merged.firstPlayerId,
+              startedAt: resolveMatchStartedAt(match.startedAt, merged),
               tableSlot: input.tableSlot !== undefined ? input.tableSlot ?? null : match.tableSlot,
             }
           : match,
@@ -1345,7 +1370,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         player2Id: merged.player2Id,
         deck2Id: merged.deck2Id,
         firstPlayerId: merged.firstPlayerId,
-        startedAt: nowIso(),
+        startedAt: resolveMatchStartedAt(null, merged),
         notes: null,
       }
       const next = persist({

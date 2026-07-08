@@ -5,6 +5,7 @@ import { CloudSyncTool } from '@/components/settings/CloudSyncTool'
 import { ProfileSettings } from '@/components/settings/ProfileSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
+import { SystemStatusPanel } from '@/components/settings/SystemStatusPanel'
 import { SessionManager } from '@/components/session/SessionManager'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import {
@@ -16,7 +17,7 @@ import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud' | 'profile' | 'appearance'
+type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud' | 'profile' | 'appearance' | 'system'
 
 function SettingsRow({
   title,
@@ -128,6 +129,11 @@ export function SettingsPage() {
               onClick={() => setSection('cloud')}
             />
             <SettingsRow
+              title={t('settings.system')}
+              description={t('settings.systemDesc')}
+              onClick={() => setSection('system')}
+            />
+            <SettingsRow
               title={t('settings.leaders')}
               description={t('settings.leadersDesc')}
               meta={`${deckCount}`}
@@ -179,6 +185,13 @@ export function SettingsPage() {
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
           <CloudSyncTool />
+        </>
+      ) : null}
+
+      {section === 'system' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <SystemStatusPanel />
         </>
       ) : null}
 

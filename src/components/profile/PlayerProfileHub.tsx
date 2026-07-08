@@ -5,7 +5,7 @@ import { DeckPreviewCard } from '@/components/profile/DeckPreviewCard'
 import { ProfileIdentityCard } from '@/components/profile/ProfileIdentityCard'
 import { ProfilePreviewCard } from '@/components/profile/ProfilePreviewCard'
 import { ProfileSection } from '@/components/profile/ProfileSection'
-import { TrendsPreviewCard } from '@/components/profile/RecentFormBars'
+import { RecentFormBars } from '@/components/profile/RecentFormBars'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
@@ -32,6 +32,7 @@ import {
 } from '@/lib/stats'
 import { uiCard, uiHorizontalRail } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
+import { useAppStore } from '@/stores/appStore'
 
 const PREVIEW_LIMIT = 10
 
@@ -97,6 +98,7 @@ export function PlayerProfileHub({
   renderHeadToHeadRow: (stat: RecordStat & { opponentId: string }) => ReactNode
 }) {
   const { t } = useI18n()
+  const linkedPlayerId = useAppStore((state) => state.settings.linkedPlayerId)
   const [panel, setPanel] = useState<ProfilePanel>(null)
 
   const lifetimeMatches = allMatches
@@ -116,6 +118,7 @@ export function PlayerProfileHub({
     lifetimeMatches,
     achievementUnlocks,
     globalRates,
+    linkedPlayerId,
   )
   const peerRateMap = computePerPlayerAchievementRates(players, decks, lifetimeMatches)
   const peerRates: AchievementPeerRate[] = players
@@ -144,6 +147,8 @@ export function PlayerProfileHub({
       <ProfileIdentityCard
         title={player.name}
         stat={stat}
+        streak={streak}
+        recentForm={recentForm}
         onBack={onBack}
         onShare={onShare}
         onViewDetails={() => setPanel('overview')}
@@ -155,28 +160,6 @@ export function PlayerProfileHub({
         previewLimit={PREVIEW_LIMIT}
         onOpenAll={() => setPanel('achievements')}
       />
-
-      <ProfileSection title={t('stats.recentMatches')} onViewAll={() => setPanel('matches')}>
-        <div className={uiHorizontalRail}>
-          {recentMatches.map((match) => (
-            <div key={match.id} className="w-[16rem] shrink-0 snap-start">
-              <MatchListItem
-                match={match}
-                players={players}
-                decks={decks}
-                perspectivePlayerId={player.id}
-                showTurnOrder
-                showWinLossBadge
-                showResultColors={false}
-              />
-            </div>
-          ))}
-        </div>
-      </ProfileSection>
-
-      <ProfileSection title={t('profile.panel.trends')} onViewAll={() => setPanel('trends')}>
-        <TrendsPreviewCard streak={streak} recentForm={recentForm} />
-      </ProfileSection>
 
       <ProfileSection title={t('profile.panel.decks')} onViewAll={() => setPanel('decks')}>
         <div className={uiHorizontalRail}>
@@ -220,6 +203,29 @@ export function PlayerProfileHub({
         </div>
       </ProfileSection>
 
+      <ProfileSection title={t('profile.panel.trends')} onViewAll={() => setPanel('trends')}>
+        <RecentFormBars recentForm={recentForm} />
+      </ProfileSection>
+
+      <ProfileSection title={t('stats.recentMatches')} onViewAll={() => setPanel('matches')}>
+        <div className={uiHorizontalRail}>
+          {recentMatches.map((match) => (
+            <div key={match.id} className="w-[16rem] shrink-0 snap-start">
+              <MatchListItem
+                match={match}
+                players={players}
+                decks={decks}
+                perspectivePlayerId={player.id}
+                showTurnOrder
+                showWinLossBadge
+                showResultColors={false}
+                showDuration
+              />
+            </div>
+          ))}
+        </div>
+      </ProfileSection>
+
       <PanelSheet open={panel === 'overview'} title={t('profile.panel.overview')} onClose={close}>
         <section className="grid grid-cols-3 gap-3">
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>
@@ -248,13 +254,7 @@ export function PlayerProfileHub({
       </PanelSheet>
 
       <PanelSheet open={panel === 'trends'} title={t('profile.panel.trends')} onClose={close}>
-        <WinStreakSummary
-          currentStreak={streak.currentStreak}
-          longestStreak={streak.longestStreak}
-          currentLossStreak={streak.currentLossStreak}
-          currentType={streak.currentType}
-        />
-        <TrendsPreviewCard streak={streak} recentForm={recentForm} />
+        <RecentFormBars recentForm={recentForm} />
         <WeeklyWinRateChart stats={weeklyStats} title={t('stats.weeklyWinRate')} />
       </PanelSheet>
 
@@ -287,6 +287,7 @@ export function PlayerProfileHub({
               showTurnOrder
               showWinLossBadge
               showResultColors={false}
+              showDuration
             />
           ))
         ) : (
@@ -305,6 +306,7 @@ export function PlayerProfileHub({
             matches: lifetimeMatches,
             achievementUnlocks,
             currentPlayerId: player.id,
+            linkedPlayerId,
           } satisfies AchievementPeerContext}
         />
       </PanelSheet>

@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
+import { useLiveMatchDuration } from '@/lib/matchTimer'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import { selectSurfaceClass } from '@/lib/selectSurface'
 import {
@@ -111,9 +112,15 @@ function TableActionsSheet({
   onClear: () => void
 }) {
   const { t } = useI18n()
+  const elapsed = useLiveMatchDuration(match.startedAt)
 
   return (
     <BottomSheet open={open} title={`${t('table.label')} ${slot}`} onClose={onClose}>
+      {elapsed ? (
+        <p className="mb-3 text-center text-sm tabular-nums text-text-secondary">
+          {t('match.timer')}: <span className="font-semibold text-text-primary">{elapsed}</span>
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" className="min-h-10 text-sm" onClick={onRoll}>
           {t('table.roll')}
@@ -174,6 +181,7 @@ function CompactCompleteTable({
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [left, right] = getOrderedMatchSides(match)
+  const elapsed = useLiveMatchDuration(match.startedAt)
 
   const rollFirst = () => onSetFirstPlayer(Math.random() < 0.5 ? match.player1Id : match.player2Id)
 
@@ -181,6 +189,11 @@ function CompactCompleteTable({
     <>
       <article className="flex min-h-8 min-w-0 touch-manipulation items-center gap-1 rounded-xl bg-surface-elevated px-1.5 py-1 ring-1 ring-surface-muted">
         <TableNumberBadge slot={slot} />
+        {elapsed ? (
+          <span className="shrink-0 text-[9px] tabular-nums text-text-secondary" title={t('match.timer')}>
+            {elapsed}
+          </span>
+        ) : null}
         <div className="min-w-0 flex-1 overflow-hidden">
           <TableSideInline playerId={left.playerId} deckId={left.deckId} players={players} decks={decks} />
         </div>

@@ -7,7 +7,7 @@ import {
   type SyncQueueOp,
 } from '@/lib/syncQueue'
 import type { ActiveMatch, AppState, Match, Player, Session } from '@/types'
-import { getAppState, updateAppState } from '@/stores/appStore'
+import { getAppState, updateAppState, useAppStore } from '@/stores/appStore'
 
 type SyncActiveRow = {
   id: string
@@ -247,7 +247,7 @@ function toActiveRow(groupKey: string, match: ActiveMatch, userId: string): Sync
     player2_id: match.player2Id,
     deck2_id: match.deck2Id,
     first_player_id: match.firstPlayerId,
-    started_at: match.startedAt,
+    started_at: match.startedAt ?? new Date().toISOString(),
     notes: match.notes,
     updated_at: new Date().toISOString(),
     updated_by: userId,
@@ -268,7 +268,7 @@ function toMatchRow(groupKey: string, match: Match, userId: string): SyncMatchRo
     winner_deck_id: match.winnerDeckId,
     first_player_id: match.firstPlayerId,
     result_type: match.resultType,
-    started_at: match.startedAt,
+    started_at: match.startedAt ?? new Date().toISOString(),
     finished_at: match.finishedAt,
     notes: match.notes,
     source: match.source,
@@ -360,7 +360,13 @@ export async function flushGroupCollabSync(_groupCode: string, _state: AppState)
   if (!isGroupCollabActive(_state) || !isOnline()) return
 
   const pending = await listSyncQueue()
-  if (!pending.length) return
+  if (!pending.length) {
+    useAppStore.getState().updateSettings({
+      lastGroupSyncAt: new Date().toISOString(),
+      lastGroupSyncError: null,
+    })
+    return
+  }
 
   const latestState = getAppState()
   for (const item of pending) {
@@ -371,10 +377,16 @@ export async function flushGroupCollabSync(_groupCode: string, _state: AppState)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sync failed'
       await markSyncQueueFailed(item.id, message)
+      useAppStore.getState().updateSettings({ lastGroupSyncError: message })
       console.error('Group collab queue item failed', item.op.kind, error)
       throw error
     }
   }
+
+  useAppStore.getState().updateSettings({
+    lastGroupSyncAt: new Date().toISOString(),
+    lastGroupSyncError: null,
+  })
 }
 
 export async function pushSyncedActiveMatches(groupCode: string, matches: ActiveMatch[]): Promise<void> {

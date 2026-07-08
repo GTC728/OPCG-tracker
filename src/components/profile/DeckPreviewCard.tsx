@@ -1,4 +1,3 @@
-import { ColorDots } from '@/components/deck/ColorDots'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { uiPopIn, uiPressable } from '@/lib/motion'
 import { formatPercent } from '@/lib/stats'
@@ -24,8 +23,7 @@ export function DeckPreviewCard({
   return (
     <button type="button" className={[uiHorizontalRailItem, 'block h-full', uiPressable].join(' ')} onClick={onClick}>
       <article className={[uiGlassCard, uiPopIn, 'flex h-full flex-col overflow-hidden p-3 text-left'].join(' ')}>
-        <div className="flex items-center gap-1.5">
-          <ColorDots colors={deck.colors} size="md" />
+        <div className="min-w-0">
           <DeckLabel deck={deck} compact showCode className="min-w-0 text-[11px]" />
         </div>
         <p className="mt-2 text-lg font-bold">{usagePercent}%</p>

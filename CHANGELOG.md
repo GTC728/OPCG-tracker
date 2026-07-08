@@ -9,6 +9,23 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.5.0 - 2026-07-09
+
+### New
+
+- **Match timer**: starts when both players and decks are assigned; compact elapsed on table row, full duration in table menu and match history.
+- **Audit log**: local operation history (complete, undo, edit, delete) under Settings → 系統與同步.
+- **Sync status**: banner shows last sync time; settings panel with device label and manual retry.
+- **20 new achievement families** from backlog (color mastery, centurion wins, timers, store regular, etc.).
+- **Achievements UI**: category accordion sections, search filter, default category sort.
+
+### Changed
+
+- **Profile hub**: streak + recent-10 win rate merged into identity card; section order (decks → rivals → trends → recent matches); deck preview no longer duplicates color dots.
+- **App header**:「OPCG Tracker」on the right; credit line `done by github@GTC728` instead of raw repo link.
+- **Assignment drawer**: rounded top corners (`rounded-t-2xl`).
+- **Schema v9**: `auditLog`, `lastGroupSyncAt`, nullable `ActiveMatch.startedAt`.
+
 ## V4.3.5 - 2026-07-08
 
 ### Changed

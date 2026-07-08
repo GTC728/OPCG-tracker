@@ -74,6 +74,7 @@ function countPlayerMatches(
 
   for (const match of state.activeMatches) {
     if (options?.sessionId && match.sessionId !== options.sessionId) continue
+    if (!match.startedAt) continue
     const time = new Date(match.startedAt).getTime()
     if (options?.sinceMs !== undefined && time < options.sinceMs) continue
     if (match.player1Id === playerId || match.player2Id === playerId) count += 1

@@ -106,8 +106,25 @@ export interface ActiveMatch {
   player2Id: string
   deck2Id: string
   firstPlayerId: string | null
-  startedAt: string
+  /** Set when all four roster fields are filled — match timer starts here. */
+  startedAt: string | null
   notes: string | null
+}
+
+export type AuditKind =
+  | 'match_complete'
+  | 'match_undo'
+  | 'match_edit'
+  | 'match_delete'
+  | 'import'
+  | 'sync'
+  | 'session'
+
+export interface AuditEntry {
+  id: string
+  at: string
+  kind: AuditKind
+  message: string
 }
 
 export interface ActiveMatchInput {
@@ -233,11 +250,14 @@ export interface AppSettings {
   density: UiDensity
   statsDefaultScope: StatsDefaultScope
   achievementNotifications: boolean
+  lastGroupSyncAt: string | null
+  lastGroupSyncError: string | null
 }
 
 export interface AppState {
   schemaVersion: number
   appVersion: string
+  auditLog: AuditEntry[]
   currentSessionId: string | null
   players: Player[]
   playerAliases: PlayerAlias[]
