@@ -105,7 +105,7 @@ const migrations: Record<number, Migration> = {
         profileSetupCompleted: Boolean(settings.profileSetupCompleted),
         theme: settings.theme ?? 'dark',
         accent: settings.accent ?? 'blue',
-        density: settings.density ?? 'compact',
+        density: settings.density ?? 'comfortable',
         statsDefaultScope: settings.statsDefaultScope ?? 'profile',
         achievementNotifications: settings.achievementNotifications ?? true,
       },

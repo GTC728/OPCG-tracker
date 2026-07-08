@@ -4,7 +4,7 @@ import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/data
 import type { AppState, Deck } from '@/types'
 
 export const SCHEMA_VERSION = 8
-export const APP_VERSION = '4.2.0'
+export const APP_VERSION = '4.3.0'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
 export const STORAGE_KEY = 'opcg-tracker-state'
 
@@ -59,7 +59,7 @@ export function createDefaultAppState(): AppState {
       profileSetupCompleted: false,
       theme: 'dark',
       accent: 'blue',
-      density: 'compact',
+      density: 'comfortable',
       statsDefaultScope: 'profile',
       achievementNotifications: true,
     },

@@ -73,21 +73,60 @@ textarea:focus-visible {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-:root {
-  --app-bottom-nav-height: 2.75rem;
-  --glass-bg: color-mix(in srgb, var(--color-surface-elevated) 72%, transparent);
-  --glass-border: color-mix(in srgb, white 10%, transparent);
-  --glass-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+/* ── Theme tokens (runtime overrides via theme.ts) ── */
+:root,
+[data-theme='dark'] {
+  --ui-border: color-mix(in srgb, white 10%, transparent);
+  --ui-border-strong: color-mix(in srgb, white 16%, transparent);
+  --glass-bg: color-mix(in srgb, var(--color-surface-elevated) 78%, transparent);
+  --glass-bg-solid: color-mix(in srgb, var(--color-surface-elevated) 92%, transparent);
+  --glass-border: color-mix(in srgb, white 11%, transparent);
+  --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.32), 0 1px 0 color-mix(in srgb, white 5%, transparent) inset;
+  --glass-inset-bg: color-mix(in srgb, var(--color-surface) 58%, transparent);
+  --header-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  --nav-bg: color-mix(in srgb, var(--color-surface) 94%, transparent);
 }
 
-[data-theme='light'] .ui-segment {
-  background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
-  border-color: color-mix(in srgb, var(--color-surface-muted) 55%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 80%, transparent);
+[data-theme='light'] {
+  --ui-border: color-mix(in srgb, var(--color-surface-muted) 72%, transparent);
+  --ui-border-strong: color-mix(in srgb, var(--color-surface-muted) 88%, transparent);
+  --glass-bg: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
+  --glass-bg-solid: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+  --glass-border: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
+  --glass-shadow: 0 4px 18px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --glass-inset-bg: color-mix(in srgb, var(--color-surface-elevated) 82%, transparent);
+  --header-bg: color-mix(in srgb, var(--color-surface-elevated) 92%, transparent);
+  --nav-bg: color-mix(in srgb, var(--color-surface-elevated) 94%, transparent);
 }
 
 [data-theme='light'] body {
   background: var(--color-surface);
+}
+
+/* ── Density (comfortable = current default layout) ── */
+:root,
+[data-density='comfortable'] {
+  --ui-page-px: 1.25rem;
+  --ui-page-pt: 0.75rem;
+  --ui-section-gap: 1rem;
+  --ui-card-p: 1rem;
+  --ui-btn-min-h: 3rem;
+  --ui-row-py: 0.625rem;
+  --ui-header-py: 0.875rem;
+}
+
+[data-density='compact'] {
+  --ui-page-px: 1rem;
+  --ui-page-pt: 0.5rem;
+  --ui-section-gap: 0.75rem;
+  --ui-card-p: 0.75rem;
+  --ui-btn-min-h: 2.5rem;
+  --ui-row-py: 0.5rem;
+  --ui-header-py: 0.625rem;
+}
+
+:root {
+  --app-bottom-nav-height: 2.75rem;
 }
 
 .app-main-bottom-pad {
@@ -107,15 +146,78 @@ textarea:focus-visible {
   display: none;
 }
 
-/* Shared UI surfaces — see docs/UI-DESIGN.md */
+/* ── Glass / card surfaces ── */
+.ui-card,
+.ui-glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.ui-glass-card {
+  background: color-mix(in srgb, var(--glass-bg) 92%, transparent);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.ui-card-inset {
+  background: var(--glass-inset-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--ui-border);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
+}
+
+[data-theme='light'] .ui-card-inset {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 85%, transparent);
+}
+
+.ui-card-interactive:hover {
+  background: color-mix(in srgb, var(--glass-bg) 88%, var(--color-surface-muted) 12%);
+}
+
+.ui-card-interactive:active {
+  background: color-mix(in srgb, var(--glass-bg) 82%, var(--color-surface-muted) 18%);
+}
+
+.ui-header-bar {
+  background: var(--header-bg);
+  border-color: var(--ui-border);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.ui-bottom-nav {
+  background: var(--nav-bg);
+  border-color: var(--ui-border);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.ui-list-row:hover {
+  background: color-mix(in srgb, var(--color-surface-muted) 22%, transparent);
+}
+
+.ui-list-row:active {
+  background: color-mix(in srgb, var(--color-surface-muted) 35%, transparent);
+}
+
+/* ── Segmented controls ── */
 .ui-segment {
   display: grid;
   gap: 0.25rem;
   padding: 0.25rem;
   border-radius: 0.875rem;
-  background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
-  border: 1px solid color-mix(in srgb, white 7%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+  background: var(--glass-inset-bg);
+  border: 1px solid var(--ui-border);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+}
+
+[data-theme='light'] .ui-segment {
+  background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 80%, transparent);
 }
 
 .ui-segment-btn {
@@ -130,15 +232,97 @@ textarea:focus-visible {
   transition:
     background-color 150ms ease,
     color 150ms ease,
-    box-shadow 150ms ease;
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 .ui-segment-btn--active {
   background: var(--color-brand-600);
   color: white;
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-brand-600) 45%, transparent);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-brand-600) 40%, transparent);
 }
 
 .ui-segment-btn:not(.ui-segment-btn--active):hover {
   color: var(--color-text-primary);
+}
+
+/* ── Motion (V4.2.1) ── */
+@keyframes ui-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ui-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-nav-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.ui-pop-in {
+  animation: ui-pop-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-slide-up {
+  animation: ui-slide-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ui-nav-active .ui-nav-icon {
+  animation: ui-nav-bounce 320ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-pop-in,
+  .ui-slide-up,
+  .ui-nav-active .ui-nav-icon {
+    animation: none;
+  }
+}
+
+/* ── Achievement global-rate row (BG3-inspired) ── */
+.achievement-rate-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: 0.625rem;
+  background: var(--glass-inset-bg);
+}
+
+.achievement-rate-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--color-brand-500) 22%, transparent);
+  pointer-events: none;
+  transition: width 400ms ease;
+}
+
+[data-theme='light'] .achievement-rate-fill {
+  background: color-mix(in srgb, var(--color-brand-500) 16%, transparent);
+}
+
+.achievement-rate-content {
+  position: relative;
+  z-index: 1;
 }

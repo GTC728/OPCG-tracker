@@ -9,6 +9,32 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.0 - 2026-07-08
+
+### New
+
+- **50 achievement families** — full brainstorm set (25 core + 25 extended): Loyalist, Ice Breaker, Night Owl, Nemesis Bond, Set Dominance, etc.
+- **Global achievement rates** — computed from all local players with match history; BG3-style list view with completion % bars.
+- **Per-player completion rates** — peer ranking panel in achievement detail; sort default = global rate (most common first).
+- **Frosted glass UI** — `ui-card` / `ui-glass-card` use backdrop-blur + theme-aware borders/shadows (light & dark).
+- **Density modes wired** — `comfortable` = current default layout; `compact` tightens spacing via CSS variables.
+
+### Changed
+
+- Light mode borders/shadows strengthened for readability (settings, cards, inputs, achievement rows).
+- Unified shadow tokens via `--glass-shadow` / `--ui-border` (fixes inconsistent ring-only surfaces).
+
+## V4.2.1 - 2026-07-08
+
+### New
+
+- **Interaction feedback** — button/nav/segment press scale animations; subtle tap/toggle/success sounds (respects reduced motion).
+
+### Changed
+
+- Toast slide-in animation; theme-aware toast colors in light mode.
+- Achievement unlock plays success sound when notifications enabled.
+
 ## V4.2.0 - 2026-07-08
 
 ### New

@@ -10,7 +10,8 @@ import { StatsPage } from '@/pages/StatsPage'
 import { Button } from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { formatAchievementToast } from '@/lib/achievements'
-import { applyThemeSettings } from '@/lib/theme'
+import { playInteractionSound } from '@/lib/motion'
+import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
@@ -98,6 +99,7 @@ function AchievementToastBridge() {
   useEffect(() => {
     if (!enabled || !pending.length) return
     for (const unlock of pending) {
+      playInteractionSound('success')
       showToast({
         type: 'success',
         message: `${t('achievements.unlocked')}: ${formatAchievementToast(unlock.achievementId, unlock.level, language)}`,
@@ -113,8 +115,9 @@ function AchievementToastBridge() {
 function ThemeBridge() {
   const theme = useAppStore((state) => state.settings.theme)
   const accent = useAppStore((state) => state.settings.accent)
+  const density = useAppStore((state) => state.settings.density)
 
-  useEffect(() => applyThemeSettings(theme, accent), [theme, accent])
+  useEffect(() => applyAppearanceSettings(theme, accent, density), [theme, accent, density])
   return null
 }
 

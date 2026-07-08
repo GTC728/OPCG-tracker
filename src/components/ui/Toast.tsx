@@ -51,14 +51,19 @@ export function Toast({
   if (!visible) return null
 
   const toneClasses: Record<ToastType, string> = {
-    success: 'border-success/40 bg-green-950/90 text-green-50',
-    error: 'border-danger/50 bg-red-950/90 text-red-50',
-    info: 'border-surface-muted bg-surface-elevated text-text-primary',
+    success: 'border-success/40 bg-success/15 text-text-primary',
+    error: 'border-danger/50 bg-danger/15 text-text-primary',
+    info: 'border-[var(--ui-border)] bg-surface-elevated/95 text-text-primary',
   }
 
   return (
     <div className="app-above-bottom-chrome fixed inset-x-0 z-40 flex justify-center px-4">
-      <div className={['flex max-w-md items-center gap-3 rounded-2xl border px-4 py-3 shadow-xl', toneClasses[type]].join(' ')}>
+      <div
+        className={[
+          'ui-slide-up flex max-w-md items-center gap-3 rounded-2xl border px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-xl',
+          toneClasses[type],
+        ].join(' ')}
+      >
         <p className="flex-1 text-sm">{message}</p>
         {actionLabel && onAction ? (
           <button

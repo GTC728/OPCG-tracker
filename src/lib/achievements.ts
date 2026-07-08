@@ -1,9 +1,10 @@
+import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '@/lib/achievementsExtra'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
 
 export type AchievementCategory = 'milestone' | 'streak' | 'meta' | 'social' | 'fun' | 'skill'
 export type AchievementKind = 'grind' | 'skill' | 'special'
-export type AchievementSortMode = 'ease' | 'progress' | 'name' | 'category'
+export type AchievementSortMode = 'global' | 'ease' | 'progress' | 'name' | 'category'
 export type AchievementIconKind =
   | 'medal'
   | 'flame'
@@ -49,7 +50,7 @@ export const ACHIEVEMENT_CATEGORY_ORDER: AchievementCategory[] = [
   'fun',
 ]
 
-export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
+export const CORE_ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   {
     id: 'veteran',
     category: 'milestone',
@@ -537,6 +538,11 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   },
 ]
 
+export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
+  ...CORE_ACHIEVEMENT_DEFINITIONS,
+  ...(EXTRA_ACHIEVEMENT_DEFINITIONS as AchievementDefinition[]),
+]
+
 const LEGACY_ACHIEVEMENT_MAP: Record<string, { id: string; level: number }> = {
   first_win: { id: 'first_win', level: 1 },
   matches_10: { id: 'veteran', level: 2 },
@@ -551,7 +557,7 @@ const LEGACY_ACHIEVEMENT_MAP: Record<string, { id: string; level: number }> = {
   first_player_king: { id: 'first_player_king', level: 1 },
   comeback: { id: 'comeback', level: 1 },
   perfect_session: { id: 'perfect_session', level: 1 },
-  night_owl: { id: 'session_marathon', level: 2 },
+  night_owl: { id: 'night_owl', level: 1 },
   rival: { id: 'rival_bond', level: 2 },
 }
 
@@ -921,6 +927,7 @@ export function evaluateAchievementMetrics(
   const wins = relevant.filter((match) => match.winnerPlayerId === playerId).length
   const deckWins = deckWinsForPlayer(playerId, matches)
   const firstStats = firstPlayerWinRate(playerId, matches)
+  const extra = evaluateExtraAchievementMetrics(playerId, players, decks, matches)
 
   return {
     veteran: relevant.length,
@@ -949,6 +956,7 @@ export function evaluateAchievementMetrics(
     weekend_warrior: countWeekendWins(playerId, matches),
     rainbow_session: countRainbowSessions(playerId, decks, matches),
     achievement_hunter: 0,
+    ...extra,
   }
 }
 
@@ -1026,6 +1034,68 @@ export function migrateLegacyUnlocks(unlocks: AchievementUnlock[]): AchievementU
   return [...map.values()]
 }
 
+export interface AchievementPeerRate {
+  playerId: string
+  name: string
+  rate: number
+}
+
+export interface AchievementGlobalRate {
+  achievementId: string
+  unlockedCount: number
+  eligibleCount: number
+  rate: number
+}
+
+export function getEligiblePlayersForAchievements(players: Player[], matches: Match[]): Player[] {
+  const withMatches = new Set<string>()
+  for (const match of getCompletedMatches(matches)) {
+    withMatches.add(match.player1Id)
+    withMatches.add(match.player2Id)
+  }
+  return players.filter((player) => !player.archived && withMatches.has(player.id))
+}
+
+export function computeGlobalAchievementRates(
+  players: Player[],
+  decks: Deck[],
+  matches: Match[],
+): Map<string, AchievementGlobalRate> {
+  const eligible = getEligiblePlayersForAchievements(players, matches)
+  const result = new Map<string, AchievementGlobalRate>()
+
+  for (const definition of ACHIEVEMENT_DEFINITIONS) {
+    let unlockedCount = 0
+    for (const player of eligible) {
+      const level = evaluateAchievementLevels(player.id, players, decks, matches)[definition.id] ?? 0
+      if (level > 0) unlockedCount += 1
+    }
+    result.set(definition.id, {
+      achievementId: definition.id,
+      unlockedCount,
+      eligibleCount: eligible.length,
+      rate: eligible.length ? Math.round((unlockedCount / eligible.length) * 1000) / 10 : 0,
+    })
+  }
+  return result
+}
+
+export function computePerPlayerAchievementRates(
+  players: Player[],
+  decks: Deck[],
+  matches: Match[],
+): Map<string, number> {
+  const eligible = getEligiblePlayersForAchievements(players, matches)
+  const rates = new Map<string, number>()
+  for (const player of eligible) {
+    const levels = evaluateAchievementLevels(player.id, players, decks, matches)
+    const families = ACHIEVEMENT_DEFINITIONS.length
+    const unlocked = ACHIEVEMENT_DEFINITIONS.filter((def) => (levels[def.id] ?? 0) > 0).length
+    rates.set(player.id, families ? Math.round((unlocked / families) * 1000) / 10 : 0)
+  }
+  return rates
+}
+
 export interface AchievementProgress {
   definition: AchievementDefinition
   currentLevel: number
@@ -1033,6 +1103,7 @@ export interface AchievementProgress {
   unlockedAt: string | null
   currentValue: number
   nextThreshold: number | null
+  globalRate: number
 }
 
 export function getPlayerAchievementProgress(
@@ -1041,9 +1112,11 @@ export function getPlayerAchievementProgress(
   decks: Deck[],
   matches: Match[],
   unlocks: AchievementUnlock[],
+  globalRates?: Map<string, AchievementGlobalRate>,
 ): AchievementProgress[] {
   const metrics = evaluateAchievementMetrics(playerId, players, decks, matches)
   const levels = evaluateAchievementLevels(playerId, players, decks, matches)
+  const rates = globalRates ?? computeGlobalAchievementRates(players, decks, matches)
   const unlockMap = new Map(
     unlocks.filter((item) => item.playerId === playerId).map((item) => [item.achievementId, item]),
   )
@@ -1063,6 +1136,7 @@ export function getPlayerAchievementProgress(
       unlockedAt: unlockMap.get(definition.id)?.unlockedAt ?? null,
       currentValue,
       nextThreshold: nextTier?.threshold ?? null,
+      globalRate: rates.get(definition.id)?.rate ?? 0,
     }
   })
 }
@@ -1073,6 +1147,12 @@ export function sortAchievementProgress(
 ): AchievementProgress[] {
   const list = [...items]
   switch (mode) {
+    case 'global':
+      return list.sort((a, b) => {
+        const rateDiff = b.globalRate - a.globalRate
+        if (rateDiff !== 0) return rateDiff
+        return b.definition.ease - a.definition.ease
+      })
     case 'ease':
       return list.sort((a, b) => {
         const easeDiff = b.definition.ease - a.definition.ease
