@@ -109,9 +109,13 @@ export function AppShell({
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
         <SyncStatusBanner />
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
-          <p className="text-[11px] font-semibold tracking-wide text-brand-400">OPCG Tracker</p>
-          <h1 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h1>
-          {subtitle ? <p className="mt-0.5 text-sm leading-snug text-text-secondary">{subtitle}</p> : null}
+          <div className="flex items-baseline justify-between gap-2">
+            <h1 className="text-base font-bold tracking-tight">{title}</h1>
+            <span className="shrink-0 text-[10px] font-semibold tracking-wide text-brand-400">OPCG</span>
+          </div>
+          {subtitle ? (
+            <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-text-secondary">{subtitle}</p>
+          ) : null}
         </header>
 
         <main className="app-main-bottom-pad flex-1 space-y-[var(--ui-section-gap)] px-[var(--ui-page-px)] pt-[var(--ui-page-pt)]">

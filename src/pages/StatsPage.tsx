@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
-import { PlayerShareCard, SessionShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
+import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { getLinkedPlayer } from '@/lib/profileClaim'
@@ -975,7 +975,14 @@ function PlayerProfileView({
         title={player.name}
         filename={`opcg-profile-${player.name}.png`}
       >
-        <PlayerShareCard player={player} matches={matches} decks={decks} />
+        <PlayerShareCard
+          player={player}
+          matches={matches}
+          players={players}
+          decks={decks}
+          language={language}
+          achievementUnlocks={achievementUnlocks}
+        />
       </ShareExportSheet>
     </>
   )
@@ -1281,19 +1288,19 @@ export function StatsPage() {
       ) : null}
 
       <ProfileLinkSheet open={profileSheetOpen} onClose={() => setProfileSheetOpen(false)} />
-      {currentSession && linkedPlayer ? (
+      {currentSession ? (
         <ShareExportSheet
           open={sessionShareOpen}
           onClose={() => setSessionShareOpen(false)}
           title={currentSession.name}
           filename={`opcg-session-${currentSession.name}.png`}
         >
-          <SessionShareCard
+          <SessionDashboardShareCard
             session={currentSession}
-            player={linkedPlayer}
-            matches={scopedMatches}
             players={players}
             decks={decks}
+            matches={scopedMatches}
+            language={language}
           />
         </ShareExportSheet>
       ) : null}

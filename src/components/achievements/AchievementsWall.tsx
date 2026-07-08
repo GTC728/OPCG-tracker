@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { AchievementCommunitySheet } from '@/components/achievements/AchievementCommunitySheet'
 import { AchievementIcon } from '@/components/achievements/AchievementIcon'
 import { AchievementTierBar } from '@/components/achievements/AchievementTierBar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import {
   ACHIEVEMENT_CATEGORY_ORDER,
   computeGlobalAchievementRates,
+  computeAchievementSummary,
   filterAchievementProgress,
   formatAchievementToast,
   getAchievementPreviewItems,
@@ -18,7 +20,7 @@ import {
 import { getHighestUnlockedMetal } from '@/lib/achievementTierStyles'
 import { playInteractionSound, uiPopIn, uiPressable } from '@/lib/motion'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
-import { uiCardInset, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
+import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 export type { AchievementPeerRate }
@@ -29,18 +31,6 @@ export interface AchievementPeerContext {
   matches: Match[]
   achievementUnlocks: AchievementUnlock[]
   currentPlayerId: string
-}
-
-function GlobalRatePill({ rate }: { rate: number }) {
-  const { t } = useI18n()
-  return (
-    <span
-      className="shrink-0 rounded-md border border-[var(--ui-border)] bg-surface/50 px-1.5 py-0.5 text-[10px] font-semibold text-text-secondary"
-      title={t('achievements.globalRate')}
-    >
-      {rate}%
-    </span>
-  )
 }
 
 function AchievementCard({
@@ -54,6 +44,7 @@ function AchievementCard({
   compact?: boolean
   onClick?: () => void
 }) {
+  const { t } = useI18n()
   const unlocked = item.currentLevel > 0
   const title = item.definition.title[language]
   const metal = getHighestUnlockedMetal(item.currentLevel, item.maxLevel)
@@ -85,16 +76,17 @@ function AchievementCard({
                   : undefined
               }
             >
-              Lv.{item.currentLevel}
+              Lv.{item.currentLevel}/{item.maxLevel}
             </span>
           ) : null}
-          <GlobalRatePill rate={item.globalRate} />
         </div>
       </div>
       <h3 className="mt-2 line-clamp-1 text-sm font-semibold">{title}</h3>
       <p className="mt-1 text-[11px] text-text-secondary">
         {unlocked
-          ? `${item.currentLevel}/${item.maxLevel}`
+          ? item.nextThreshold
+            ? `→ ${item.nextThreshold}`
+            : t('achievements.maxTier')
           : item.nextThreshold
             ? `→ ${item.nextThreshold}`
             : '—'}
@@ -154,7 +146,6 @@ function AchievementListRow({
               <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{desc}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
-              <GlobalRatePill rate={item.globalRate} />
               {item.currentLevel > 0 ? (
                 <span className="text-[11px] font-bold text-brand-400">
                   Lv.{item.currentLevel}/{item.maxLevel}
@@ -162,6 +153,11 @@ function AchievementListRow({
               ) : (
                 <span className="text-[11px] text-text-secondary">{t('achievements.notUnlocked')}</span>
               )}
+              {item.maxLevel > 1 ? (
+                <span className="text-[10px] text-text-secondary">
+                  {Math.round((item.currentLevel / item.maxLevel) * 100)}%
+                </span>
+              ) : null}
             </div>
           </div>
           <AchievementTierBar currentLevel={item.currentLevel} maxLevel={item.maxLevel} />
@@ -204,11 +200,12 @@ function AchievementDetailSheet({
         <div className="grid grid-cols-2 gap-2">
           <article className={[uiGlassCard, 'p-3'].join(' ')}>
             <p className="text-[10px] uppercase text-text-secondary">{t('achievements.globalRate')}</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-text-secondary">{t('achievements.globalRateHint')}</p>
             <p className="mt-1 text-xl font-bold text-brand-400">{item.globalRate}%</p>
           </article>
           {playerCompletionRate != null ? (
             <article className={[uiGlassCard, 'p-3'].join(' ')}>
-              <p className="text-[10px] uppercase text-text-secondary">{t('achievements.playerRate')}</p>
+              <p className="text-[10px] uppercase text-text-secondary">{t('achievements.tierProgress')}</p>
               <p className="mt-1 text-xl font-bold">{playerCompletionRate}%</p>
             </article>
           ) : null}
@@ -266,6 +263,8 @@ function AchievementFilters({
   onCategoryChange,
   onSortChange,
   onViewModeChange,
+  onOpenCommunity,
+  showCommunityLink,
 }: {
   category: AchievementCategory | 'all'
   sortMode: AchievementSortMode
@@ -273,6 +272,8 @@ function AchievementFilters({
   onCategoryChange: (value: AchievementCategory | 'all') => void
   onSortChange: (value: AchievementSortMode) => void
   onViewModeChange: (value: 'grid' | 'list') => void
+  onOpenCommunity?: () => void
+  showCommunityLink?: boolean
 }) {
   const { t } = useI18n()
   const categories: Array<AchievementCategory | 'all'> = ['all', ...ACHIEVEMENT_CATEGORY_ORDER]
@@ -314,6 +315,21 @@ function AchievementFilters({
             </option>
           ))}
         </select>
+        {showCommunityLink && onOpenCommunity ? (
+          <button
+            type="button"
+            className={[
+              'rounded-lg border border-[var(--ui-border)] bg-surface-muted/40 px-2 py-1 text-[11px] font-semibold text-brand-400',
+              uiPressable,
+            ].join(' ')}
+            onClick={() => {
+              playInteractionSound('tap')
+              onOpenCommunity()
+            }}
+          >
+            {t('achievements.communityData')}
+          </button>
+        ) : null}
         <div className="ml-auto flex gap-1">
           {(['list', 'grid'] as const).map((mode) => (
             <button
@@ -359,60 +375,6 @@ function useFilteredAchievements(achievements: AchievementProgress[]) {
   }, [category, sortMode, filtered])
 
   return { category, sortMode, viewMode, setCategory, setSortMode, setViewMode, filtered, grouped }
-}
-
-function PeerRatesPanel({
-  peers,
-  onSelectPeer,
-}: {
-  peers: AchievementPeerRate[]
-  onSelectPeer: (playerId: string) => void
-}) {
-  const { t } = useI18n()
-  const [expanded, setExpanded] = useState(false)
-  if (!peers.length) return null
-
-  return (
-    <section className={[uiCardInset, 'p-2'].join(' ')}>
-      <button
-        type="button"
-        className={['flex w-full items-center justify-between text-left', uiPressable].join(' ')}
-        onClick={() => {
-          playInteractionSound('toggle')
-          setExpanded((value) => !value)
-        }}
-      >
-        <span className="text-xs font-semibold text-text-secondary">{t('achievements.peerRates')}</span>
-        <span className="text-[11px] text-brand-400">
-          {expanded ? t('achievements.peerRatesCollapse') : t('achievements.peerRatesExpand')}
-        </span>
-      </button>
-      {expanded ? (
-        <ol className="mt-2 space-y-1 border-t border-[var(--ui-border)] pt-2">
-          {peers.slice(0, 12).map((peer, index) => (
-            <li key={peer.playerId}>
-              <button
-                type="button"
-                className={[
-                  'flex w-full items-center justify-between rounded-md border border-[var(--ui-border)] px-2.5 py-1.5 text-left text-sm',
-                  uiPressable,
-                ].join(' ')}
-                onClick={() => {
-                  playInteractionSound('tap')
-                  onSelectPeer(peer.playerId)
-                }}
-              >
-                <span className="truncate font-medium">
-                  {index + 1}. {peer.name}
-                </span>
-                <span className="shrink-0 pl-2 text-xs font-bold text-brand-400">{peer.rate}%</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      ) : null}
-    </section>
-  )
 }
 
 function AchievementGrid({
@@ -468,9 +430,7 @@ export function AchievementsPreviewRail({
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
   const preview = getAchievementPreviewItems(achievements, 8)
-  const unlocked = achievements.filter((item) => item.currentLevel > 0).length
-  const playerRate =
-    achievements.length > 0 ? Math.round((unlocked / achievements.length) * 1000) / 10 : 0
+  const summary = computeAchievementSummary(achievements)
 
   return (
     <section className="space-y-2">
@@ -488,7 +448,7 @@ export function AchievementsPreviewRail({
             onOpenAll?.()
           }}
         >
-          {unlocked}/{achievements.length} ({playerRate}%) · {t('achievements.viewAll')}
+          {summary.familiesUnlocked}/{summary.totalFamilies} · {t('achievements.tierProgress')} {summary.tierRate}% · {t('achievements.viewAll')}
         </button>
       </div>
       {preview.items.length ? (
@@ -509,7 +469,7 @@ export function AchievementsPreviewRail({
       <AchievementDetailSheet
         item={detail}
         language={language}
-        playerCompletionRate={playerRate}
+        playerCompletionRate={summary.tierRate}
         open={Boolean(detail)}
         onClose={() => setDetail(null)}
       />
@@ -531,6 +491,7 @@ export function AchievementsWall({
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
   const [peerViewId, setPeerViewId] = useState<string | null>(null)
+  const [communityOpen, setCommunityOpen] = useState(false)
 
   const globalRates = useMemo(() => {
     if (!peerContext) return null
@@ -552,12 +513,8 @@ export function AchievementsWall({
   const { category, sortMode, viewMode, setCategory, setSortMode, setViewMode, filtered, grouped } =
     useFilteredAchievements(activeAchievements)
 
-  const unlocked = activeAchievements.filter((item) => item.currentLevel > 0).length
-  const completion =
-    playerCompletionRate ??
-    (activeAchievements.length
-      ? Math.round((unlocked / activeAchievements.length) * 1000) / 10
-      : 0)
+  const summary = computeAchievementSummary(activeAchievements)
+  const completion = playerCompletionRate ?? summary.tierRate
 
   const peerName = peerViewId
     ? peerContext?.players.find((player) => player.id === peerViewId)?.name
@@ -582,9 +539,14 @@ export function AchievementsWall({
         <h2 className={uiSectionTitle}>
           {peerName ? `${peerName} · ${t('achievements.title')}` : t('achievements.myTitle')}
         </h2>
-        <span className="rounded-md border border-[var(--ui-border)] bg-surface-muted/40 px-2 py-1 text-xs text-text-secondary">
-          {unlocked}/{activeAchievements.length} · {completion}%
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          <span className="rounded-md border border-[var(--ui-border)] bg-surface-muted/40 px-2 py-1 text-xs text-text-secondary">
+            {summary.familiesUnlocked}/{summary.totalFamilies} {t('achievements.familiesUnit')}
+          </span>
+          <span className="text-[10px] text-text-secondary">
+            {t('achievements.tierProgress')}: {summary.tiersEarned}/{summary.totalTiers} ({summary.tierRate}%)
+          </span>
+        </div>
       </div>
 
       <AchievementFilters
@@ -594,11 +556,17 @@ export function AchievementsWall({
         onCategoryChange={setCategory}
         onSortChange={setSortMode}
         onViewModeChange={setViewMode}
+        showCommunityLink={!peerViewId && Boolean(peerContext)}
+        onOpenCommunity={() => setCommunityOpen(true)}
       />
 
-      {!peerViewId && peerContext ? (
-        <PeerRatesPanel peers={peerRates} onSelectPeer={setPeerViewId} />
-      ) : null}
+      <AchievementCommunitySheet
+        open={communityOpen}
+        onClose={() => setCommunityOpen(false)}
+        peerRates={peerRates}
+        peerContext={peerContext}
+        onSelectPeer={setPeerViewId}
+      />
 
       {grouped ? (
         <div className="space-y-4">

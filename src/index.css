@@ -112,7 +112,7 @@ textarea:focus-visible {
   --ui-card-p: 1rem;
   --ui-btn-min-h: 3rem;
   --ui-row-py: 0.625rem;
-  --ui-header-py: 0.875rem;
+  --ui-header-py: 0.5rem;
 }
 
 [data-density='compact'] {
@@ -122,7 +122,7 @@ textarea:focus-visible {
   --ui-card-p: 0.75rem;
   --ui-btn-min-h: 2.5rem;
   --ui-row-py: 0.5rem;
-  --ui-header-py: 0.625rem;
+  --ui-header-py: 0.375rem;
 }
 
 :root {

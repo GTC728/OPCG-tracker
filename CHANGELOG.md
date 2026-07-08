@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.2 - 2026-07-08
+
+### New
+
+- **Achievement community page**: global unlock rates and player rankings in a dedicated sheet; entry via「社群數據」next to sort controls.
+- **Session export**: session dashboard PNG from Record and Stats (leaderboard, MVP, deck usage, meta).
+- **Richer profile export**: streaks, first/second, recent form, top decks, rivals, achievement tier progress.
+
+### Changed
+
+- **Achievement cards**: global rate removed from card corner; shown only in detail sheet with explanation.
+- **Progress display**: header shows families unlocked + weighted tier progress (Lv.1/5 no longer counts as 100%).
+- **App header**: more compact title bar.
+- **Assignment dock**: removed unused「顯示更多牌組」.
+
 ## V4.3.1 - 2026-07-08
 
 ### Fixed

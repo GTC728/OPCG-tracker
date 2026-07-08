@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
+import { SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SessionManager } from '@/components/session/SessionManager'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -25,6 +26,7 @@ export function RecordPage() {
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
   const [expanded, setExpanded] = useState(false)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
+  const [sessionShareOpen, setSessionShareOpen] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionMatches = matches.filter((match) => match.sessionId === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
@@ -52,30 +54,39 @@ export function RecordPage() {
         </div>
 
         {currentSession ? (
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="secondary"
+                className="min-h-10 text-xs"
+                onClick={() => openSessionRosterPrompt(currentSession.id)}
+              >
+                {t('record.players')}
+              </Button>
+              <Button
+                variant="secondary"
+                className="min-h-10 text-xs"
+                onClick={() => setSessionSheetOpen(true)}
+              >
+                {t('record.manageSession')}
+              </Button>
+              <Button
+                variant="ghost"
+                className="min-h-10 text-xs"
+                onClick={() => {
+                  endCurrentSession()
+                  toast.success(t('record.sessionEnded'))
+                }}
+              >
+                {t('record.end')}
+              </Button>
+            </div>
             <Button
               variant="secondary"
-              className="min-h-10 text-xs"
-              onClick={() => openSessionRosterPrompt(currentSession.id)}
+              className="min-h-10 w-full text-xs"
+              onClick={() => setSessionShareOpen(true)}
             >
-              {t('record.players')}
-            </Button>
-            <Button
-              variant="secondary"
-              className="min-h-10 text-xs"
-              onClick={() => setSessionSheetOpen(true)}
-            >
-              {t('record.manageSession')}
-            </Button>
-            <Button
-              variant="ghost"
-              className="min-h-10 text-xs"
-              onClick={() => {
-                endCurrentSession()
-                toast.success(t('record.sessionEnded'))
-              }}
-            >
-              {t('record.end')}
+              {t('record.exportSession')}
             </Button>
           </div>
         ) : (
@@ -171,6 +182,23 @@ export function RecordPage() {
           setActiveTab('settings')
         }}
       />
+
+      {currentSession ? (
+        <ShareExportSheet
+          open={sessionShareOpen}
+          onClose={() => setSessionShareOpen(false)}
+          title={currentSession.name}
+          filename={`opcg-session-${currentSession.name}.png`}
+        >
+          <SessionDashboardShareCard
+            session={currentSession}
+            players={players}
+            decks={decks}
+            matches={matches}
+            language={language}
+          />
+        </ShareExportSheet>
+      ) : null}
     </div>
   )
 }
