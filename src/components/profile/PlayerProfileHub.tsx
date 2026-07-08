@@ -4,7 +4,12 @@ import { MatchListItem } from '@/components/match/MatchResultRow'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
-import { getPlayerAchievementProgress } from '@/lib/achievements'
+import {
+  computeGlobalAchievementRates,
+  computePerPlayerAchievementRates,
+  getPlayerAchievementProgress,
+} from '@/lib/achievements'
+import type { AchievementPeerRate } from '@/lib/achievements'
 import { useI18n } from '@/lib/i18n'
 import {
   buildDeckUsageDistribution,
@@ -117,13 +122,30 @@ export function PlayerProfileHub({
   const streak = buildWinStreakStats(player.id, matches)
   const deckUsage = buildDeckUsageDistribution(player.id, decks, matches, language)
   const weeklyStats = buildWeeklyWinRateStats(player.id, allMatches)
+  const globalRates = computeGlobalAchievementRates(players, decks, matches)
   const achievements = getPlayerAchievementProgress(
     player.id,
     players,
     decks,
     matches,
     achievementUnlocks,
+    globalRates,
   )
+  const peerRateMap = computePerPlayerAchievementRates(players, decks, matches)
+  const peerRates: AchievementPeerRate[] = players
+    .filter((p) => !p.archived && p.id !== player.id)
+    .map((p) => ({
+      playerId: p.id,
+      name: p.name,
+      rate: peerRateMap.get(p.id) ?? 0,
+    }))
+    .sort((a, b) => b.rate - a.rate)
+  const playerCompletionRate =
+    achievements.length > 0
+      ? Math.round(
+          (achievements.filter((a) => a.currentLevel > 0).length / achievements.length) * 1000,
+        ) / 10
+      : 0
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -293,7 +315,11 @@ export function PlayerProfileHub({
       </PanelSheet>
 
       <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close}>
-        <AchievementsWall achievements={achievements} />
+        <AchievementsWall
+          achievements={achievements}
+          playerCompletionRate={playerCompletionRate}
+          peerRates={peerRates}
+        />
       </PanelSheet>
 
       <PanelSheet open={panel === 'rivals'} title={t('profile.panel.rivals')} onClose={close}>

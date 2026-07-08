@@ -1,4 +1,5 @@
 import { type ButtonHTMLAttributes } from 'react'
+import { playInteractionSound, uiPressable } from '@/lib/motion'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
 
@@ -7,14 +8,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean
   loading?: boolean
   loadingLabel?: string
+  silent?: boolean
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white shadow-md shadow-brand-600/25 hover:bg-brand-700 active:bg-brand-700',
-  secondary: 'bg-surface-elevated text-text-primary ring-1 ring-white/[0.08] hover:bg-surface-muted/50 active:bg-surface-muted/70',
-  ghost: 'bg-transparent text-text-secondary ring-1 ring-white/[0.08] hover:bg-surface-elevated hover:text-text-primary',
-  danger: 'bg-danger text-white shadow-md shadow-red-900/25 hover:bg-red-600 active:bg-red-700',
-  success: 'bg-success text-white shadow-md shadow-green-900/25 hover:bg-green-600 active:bg-green-700',
+  primary:
+    'bg-brand-600 text-white shadow-[0_4px_14px_color-mix(in_srgb,var(--color-brand-600)_35%,transparent)] hover:bg-brand-700 active:bg-brand-700',
+  secondary:
+    'bg-surface-elevated text-text-primary border border-[var(--ui-border)] hover:bg-surface-muted/50 active:bg-surface-muted/70',
+  ghost:
+    'bg-transparent text-text-secondary border border-[var(--ui-border)] hover:bg-surface-elevated hover:text-text-primary',
+  danger: 'bg-danger text-white shadow-[0_4px_14px_rgba(239,68,68,0.25)] hover:bg-red-600 active:bg-red-700',
+  success:
+    'bg-success text-white shadow-[0_4px_14px_rgba(34,197,94,0.25)] hover:bg-green-600 active:bg-green-700',
 }
 
 export function Button({
@@ -24,7 +30,9 @@ export function Button({
   disabled,
   loading = false,
   loadingLabel,
+  silent = false,
   children,
+  onPointerDown,
   ...props
 }: ButtonProps) {
   const isDisabled = disabled || loading
@@ -32,8 +40,8 @@ export function Button({
   return (
     <button
       className={[
-        'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-semibold',
-        'transition duration-150 ease-out active:scale-[0.98]',
+        'inline-flex min-h-[var(--ui-btn-min-h)] items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-semibold',
+        uiPressable,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
         'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
         variantClasses[variant],
@@ -44,6 +52,10 @@ export function Button({
         .join(' ')}
       disabled={isDisabled}
       aria-busy={loading}
+      onPointerDown={(event) => {
+        if (!silent && !isDisabled) playInteractionSound('tap')
+        onPointerDown?.(event)
+      }}
       {...props}
     >
       {loading ? (

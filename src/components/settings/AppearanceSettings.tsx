@@ -1,4 +1,5 @@
-import { accentOptions, applyThemeSettings } from '@/lib/theme'
+import { accentOptions, applyAppearanceSettings } from '@/lib/theme'
+import { playInteractionSound } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
@@ -11,8 +12,8 @@ export function AppearanceSettings() {
   const updateSettings = useAppStore((state) => state.updateSettings)
 
   useEffect(() => {
-    return applyThemeSettings(settings.theme, settings.accent)
-  }, [settings.theme, settings.accent])
+    return applyAppearanceSettings(settings.theme, settings.accent, settings.density)
+  }, [settings.theme, settings.accent, settings.density])
 
   return (
     <div className="space-y-4">
@@ -28,7 +29,10 @@ export function AppearanceSettings() {
                 'p-3 text-sm font-semibold',
                 settings.theme === theme ? 'ring-brand-500/40' : '',
               ].join(' ')}
-              onClick={() => updateSettings({ theme })}
+              onClick={() => {
+                playInteractionSound('toggle')
+                updateSettings({ theme })
+              }}
             >
               {t(`appearance.theme.${theme}` as 'appearance.theme.dark')}
             </button>
@@ -96,7 +100,7 @@ export function AppearanceSettings() {
         </div>
       </section>
 
-      <label className="flex items-center justify-between rounded-lg bg-surface-elevated/70 px-3 py-3 ring-1 ring-white/[0.06]">
+      <label className="ui-card-inset flex items-center justify-between px-3 py-3">
         <span className="text-sm">{t('appearance.achievementNotifications')}</span>
         <input
           type="checkbox"

@@ -1,11 +1,13 @@
 import { type ReactNode } from 'react'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
+import { uiBottomNav, uiHeaderBar } from '@/lib/uiSurface'
+import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
 import type { TabId } from '@/types'
 
 function NavIcon({ name }: { name: TabId }) {
-  const className = 'h-4 w-4'
+  const className = 'ui-nav-icon h-4 w-4'
   switch (name) {
     case 'record':
       return (
@@ -59,7 +61,7 @@ interface BottomNavProps {
 function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const { t } = useI18n()
   return (
-    <nav className="border-t border-white/[0.06] bg-surface/95">
+    <nav className={uiBottomNav}>
       <div className="grid grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
@@ -69,9 +71,13 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
               type="button"
               className={[
                 'flex min-h-10 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-medium leading-none transition-colors',
-                active ? 'text-brand-400' : 'text-text-secondary hover:text-text-primary',
+                uiPressable,
+                active ? 'ui-nav-active text-brand-400' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')}
-              onClick={() => onChange(tab.id)}
+              onClick={() => {
+                playInteractionSound('tap')
+                onChange(tab.id)
+              }}
             >
               <NavIcon name={tab.id} />
               <span>{t(tab.labelKey)}</span>
@@ -102,13 +108,15 @@ export function AppShell({
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
         <SyncStatusBanner />
-        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-surface/90 px-5 py-3.5 backdrop-blur-md">
+        <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <p className="text-[11px] font-semibold tracking-wide text-brand-400">OPCG Tracker</p>
           <h1 className="mt-0.5 text-xl font-bold tracking-tight">{title}</h1>
           {subtitle ? <p className="mt-0.5 text-sm leading-snug text-text-secondary">{subtitle}</p> : null}
         </header>
 
-        <main className="app-main-bottom-pad flex-1 space-y-4 px-5 pt-3">{children}</main>
+        <main className="app-main-bottom-pad flex-1 space-y-[var(--ui-section-gap)] px-[var(--ui-page-px)] pt-[var(--ui-page-pt)]">
+          {children}
+        </main>
       </div>
     </BottomChromeShell>
   )

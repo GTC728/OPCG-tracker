@@ -1,4 +1,5 @@
 import { uiSegment, uiSegmentButton } from '@/lib/uiSurface'
+import { playInteractionSound } from '@/lib/motion'
 
 export function SegmentedControl<T extends string>({
   options,
@@ -22,7 +23,10 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={active}
             className={uiSegmentButton(active)}
-            onClick={() => onChange(option.value)}
+            onClick={() => {
+              playInteractionSound('toggle')
+              onChange(option.value)
+            }}
           >
             {option.label}
           </button>

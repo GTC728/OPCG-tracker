@@ -1,4 +1,4 @@
-import type { AccentPreset, ThemeMode } from '@/types'
+import type { AccentPreset, ThemeMode, UiDensity } from '@/types'
 
 const accentPalettes: Record<
   AccentPreset,
@@ -62,6 +62,19 @@ export function applyThemeSettings(theme: ThemeMode, accent: AccentPreset): () =
   const listener = () => applyThemeSettings('system', accent)
   media.addEventListener('change', listener)
   return () => media.removeEventListener('change', listener)
+}
+
+export function applyDensitySetting(density: UiDensity): void {
+  document.documentElement.dataset.density = density
+}
+
+export function applyAppearanceSettings(
+  theme: ThemeMode,
+  accent: AccentPreset,
+  density: UiDensity,
+): () => void {
+  applyDensitySetting(density)
+  return applyThemeSettings(theme, accent)
 }
 
 export const accentOptions: Array<{ value: AccentPreset; labelKey: string; swatch: string }> = [
