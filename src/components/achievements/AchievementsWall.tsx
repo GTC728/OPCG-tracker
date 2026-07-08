@@ -372,10 +372,8 @@ function PeerRatesPanel({
   const [expanded, setExpanded] = useState(false)
   if (!peers.length) return null
 
-  const visible = expanded ? peers.slice(0, 12) : peers.slice(0, 3)
-
   return (
-    <section className={[uiCardInset, 'space-y-2 p-2.5'].join(' ')}>
+    <section className={[uiCardInset, 'p-2'].join(' ')}>
       <button
         type="button"
         className={['flex w-full items-center justify-between text-left', uiPressable].join(' ')}
@@ -389,28 +387,30 @@ function PeerRatesPanel({
           {expanded ? t('achievements.peerRatesCollapse') : t('achievements.peerRatesExpand')}
         </span>
       </button>
-      <ol className="space-y-1">
-        {visible.map((peer, index) => (
-          <li key={peer.playerId}>
-            <button
-              type="button"
-              className={[
-                'flex w-full items-center justify-between rounded-md border border-[var(--ui-border)] px-2.5 py-1.5 text-left text-sm',
-                uiPressable,
-              ].join(' ')}
-              onClick={() => {
-                playInteractionSound('tap')
-                onSelectPeer(peer.playerId)
-              }}
-            >
-              <span className="truncate font-medium">
-                {index + 1}. {peer.name}
-              </span>
-              <span className="shrink-0 pl-2 text-xs font-bold text-brand-400">{peer.rate}%</span>
-            </button>
-          </li>
-        ))}
-      </ol>
+      {expanded ? (
+        <ol className="mt-2 space-y-1 border-t border-[var(--ui-border)] pt-2">
+          {peers.slice(0, 12).map((peer, index) => (
+            <li key={peer.playerId}>
+              <button
+                type="button"
+                className={[
+                  'flex w-full items-center justify-between rounded-md border border-[var(--ui-border)] px-2.5 py-1.5 text-left text-sm',
+                  uiPressable,
+                ].join(' ')}
+                onClick={() => {
+                  playInteractionSound('tap')
+                  onSelectPeer(peer.playerId)
+                }}
+              >
+                <span className="truncate font-medium">
+                  {index + 1}. {peer.name}
+                </span>
+                <span className="shrink-0 pl-2 text-xs font-bold text-brand-400">{peer.rate}%</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </section>
   )
 }
@@ -587,10 +587,6 @@ export function AchievementsWall({
         </span>
       </div>
 
-      {!peerViewId && peerContext ? (
-        <PeerRatesPanel peers={peerRates} onSelectPeer={setPeerViewId} />
-      ) : null}
-
       <AchievementFilters
         category={category}
         sortMode={sortMode}
@@ -599,6 +595,10 @@ export function AchievementsWall({
         onSortChange={setSortMode}
         onViewModeChange={setViewMode}
       />
+
+      {!peerViewId && peerContext ? (
+        <PeerRatesPanel peers={peerRates} onSelectPeer={setPeerViewId} />
+      ) : null}
 
       {grouped ? (
         <div className="space-y-4">
