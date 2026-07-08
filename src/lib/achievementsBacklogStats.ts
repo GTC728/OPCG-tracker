@@ -175,11 +175,10 @@ function maxRollingCount(matches: Match[], windowMs: number): number {
   if (!matches.length) return 0
   const times = matches.map((m) => new Date(m.finishedAt).getTime()).sort((a, b) => a - b)
   let best = 0
-  for (let i = 0; i < times.length; i += 1) {
-    const end = times[i] + windowMs
-    let count = 0
-    for (let j = i; j < times.length && times[j] <= end; j += 1) count += 1
-    best = Math.max(best, count)
+  let left = 0
+  for (let right = 0; right < times.length; right += 1) {
+    while (left <= right && times[right] - times[left] > windowMs) left += 1
+    best = Math.max(best, right - left + 1)
   }
   return best
 }

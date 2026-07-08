@@ -5,7 +5,11 @@ import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { createSession, findOpenSessionForToday, mergeSessionsState } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
-  notifyGroupCollabChange,
+  initPersistScheduler,
+  schedulePersist,
+} from '@/lib/persistScheduler'
+import { invalidateDerivedCache } from '@/lib/derivedData'
+import {
   pauseGroupCollabNotify,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
@@ -14,7 +18,7 @@ import { evaluateNewAchievementUnlocks, mergeAchievementUnlocks } from '@/lib/ac
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
-import { loadAppState, saveAppState } from '@/lib/storage'
+import { loadAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
 import type {
   ActiveMatch,
@@ -130,14 +134,9 @@ function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state:
   return { state: nextState, fresh }
 }
 
-let lastPersistedAppState: AppState | null = null
-
-function persist(state: AppState): AppState {
-  const prev = lastPersistedAppState
+function persist(state: AppState, immediate = false): AppState {
   const persisted = { ...state, appVersion: APP_VERSION }
-  saveAppState(persisted)
-  lastPersistedAppState = persisted
-  notifyGroupCollabChange(prev, persisted)
+  schedulePersist(persisted, immediate)
   return persisted
 }
 
@@ -333,12 +332,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
     try {
       const loaded = await loadAppState()
       const { state } = ensureSessionState(loaded)
-      const persisted = persist(state)
+      invalidateDerivedCache()
+      initPersistScheduler({ ...state, appVersion: APP_VERSION })
+      const persisted = persist(state, true)
       set({ ...persisted, hydrated: true })
     } catch (error) {
       console.error('Failed to hydrate OPCG Tracker state', error)
       const { state } = ensureSessionState(createDefaultAppState())
-      const persisted = persist(state)
+      invalidateDerivedCache()
+      initPersistScheduler({ ...state, appVersion: APP_VERSION })
+      const persisted = persist(state, true)
       set({ ...persisted, hydrated: true })
     }
   },
@@ -348,9 +351,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   replaceState: (state) => {
     pauseGroupCollabNotify()
     try {
-      lastPersistedAppState = null
+      invalidateDerivedCache()
       const { state: nextState } = ensureSessionState(state)
-      const persisted = persist(nextState)
+      initPersistScheduler({ ...nextState, appVersion: APP_VERSION })
+      const persisted = persist(nextState, true)
       set({ ...persisted, hydrated: true })
     } finally {
       resumeGroupCollabNotify()
@@ -359,7 +363,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   resetAllData: () => {
     const { state } = ensureSessionState(createDefaultAppState())
-    const persisted = persist(state)
+    invalidateDerivedCache()
+    initPersistScheduler({ ...state, appVersion: APP_VERSION })
+    const persisted = persist(state, true)
     set({ ...persisted, hydrated: true })
   },
 
@@ -1399,7 +1405,7 @@ export function updateAppState(updater: (state: AppState) => AppState) {
   pauseGroupCollabNotify()
   try {
     const next = updater(current)
-    const persisted = persist(next)
+    const persisted = persist(next, true)
     useAppStore.setState({ ...persisted })
   } finally {
     resumeGroupCollabNotify()

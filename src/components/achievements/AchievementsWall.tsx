@@ -13,6 +13,7 @@ import {
   getPlayerAchievementProgress,
   sortAchievementProgress,
   type AchievementCategory,
+  type AchievementGlobalRate,
   type AchievementPeerRate,
   type AchievementProgress,
   type AchievementSortMode,
@@ -33,6 +34,7 @@ export interface AchievementPeerContext {
   achievementUnlocks: AchievementUnlock[]
   currentPlayerId: string
   linkedPlayerId?: string | null
+  globalRates?: Map<string, AchievementGlobalRate>
 }
 
 function AchievementCard({
@@ -557,6 +559,7 @@ export function AchievementsWall({
   const [communityOpen, setCommunityOpen] = useState(false)
 
   const globalRates = useMemo(() => {
+    if (peerContext?.globalRates) return peerContext.globalRates
     if (!peerContext) return null
     return computeGlobalAchievementRates(peerContext.players, peerContext.decks, peerContext.matches)
   }, [peerContext])

@@ -5,8 +5,9 @@ import { SessionDashboardShareCard, ShareExportSheet } from '@/components/share/
 import { SessionManager } from '@/components/session/SessionManager'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { useSessionDashboard } from '@/hooks/useDerivedStats'
 import { useI18n } from '@/lib/i18n'
-import { buildDashboardStats, formatPercent } from '@/lib/stats'
+import { formatPercent } from '@/lib/stats'
 import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -28,9 +29,8 @@ export function RecordPage() {
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
-  const sessionMatches = matches.filter((match) => match.sessionId === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
-  const dashboard = buildDashboardStats(players, decks, sessionMatches, language)
+  const dashboard = useSessionDashboard(currentSessionId ?? null, language)
 
   return (
     <div className="space-y-3">
@@ -40,13 +40,15 @@ export function RecordPage() {
           {currentSession ? (
             <p className="mt-0.5 text-sm font-semibold leading-snug">
               {currentSession.name}
-              <span className="mt-0.5 block text-xs font-normal text-text-secondary">
-                {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
-                {dashboard.firstPlayerSample > 0
-                  ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
-                  : ''}
-                {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
-              </span>
+              {dashboard ? (
+                <span className="mt-0.5 block text-xs font-normal text-text-secondary">
+                  {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
+                  {dashboard.firstPlayerSample > 0
+                    ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
+                    : ''}
+                  {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
+                </span>
+              ) : null}
             </p>
           ) : (
             <p className="mt-0.5 text-sm text-text-secondary">{t('settings.noActiveSession')}</p>
@@ -120,7 +122,7 @@ export function RecordPage() {
           </button>
         ) : null}
 
-        {expanded && currentSession ? (
+        {expanded && currentSession && dashboard ? (
           <dl className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-muted pt-2 text-xs">
             <div className="rounded-lg bg-surface px-2 py-1.5">
               <dt className="text-text-secondary">{t('record.start')}</dt>

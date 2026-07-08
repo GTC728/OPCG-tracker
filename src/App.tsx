@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionDayPrompt } from '@/components/session/SessionDayPrompt'
 import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
@@ -10,6 +10,7 @@ import { StatsPage } from '@/pages/StatsPage'
 import { Button } from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { formatAchievementToast } from '@/lib/achievements'
+import { flushPersistNow } from '@/lib/persistScheduler'
 import { playInteractionSound } from '@/lib/motion'
 import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
@@ -17,20 +18,39 @@ import { useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
 function PageContent({ activeTab }: { activeTab: TabId }) {
+  const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(() => new Set(['record']))
+
+  useEffect(() => {
+    setMountedTabs((prev) => {
+      if (prev.has(activeTab)) return prev
+      const next = new Set(prev)
+      next.add(activeTab)
+      return next
+    })
+  }, [activeTab])
+
   return (
     <>
-      <div className={activeTab === 'record' ? undefined : 'hidden'} aria-hidden={activeTab !== 'record'}>
-        <RecordPage />
-      </div>
-      <div className={activeTab === 'stats' ? undefined : 'hidden'} aria-hidden={activeTab !== 'stats'}>
-        <StatsPage />
-      </div>
-      <div className={activeTab === 'history' ? undefined : 'hidden'} aria-hidden={activeTab !== 'history'}>
-        <HistoryPage />
-      </div>
-      <div className={activeTab === 'settings' ? undefined : 'hidden'} aria-hidden={activeTab !== 'settings'}>
-        <SettingsPage />
-      </div>
+      {mountedTabs.has('record') ? (
+        <div className={activeTab === 'record' ? undefined : 'hidden'} aria-hidden={activeTab !== 'record'}>
+          <RecordPage />
+        </div>
+      ) : null}
+      {mountedTabs.has('stats') ? (
+        <div className={activeTab === 'stats' ? undefined : 'hidden'} aria-hidden={activeTab !== 'stats'}>
+          <StatsPage />
+        </div>
+      ) : null}
+      {mountedTabs.has('history') ? (
+        <div className={activeTab === 'history' ? undefined : 'hidden'} aria-hidden={activeTab !== 'history'}>
+          <HistoryPage />
+        </div>
+      ) : null}
+      {mountedTabs.has('settings') ? (
+        <div className={activeTab === 'settings' ? undefined : 'hidden'} aria-hidden={activeTab !== 'settings'}>
+          <SettingsPage />
+        </div>
+      ) : null}
     </>
   )
 }
@@ -143,6 +163,17 @@ export default function App() {
   useEffect(() => {
     hydrate()
   }, [hydrate])
+
+  useEffect(() => {
+    const flush = () => flushPersistNow()
+    window.addEventListener('beforeunload', flush)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      window.removeEventListener('pagehide', flush)
+      flush()
+    }
+  }, [])
 
   if (!hydrated) {
     return (

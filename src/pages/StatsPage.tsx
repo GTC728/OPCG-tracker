@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
@@ -9,26 +9,25 @@ import { getLinkedPlayer } from '@/lib/profileClaim'
 import { useI18n } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import {
-  buildDashboardStats,
   buildDeckStats,
   buildFirstSecondStats,
-  buildInsightMessages,
   buildMatchupStats,
-  buildMetaSummaryStats,
   buildPlayerDeckStats,
-  buildPlayerMatchupStats,
-  buildPlayerStats,
-  buildRecentForm,
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
   sortStatsByWeightedWinRate,
   type FirstSecondStat,
+  type InsightMessage,
   type MatchupStat,
+  type MetaSummaryStats,
   type PlayerDeckStat,
   type PlayerMatchupStat,
+  type RecentFormStat,
   type RecordStat,
 } from '@/lib/stats'
+import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
+import type { StatsScope } from '@/lib/derivedData'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
 
@@ -527,7 +526,7 @@ function PlayerMatchupHeatmap({
   )
 }
 
-function MetaSummarySection({ summary }: { summary: ReturnType<typeof buildMetaSummaryStats> }) {
+function MetaSummarySection({ summary }: { summary: MetaSummaryStats }) {
   if (!summary.totalMatches) return null
 
   return (
@@ -714,18 +713,7 @@ function MiniLeaderboard({
   )
 }
 
-function InsightsSection({
-  players,
-  decks,
-  matches,
-  language,
-}: {
-  players: Player[]
-  decks: Deck[]
-  matches: Match[]
-  language: Language
-}) {
-  const insights = buildInsightMessages(players, decks, matches, language)
+function InsightsSection({ insights }: { insights: InsightMessage[] }) {
   if (!insights.length) return null
 
   return (
@@ -823,7 +811,7 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
   )
 }
 
-function RecentFormSection({ recentForm }: { recentForm: ReturnType<typeof buildRecentForm> }) {
+function RecentFormSection({ recentForm }: { recentForm: RecentFormStat[] }) {
   const visibleForms = recentForm.filter((form) => form.total > 0 && form.winRate !== null)
   if (!visibleForms.length) return null
 
@@ -1067,26 +1055,34 @@ export function StatsPage() {
   const sectionScrollY = useRef<Partial<Record<StatsSectionId, number>>>({})
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
-  const matches = useAppStore((state) => state.matches)
+  const allMatches = useAppStore((state) => state.matches)
 
   useEffect(() => {
     if (!settings.profileSetupCompleted && !linkedPlayer) {
       setProfileSheetOpen(true)
     }
   }, [settings.profileSetupCompleted, linkedPlayer])
-  const scopedMatches =
-    scope === 'session' && currentSessionId
-      ? matches.filter((match) => match.sessionId === currentSessionId)
-      : matches
-  const dashboard = buildDashboardStats(players, decks, scopedMatches, language)
-  const playerStats = buildPlayerStats(players, scopedMatches)
-  const deckStats = buildDeckStats(decks, scopedMatches, language)
-  const playerDeckStats = buildPlayerDeckStats(players, decks, scopedMatches, language)
-  const matchupStats = buildMatchupStats(decks, scopedMatches, language)
-  const playerMatchupStats = buildPlayerMatchupStats(players, scopedMatches)
-  const metaSummary = buildMetaSummaryStats(scopedMatches)
-  const firstSecondStats = buildFirstSecondStats(scopedMatches)
-  const globalRecentForm = buildRecentForm(scopedMatches)
+
+  const statsScope = useMemo((): StatsScope => {
+    if (scope === 'session' && currentSessionId) {
+      return { type: 'session', sessionId: currentSessionId }
+    }
+    return { type: 'all' }
+  }, [scope, currentSessionId])
+
+  const {
+    scopedMatches,
+    dashboard,
+    playerStats,
+    deckStats,
+    playerDeckStats,
+    matchupStats,
+    playerMatchupStats,
+    metaSummary,
+    firstSecondStats,
+    globalRecentForm,
+  } = useScopedStats(statsScope)
+  const insights = useScopedInsights(statsScope)
 
   const openProfile = (target: ProfileTarget) => {
     listScrollY.current = window.scrollY
@@ -1118,7 +1114,7 @@ export function StatsPage() {
       <>
         <PlayerProfileView
           player={selectedPlayer}
-          allMatches={matches}
+          allMatches={allMatches}
           players={players}
           decks={decks}
           language={language}
@@ -1227,7 +1223,7 @@ export function StatsPage() {
               onSelect={(stat) => openProfile({ type: 'deck', id: stat.id })}
             />
           </div>
-          <InsightsSection players={players} decks={decks} matches={scopedMatches} language={language} />
+          <InsightsSection insights={insights} />
           <section className="grid grid-cols-2 gap-3">
             <button
               type="button"

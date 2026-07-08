@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { AchievementsPreviewRail, AchievementsWall } from '@/components/achievements/AchievementsWall'
 import { MatchListItem } from '@/components/match/MatchResultRow'
 import { DeckPreviewCard } from '@/components/profile/DeckPreviewCard'
@@ -9,28 +9,15 @@ import { RecentFormBars } from '@/components/profile/RecentFormBars'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
-import {
-  computeGlobalAchievementRates,
-  computePerPlayerAchievementRates,
-  computeAchievementSummary,
-  getPlayerAchievementProgress,
-  backlogExtrasFromState,
-} from '@/lib/achievements'
-import type { AchievementPeerRate } from '@/lib/achievements'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
-import { useI18n } from '@/lib/i18n'
 import {
-  buildDeckUsageDistribution,
-  buildHeadToHeadStats,
-  buildPlayerDeckStats,
-  buildPlayerStats,
-  buildRecentForm,
-  buildWeeklyWinRateStats,
-  buildWinStreakStats,
-  formatPercent,
-  getCompletedMatches,
-  type RecordStat,
-} from '@/lib/stats'
+  useAchievementPanelData,
+  useAchievementPreview,
+  useAppDataSlice,
+  usePlayerProfileBundle,
+} from '@/hooks/useDerivedStats'
+import { useI18n } from '@/lib/i18n'
+import { formatPercent, type RecordStat } from '@/lib/stats'
 import { uiCard, uiHorizontalRail } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -99,50 +86,45 @@ export function PlayerProfileHub({
   renderHeadToHeadRow: (stat: RecordStat & { opponentId: string }) => ReactNode
 }) {
   const { t } = useI18n()
-  const appState = useAppStore()
-  const linkedPlayerId = appState.settings.linkedPlayerId
-  const backlogExtras = backlogExtrasFromState(appState)
+  const linkedPlayerId = useAppStore((state) => state.settings.linkedPlayerId)
+  const dataSlice = useAppDataSlice()
   const [panel, setPanel] = useState<ProfilePanel>(null)
 
-  const lifetimeMatches = allMatches
-  const playerMatches = getCompletedMatches(lifetimeMatches).filter(
-    (m) => m.player1Id === player.id || m.player2Id === player.id,
-  )
-  const stat = buildPlayerStats(players, lifetimeMatches).find((item) => item.id === player.id) ?? null
-  const streak = buildWinStreakStats(player.id, lifetimeMatches)
-  const deckUsage = buildDeckUsageDistribution(player.id, decks, lifetimeMatches, language)
-  const deckUsageById = new Map(deckUsage.map((slice) => [slice.deckId, slice]))
-  const weeklyStats = buildWeeklyWinRateStats(player.id, lifetimeMatches)
-  const globalRates = computeGlobalAchievementRates(players, decks, lifetimeMatches)
-  const achievements = getPlayerAchievementProgress(
+  void allMatches
+  void achievementUnlocks
+
+  const {
+    playerMatches,
+    stat,
+    streak,
+    deckUsage,
+    deckUsageById,
+    weeklyStats,
+    deckStats,
+    headToHead,
+    recentForm,
+    recentMatches,
+  } = usePlayerProfileBundle(player.id, language)
+
+  const previewAchievements = useAchievementPreview(player.id, linkedPlayerId)
+  const achievementPanelData = useAchievementPanelData(
     player.id,
-    players,
-    decks,
-    lifetimeMatches,
-    achievementUnlocks,
-    globalRates,
+    panel === 'achievements',
     linkedPlayerId,
-    backlogExtras,
   )
-  const peerRateMap = computePerPlayerAchievementRates(players, decks, lifetimeMatches)
-  const peerRates: AchievementPeerRate[] = players
-    .filter((p) => !p.archived && p.id !== player.id)
-    .map((p) => ({
-      playerId: p.id,
-      name: p.name,
-      rate: peerRateMap.get(p.id) ?? 0,
-    }))
-    .sort((a, b) => b.rate - a.rate)
-  const achievementSummary = computeAchievementSummary(achievements)
-  const playerCompletionRate = achievementSummary.tierRate
-  const deckStats = buildPlayerDeckStats(players, decks, lifetimeMatches, language).filter(
-    (item) => item.playerId === player.id,
+
+  const peerContext = useMemo(
+    (): AchievementPeerContext => ({
+      players,
+      decks,
+      matches: dataSlice.matches,
+      achievementUnlocks: dataSlice.achievementUnlocks,
+      currentPlayerId: player.id,
+      linkedPlayerId,
+      globalRates: achievementPanelData?.globalRates,
+    }),
+    [players, decks, dataSlice, player.id, linkedPlayerId, achievementPanelData?.globalRates],
   )
-  const headToHead = buildHeadToHeadStats(player.id, players, lifetimeMatches)
-  const recentForm = buildRecentForm(lifetimeMatches, player.id)
-  const recentMatches = [...playerMatches]
-    .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
-    .slice(0, PREVIEW_LIMIT)
 
   const close = () => setPanel(null)
 
@@ -159,7 +141,7 @@ export function PlayerProfileHub({
       />
 
       <AchievementsPreviewRail
-        achievements={achievements}
+        achievements={previewAchievements}
         variant="profile"
         previewLimit={PREVIEW_LIMIT}
         onOpenAll={() => setPanel('achievements')}
@@ -255,6 +237,7 @@ export function PlayerProfileHub({
           currentType={streak.currentType}
         />
         {renderFirstSecond(playerMatches)}
+        {renderMatchups}
       </PanelSheet>
 
       <PanelSheet open={panel === 'trends'} title={t('profile.panel.trends')} onClose={close}>
@@ -263,20 +246,15 @@ export function PlayerProfileHub({
       </PanelSheet>
 
       <PanelSheet open={panel === 'decks'} title={t('profile.panel.decks')} onClose={close}>
-        <DeckUsagePieChart slices={deckUsage} title={t('stats.deckUsagePie')} />
-        <section className="space-y-2">
-          {deckStats.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="block w-full text-left"
-              onClick={() => onOpenDeck(item.deckId)}
-            >
-              {renderDeckRow({ ...item, id: item.deckId, name: item.deckName }, decks.find((d) => d.id === item.deckId))}
-            </button>
-          ))}
-        </section>
-        {renderMatchups}
+        <DeckUsagePieChart slices={deckUsage} title={t('profile.panel.decks')} />
+        {deckStats.length ? (
+          deckStats.map((item) => {
+            const deck = decks.find((d) => d.id === item.deckId)
+            return renderDeckRow(item, deck)
+          })
+        ) : (
+          <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
+        )}
       </PanelSheet>
 
       <PanelSheet open={panel === 'matches'} title={t('profile.panel.matches')} onClose={close}>
@@ -300,19 +278,16 @@ export function PlayerProfileHub({
       </PanelSheet>
 
       <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close}>
-        <AchievementsWall
-          achievements={achievements}
-          playerCompletionRate={playerCompletionRate}
-          peerRates={peerRates}
-          peerContext={{
-            players,
-            decks,
-            matches: lifetimeMatches,
-            achievementUnlocks,
-            currentPlayerId: player.id,
-            linkedPlayerId,
-          } satisfies AchievementPeerContext}
-        />
+        {achievementPanelData ? (
+          <AchievementsWall
+            achievements={achievementPanelData.achievements}
+            playerCompletionRate={achievementPanelData.summary.tierRate}
+            peerRates={achievementPanelData.peerRates}
+            peerContext={peerContext}
+          />
+        ) : (
+          <p className="py-8 text-center text-sm text-text-secondary">{t('app.loading')}</p>
+        )}
       </PanelSheet>
 
       <PanelSheet open={panel === 'rivals'} title={t('profile.panel.rivals')} onClose={close}>

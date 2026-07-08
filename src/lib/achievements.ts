@@ -997,14 +997,14 @@ export function evaluateAchievementMetrics(
   }
 }
 
-export function evaluateAchievementLevels(
+export function evaluateAchievementState(
   playerId: string,
   players: Player[],
   decks: Deck[],
   matches: Match[],
   linkedPlayerId: string | null = null,
   extras?: BacklogExtras,
-): Record<string, number> {
+): { metrics: Record<string, number>; levels: Record<string, number> } {
   const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId, extras)
   const levels: Record<string, number> = {}
   for (const definition of ACHIEVEMENT_DEFINITIONS) {
@@ -1017,7 +1017,86 @@ export function evaluateAchievementLevels(
     hunterPct,
   )
   metrics.achievement_hunter = hunterPct
-  return levels
+  return { metrics, levels }
+}
+
+export function evaluateAchievementLevels(
+  playerId: string,
+  players: Player[],
+  decks: Deck[],
+  matches: Match[],
+  linkedPlayerId: string | null = null,
+  extras?: BacklogExtras,
+): Record<string, number> {
+  return evaluateAchievementState(playerId, players, decks, matches, linkedPlayerId, extras).levels
+}
+
+/** One full evaluation pass per eligible player (shared by global + peer rate helpers). */
+export function evaluateAllEligibleAchievementLevels(
+  players: Player[],
+  decks: Deck[],
+  matches: Match[],
+): Map<string, Record<string, number>> {
+  const eligible = getEligiblePlayersForAchievements(players, matches)
+  const levelByPlayer = new Map<string, Record<string, number>>()
+  for (const player of eligible) {
+    levelByPlayer.set(player.id, evaluateAchievementLevels(player.id, players, decks, matches))
+  }
+  return levelByPlayer
+}
+
+function globalRatesFromLevelMap(
+  levelByPlayer: Map<string, Record<string, number>>,
+  eligibleCount: number,
+): Map<string, AchievementGlobalRate> {
+  const unlockedCounts = new Map<string, number>()
+  for (const definition of ACHIEVEMENT_DEFINITIONS) {
+    unlockedCounts.set(definition.id, 0)
+  }
+  for (const levels of levelByPlayer.values()) {
+    for (const definition of ACHIEVEMENT_DEFINITIONS) {
+      if ((levels[definition.id] ?? 0) > 0) {
+        unlockedCounts.set(definition.id, (unlockedCounts.get(definition.id) ?? 0) + 1)
+      }
+    }
+  }
+  const result = new Map<string, AchievementGlobalRate>()
+  for (const definition of ACHIEVEMENT_DEFINITIONS) {
+    const unlockedCount = unlockedCounts.get(definition.id) ?? 0
+    result.set(definition.id, {
+      achievementId: definition.id,
+      unlockedCount,
+      eligibleCount,
+      rate: eligibleCount ? Math.round((unlockedCount / eligibleCount) * 1000) / 10 : 0,
+    })
+  }
+  return result
+}
+
+function peerRatesFromLevelMap(levelByPlayer: Map<string, Record<string, number>>): Map<string, number> {
+  const families = ACHIEVEMENT_DEFINITIONS.length
+  const rates = new Map<string, number>()
+  for (const [playerId, levels] of levelByPlayer) {
+    const unlocked = ACHIEVEMENT_DEFINITIONS.filter((def) => (levels[def.id] ?? 0) > 0).length
+    rates.set(playerId, families ? Math.round((unlocked / families) * 1000) / 10 : 0)
+  }
+  return rates
+}
+
+export function computeAchievementLeaderboards(
+  players: Player[],
+  decks: Deck[],
+  matches: Match[],
+): {
+  globalRates: Map<string, AchievementGlobalRate>
+  peerRateByPlayer: Map<string, number>
+} {
+  const levelByPlayer = evaluateAllEligibleAchievementLevels(players, decks, matches)
+  const eligibleCount = levelByPlayer.size
+  return {
+    globalRates: globalRatesFromLevelMap(levelByPlayer, eligibleCount),
+    peerRateByPlayer: peerRatesFromLevelMap(levelByPlayer),
+  }
 }
 
 export function evaluateNewAchievementUnlocks(
@@ -1107,23 +1186,7 @@ export function computeGlobalAchievementRates(
   decks: Deck[],
   matches: Match[],
 ): Map<string, AchievementGlobalRate> {
-  const eligible = getEligiblePlayersForAchievements(players, matches)
-  const result = new Map<string, AchievementGlobalRate>()
-
-  for (const definition of ACHIEVEMENT_DEFINITIONS) {
-    let unlockedCount = 0
-    for (const player of eligible) {
-      const level = evaluateAchievementLevels(player.id, players, decks, matches)[definition.id] ?? 0
-      if (level > 0) unlockedCount += 1
-    }
-    result.set(definition.id, {
-      achievementId: definition.id,
-      unlockedCount,
-      eligibleCount: eligible.length,
-      rate: eligible.length ? Math.round((unlockedCount / eligible.length) * 1000) / 10 : 0,
-    })
-  }
-  return result
+  return computeAchievementLeaderboards(players, decks, matches).globalRates
 }
 
 export function computePerPlayerAchievementRates(
@@ -1131,15 +1194,7 @@ export function computePerPlayerAchievementRates(
   decks: Deck[],
   matches: Match[],
 ): Map<string, number> {
-  const eligible = getEligiblePlayersForAchievements(players, matches)
-  const rates = new Map<string, number>()
-  for (const player of eligible) {
-    const levels = evaluateAchievementLevels(player.id, players, decks, matches)
-    const families = ACHIEVEMENT_DEFINITIONS.length
-    const unlocked = ACHIEVEMENT_DEFINITIONS.filter((def) => (levels[def.id] ?? 0) > 0).length
-    rates.set(player.id, families ? Math.round((unlocked / families) * 1000) / 10 : 0)
-  }
-  return rates
+  return computeAchievementLeaderboards(players, decks, matches).peerRateByPlayer
 }
 
 export interface AchievementProgress {
@@ -1186,6 +1241,7 @@ export function getPlayerAchievementProgress(
   globalRates?: Map<string, AchievementGlobalRate>,
   linkedPlayerId: string | null = null,
   extras?: BacklogExtras,
+  precomputedState?: { metrics: Record<string, number>; levels: Record<string, number> },
 ): AchievementProgress[] {
   const defaultExtras = backlogExtrasFromState(createDefaultAppState())
   const backlogExtras = extras ?? {
@@ -1193,35 +1249,22 @@ export function getPlayerAchievementProgress(
     linkedPlayerId: linkedPlayerId ?? defaultExtras.linkedPlayerId,
     achievementUnlocks: unlocks,
   }
-  const metrics = evaluateAchievementMetrics(
-    playerId,
-    players,
-    decks,
-    matches,
-    linkedPlayerId,
-    backlogExtras,
-  )
-  const levels = evaluateAchievementLevels(
-    playerId,
-    players,
-    decks,
-    matches,
-    linkedPlayerId,
-    backlogExtras,
-  )
+  const metrics =
+    precomputedState ??
+    evaluateAchievementState(playerId, players, decks, matches, linkedPlayerId, backlogExtras)
   const rates = globalRates ?? computeGlobalAchievementRates(players, decks, matches)
   const unlockMap = new Map(
     unlocks.filter((item) => item.playerId === playerId).map((item) => [item.achievementId, item]),
   )
 
   return ACHIEVEMENT_DEFINITIONS.map((definition) => {
-    const currentLevel = levels[definition.id] ?? 0
+    const currentLevel = metrics.levels[definition.id] ?? 0
     const maxLevel = definition.tiers[definition.tiers.length - 1]?.level ?? 1
     const nextTier = definition.tiers.find((t) => t.level === currentLevel + 1)
     const currentValue =
       definition.id === 'achievement_hunter'
-        ? computeAchievementHunterPercent(levels)
-        : metrics[definition.id] ?? 0
+        ? computeAchievementHunterPercent(metrics.levels)
+        : metrics.metrics[definition.id] ?? 0
     return {
       definition,
       currentLevel,

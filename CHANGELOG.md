@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.0 - 2026-07-09
+
+### Changed
+
+- **Derived data layer** (`derivedData.ts` + `useDerivedStats`): stats, profile bundles, and achievement evals are fingerprint-cached and shared across pages instead of recomputing on every render.
+- **Lazy tab mounting**: Stats / History / Settings pages mount on first visit only; Record stays default.
+- **Debounced persistence**: rapid table assignments batch into a single localStorage/IndexedDB write (~150ms); flush on tab close.
+- **Achievement perf (V4.6 follow-up)**: single pass per player for leaderboards; cached player eval reused for progress UI.
+
+### Fixed
+
+- Achievement panel and stats pages no longer block the main thread with O(achievements × players) recomputation when opening profile or achievements wall.
+
 ## V4.6.0 - 2026-07-09
 
 ### New

@@ -378,14 +378,13 @@ function getDeckForPlayer(match: Match, playerId: string, decks: Deck[]): Deck |
 
 function maxInRollingWeek(matches: Match[]): number {
   if (!matches.length) return 0
+  const windowMs = 7 * 24 * 60 * 60 * 1000
   const times = matches.map((m) => new Date(m.finishedAt).getTime()).sort((a, b) => a - b)
   let best = 0
-  for (let i = 0; i < times.length; i += 1) {
-    const start = times[i]
-    const end = start + 7 * 24 * 60 * 60 * 1000
-    let count = 0
-    for (let j = i; j < times.length && times[j] <= end; j += 1) count += 1
-    best = Math.max(best, count)
+  let left = 0
+  for (let right = 0; right < times.length; right += 1) {
+    while (left <= right && times[right] - times[left] > windowMs) left += 1
+    best = Math.max(best, right - left + 1)
   }
   return best
 }
