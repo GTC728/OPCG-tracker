@@ -1,4 +1,10 @@
+import { createDefaultAppState } from '@/lib/constants'
 import { BACKLOG_BATCH_DEFINITIONS, evaluateBacklogBatchMetrics } from '@/lib/achievementsBacklogBatch'
+import {
+  REMAINING_ACHIEVEMENT_DEFINITIONS,
+  evaluateRemainingBacklogMetrics,
+} from '@/lib/achievementsBacklogRemainingEval'
+import type { BacklogExtras } from '@/lib/achievementsBacklogStats'
 import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '@/lib/achievementsExtra'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
@@ -543,7 +549,19 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   ...CORE_ACHIEVEMENT_DEFINITIONS,
   ...(EXTRA_ACHIEVEMENT_DEFINITIONS as AchievementDefinition[]),
   ...BACKLOG_BATCH_DEFINITIONS,
+  ...REMAINING_ACHIEVEMENT_DEFINITIONS,
 ]
+
+export function backlogExtrasFromState(state: AppState): BacklogExtras {
+  return {
+    linkedPlayerId: state.settings.linkedPlayerId,
+    settings: state.settings,
+    auditLog: state.auditLog ?? [],
+    matchRevisions: state.matchRevisions,
+    achievementUnlocks: state.achievementUnlocks,
+    sessions: state.sessions,
+  }
+}
 
 const LEGACY_ACHIEVEMENT_MAP: Record<string, { id: string; level: number }> = {
   first_win: { id: 'first_win', level: 1 },
@@ -924,6 +942,7 @@ export function evaluateAchievementMetrics(
   decks: Deck[],
   matches: Match[],
   linkedPlayerId: string | null = null,
+  extras?: BacklogExtras,
 ): Record<string, number> {
   const relevant = playerMatches(playerId, matches)
   const sorted = sortByFinished(relevant)
@@ -932,6 +951,18 @@ export function evaluateAchievementMetrics(
   const firstStats = firstPlayerWinRate(playerId, matches)
   const extra = evaluateExtraAchievementMetrics(playerId, players, decks, matches)
   const batch = evaluateBacklogBatchMetrics(playerId, players, decks, matches, linkedPlayerId)
+  const defaultExtras = backlogExtrasFromState(createDefaultAppState())
+  const backlogExtras = extras ?? {
+    ...defaultExtras,
+    linkedPlayerId: linkedPlayerId ?? defaultExtras.linkedPlayerId,
+  }
+  const remaining = evaluateRemainingBacklogMetrics(
+    playerId,
+    players,
+    decks,
+    matches,
+    backlogExtras,
+  )
 
   return {
     veteran: relevant.length,
@@ -962,6 +993,7 @@ export function evaluateAchievementMetrics(
     achievement_hunter: 0,
     ...extra,
     ...batch,
+    ...remaining,
   }
 }
 
@@ -971,8 +1003,9 @@ export function evaluateAchievementLevels(
   decks: Deck[],
   matches: Match[],
   linkedPlayerId: string | null = null,
+  extras?: BacklogExtras,
 ): Record<string, number> {
-  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId)
+  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId, extras)
   const levels: Record<string, number> = {}
   for (const definition of ACHIEVEMENT_DEFINITIONS) {
     if (definition.id === 'achievement_hunter') continue
@@ -991,7 +1024,14 @@ export function evaluateNewAchievementUnlocks(
   state: AppState,
   playerId: string,
 ): AchievementUnlock[] {
-  const earned = evaluateAchievementLevels(playerId, state.players, state.decks, state.matches, state.settings.linkedPlayerId)
+  const earned = evaluateAchievementLevels(
+    playerId,
+    state.players,
+    state.decks,
+    state.matches,
+    state.settings.linkedPlayerId,
+    backlogExtrasFromState(state),
+  )
   const existing = new Map(
     state.achievementUnlocks
       .filter((item) => item.playerId === playerId)
@@ -1145,9 +1185,30 @@ export function getPlayerAchievementProgress(
   unlocks: AchievementUnlock[],
   globalRates?: Map<string, AchievementGlobalRate>,
   linkedPlayerId: string | null = null,
+  extras?: BacklogExtras,
 ): AchievementProgress[] {
-  const metrics = evaluateAchievementMetrics(playerId, players, decks, matches, linkedPlayerId)
-  const levels = evaluateAchievementLevels(playerId, players, decks, matches, linkedPlayerId)
+  const defaultExtras = backlogExtrasFromState(createDefaultAppState())
+  const backlogExtras = extras ?? {
+    ...defaultExtras,
+    linkedPlayerId: linkedPlayerId ?? defaultExtras.linkedPlayerId,
+    achievementUnlocks: unlocks,
+  }
+  const metrics = evaluateAchievementMetrics(
+    playerId,
+    players,
+    decks,
+    matches,
+    linkedPlayerId,
+    backlogExtras,
+  )
+  const levels = evaluateAchievementLevels(
+    playerId,
+    players,
+    decks,
+    matches,
+    linkedPlayerId,
+    backlogExtras,
+  )
   const rates = globalRates ?? computeGlobalAchievementRates(players, decks, matches)
   const unlockMap = new Map(
     unlocks.filter((item) => item.playerId === playerId).map((item) => [item.achievementId, item]),

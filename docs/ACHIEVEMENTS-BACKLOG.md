@@ -2,7 +2,7 @@
 
 Living document for **future achievement families** beyond the ~50 shipped in V4.3.x (`src/lib/achievements.ts`, `src/lib/achievementsExtra.ts`).
 
-**Backlog total:** 250 items (Batch A–E × 50). Shipped ~50 — do not duplicate ids in Part 2.
+**Backlog total:** 250 items (Batch A–E × 50). **Shipped in app (V4.6.0):** ~300 families total (core 25 + extra 25 + backlog batches). Remaining 🔴 V5/event items are defined but metrics return 0 until Event/League ships.
 
 **Related code:** `AchievementDefinition`, `evaluateExtraAchievementMetrics`, `AchievementsWall`, global unlock rates (V4.3+).
 

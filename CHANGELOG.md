@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.6.0 - 2026-07-09
+
+### New
+
+- **Full achievement backlog**: added remaining ~230 achievement families from `docs/ACHIEVEMENTS-BACKLOG.md` (Batches A–E), bringing total families to ~300.
+- **Data-driven catalog**: generator scripts for catalog definitions and metric bindings; shared stats engine for backlog evaluation.
+
+### Changed
+
+- Achievement evaluation accepts audit log, settings, and session context for sync/profile milestones.
+
 ## V4.5.0 - 2026-07-09
 
 ### New

@@ -14,6 +14,7 @@ import {
   computePerPlayerAchievementRates,
   computeAchievementSummary,
   getPlayerAchievementProgress,
+  backlogExtrasFromState,
 } from '@/lib/achievements'
 import type { AchievementPeerRate } from '@/lib/achievements'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
@@ -98,7 +99,9 @@ export function PlayerProfileHub({
   renderHeadToHeadRow: (stat: RecordStat & { opponentId: string }) => ReactNode
 }) {
   const { t } = useI18n()
-  const linkedPlayerId = useAppStore((state) => state.settings.linkedPlayerId)
+  const appState = useAppStore()
+  const linkedPlayerId = appState.settings.linkedPlayerId
+  const backlogExtras = backlogExtrasFromState(appState)
   const [panel, setPanel] = useState<ProfilePanel>(null)
 
   const lifetimeMatches = allMatches
@@ -119,6 +122,7 @@ export function PlayerProfileHub({
     achievementUnlocks,
     globalRates,
     linkedPlayerId,
+    backlogExtras,
   )
   const peerRateMap = computePerPlayerAchievementRates(players, decks, lifetimeMatches)
   const peerRates: AchievementPeerRate[] = players
