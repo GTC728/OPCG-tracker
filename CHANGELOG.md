@@ -9,6 +9,15 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.5 - 2026-07-08
+
+### Changed
+
+- **Profile identity card**: merged 戰績摘要 into top card with 戰績詳細 link; removed「詳細資訊」label.
+- **Horizontal rails**: aligned with page padding (no left-edge bleed); preview limit raised to 10 items.
+- **Trends section**: bar chart for recent win rates; streak shows win 🔥 or loss 連敗 (not blank dash).
+- **Deck previews**: color dots + usage % + win rate on each card.
+
 ## V4.3.4 - 2026-07-08
 
 ### Changed

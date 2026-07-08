@@ -435,14 +435,16 @@ export function AchievementsPreviewRail({
   achievements,
   onOpenAll,
   variant = 'default',
+  previewLimit = 10,
 }: {
   achievements: AchievementProgress[]
   onOpenAll?: () => void
   variant?: 'default' | 'profile'
+  previewLimit?: number
 }) {
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
-  const preview = getAchievementPreviewItems(achievements, 8)
+  const preview = getAchievementPreviewItems(achievements, previewLimit)
   const summary = computeAchievementSummary(achievements)
   const title =
     variant === 'profile'

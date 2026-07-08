@@ -35,7 +35,7 @@ export const uiCalloutWarning =
   'rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
 
 export const uiHorizontalRail =
-  '-mx-[var(--ui-page-px)] flex gap-2.5 overflow-x-auto px-[var(--ui-page-px)] pb-1 scrollbar-none snap-x snap-mandatory'
+  'flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory'
 
 export const uiHorizontalRailItem = 'w-[9.5rem] shrink-0 snap-start'
 

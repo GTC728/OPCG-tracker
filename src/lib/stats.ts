@@ -603,6 +603,7 @@ export function buildRecentForm(matches: Match[], playerId?: string): RecentForm
 export interface WinStreakStats {
   currentStreak: number
   longestStreak: number
+  currentLossStreak: number
   currentType: 'win' | 'loss' | 'none'
 }
 
@@ -612,7 +613,7 @@ export function buildWinStreakStats(playerId: string, matches: Match[]): WinStre
     .sort((a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime())
 
   if (!relevant.length) {
-    return { currentStreak: 0, longestStreak: 0, currentType: 'none' }
+    return { currentStreak: 0, longestStreak: 0, currentLossStreak: 0, currentType: 'none' }
   }
 
   let longest = 0
@@ -654,6 +655,7 @@ export function buildWinStreakStats(playerId: string, matches: Match[]): WinStre
   return {
     currentStreak: lastWon ? currentStreak : 0,
     longestStreak: longest,
+    currentLossStreak,
     currentType: lastWon ? 'win' : currentLossStreak > 0 ? 'loss' : 'none',
   }
 }
