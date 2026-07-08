@@ -330,6 +330,7 @@ export const zhHant = {
   'stats.headToHead': '對手勝率',
   'stats.noHeadToHead': '完成對局後會顯示與各對手的勝率。',
   'stats.backToStats': '返回統計',
+  'stats.back': '返回',
   'stats.playerProfile': '玩家資料',
   'stats.matchesUnit': '場對局',
   'stats.deckUsagePie': '牌組使用率',

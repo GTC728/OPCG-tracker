@@ -32,7 +32,7 @@ import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
 
 type StatsSectionId = 'overview' | 'players' | 'decks'
-type ProfileTarget = { type: 'player' | 'deck'; id: string } | null
+type ProfileNavTarget = { type: 'player' | 'deck'; id: string }
 
 function SummaryCard({
   label,
@@ -845,19 +845,22 @@ function ProfileHeader({
   title,
   subtitle,
   onBack,
+  backLabel,
   onShare,
 }: {
   title: ReactNode
   subtitle: string
   onBack: () => void
+  backLabel?: string
   onShare?: () => void
 }) {
   const { t } = useI18n()
+  const backText = backLabel ?? t('stats.backToStats')
   return (
     <section className={[uiGlassCard, 'px-3 py-2.5'].join(' ')}>
       <div className="flex items-center gap-2">
         <button type="button" className={['shrink-0 text-xs font-semibold', uiLink].join(' ')} onClick={onBack}>
-          ← {t('stats.backToStats')}
+          ← {backText}
         </button>
         {onShare ? (
           <Button variant="ghost" className="ml-auto min-h-8 px-2.5 py-1 text-xs" onClick={onShare}>
@@ -895,6 +898,7 @@ function PlayerProfileView({
   language,
   achievementUnlocks,
   onBack,
+  backLabel,
   onOpenDeck,
   onOpenPlayer,
 }: {
@@ -905,6 +909,7 @@ function PlayerProfileView({
   language: Language
   achievementUnlocks: ReturnType<typeof useAppStore.getState>['achievementUnlocks']
   onBack: () => void
+  backLabel?: string
   onOpenDeck: (deckId: string) => void
   onOpenPlayer: (playerId: string) => void
 }) {
@@ -927,6 +932,7 @@ function PlayerProfileView({
         language={language}
         achievementUnlocks={achievementUnlocks}
         onBack={onBack}
+        backLabel={backLabel}
         onShare={() => setShareOpen(true)}
         onOpenDeck={onOpenDeck}
         renderFirstSecond={(scopeMatches) => <FirstSecondSection stats={buildFirstSecondStats(scopeMatches)} />}
@@ -971,6 +977,7 @@ function DeckProfileView({
   decks,
   language,
   onBack,
+  backLabel,
   onOpenPlayer,
 }: {
   deck: Deck
@@ -979,6 +986,7 @@ function DeckProfileView({
   decks: Deck[]
   language: Language
   onBack: () => void
+  backLabel?: string
   onOpenPlayer: (playerId: string) => void
 }) {
   const deckMatches = getCompletedMatches(matches).filter(
@@ -998,6 +1006,7 @@ function DeckProfileView({
         title={<DeckLabel deck={deck} showCode className="inline-flex" />}
         subtitle={`${deckMatches.length} 次出場`}
         onBack={onBack}
+        backLabel={backLabel}
       />
       <MiniStatGrid stat={stat} />
       <FirstSecondSection stats={buildFirstSecondStats(deckMatches)} />
@@ -1044,10 +1053,10 @@ export function StatsPage() {
         : 'session'
   const [scope, setScope] = useState<'session' | 'all'>(initialScope)
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
-  const [profileTarget, setProfileTarget] = useState<ProfileTarget>(
+  const [profileStack, setProfileStack] = useState<ProfileNavTarget[]>(() =>
     settings.statsDefaultScope === 'profile' && linkedPlayer
-      ? { type: 'player', id: linkedPlayer.id }
-      : null,
+      ? [{ type: 'player', id: linkedPlayer.id }]
+      : [],
   )
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
@@ -1084,22 +1093,35 @@ export function StatsPage() {
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
-  const openProfile = (target: ProfileTarget) => {
-    listScrollY.current = window.scrollY
-    setProfileTarget(target)
+  const openProfile = (target: ProfileNavTarget) => {
+    setProfileStack((prev) => {
+      if (prev.length === 0) listScrollY.current = window.scrollY
+      const last = prev[prev.length - 1]
+      if (last?.type === target.type && last?.id === target.id) return prev
+      return [...prev, target]
+    })
     requestAnimationFrame(() => window.scrollTo(0, 0))
   }
 
-  const closeProfile = () => {
-    setProfileTarget(null)
-    requestAnimationFrame(() => window.scrollTo(0, listScrollY.current))
+  const handleProfileBack = () => {
+    setProfileStack((prev) => {
+      if (prev.length > 1) {
+        requestAnimationFrame(() => window.scrollTo(0, 0))
+        return prev.slice(0, -1)
+      }
+      requestAnimationFrame(() => window.scrollTo(0, listScrollY.current))
+      return []
+    })
   }
+
+  const profileBackLabel = profileStack.length > 1 ? t('stats.back') : t('stats.backToStats')
 
   const changeSection = (section: StatsSectionId) => {
     sectionScrollY.current[activeSection] = window.scrollY
     setActiveSection(section)
     requestAnimationFrame(() => window.scrollTo(0, sectionScrollY.current[section] ?? 0))
   }
+  const profileTarget = profileStack[profileStack.length - 1] ?? null
   const selectedPlayer =
     profileTarget?.type === 'player'
       ? players.find((player) => player.id === profileTarget.id) ?? null
@@ -1119,7 +1141,8 @@ export function StatsPage() {
           decks={decks}
           language={language}
           achievementUnlocks={achievementUnlocks}
-          onBack={closeProfile}
+          onBack={handleProfileBack}
+          backLabel={profileBackLabel}
           onOpenDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
           onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
         />
@@ -1136,7 +1159,8 @@ export function StatsPage() {
         players={players}
         decks={decks}
         language={language}
-        onBack={closeProfile}
+        onBack={handleProfileBack}
+        backLabel={profileBackLabel}
         onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
       />
     )
@@ -1175,7 +1199,7 @@ export function StatsPage() {
         value={scope}
         onChange={(value) => {
           setScope(value)
-          setProfileTarget(null)
+          setProfileStack([])
         }}
         options={[
           { value: 'session', label: t('stats.currentSession') },

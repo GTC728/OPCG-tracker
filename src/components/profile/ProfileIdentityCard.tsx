@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/Button'
-import { Recent20WinRateBar, RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
+import { RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
 import { formatStreakLine } from '@/components/profile/RecentFormBars'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecentFormStat, type RecordStat, type WinStreakStats } from '@/lib/stats'
@@ -22,6 +22,7 @@ export function ProfileIdentityCard({
   recentMatches,
   playerId,
   onBack,
+  backLabel,
   onShare,
   onViewDetails,
 }: {
@@ -32,17 +33,19 @@ export function ProfileIdentityCard({
   recentMatches: Match[]
   playerId: string
   onBack: () => void
+  backLabel?: string
   onShare?: () => void
   onViewDetails: () => void
 }) {
   const { t } = useI18n()
   const recent20 = getRecentWindowStat(recentForm, 20)
+  const backText = backLabel ?? t('stats.backToStats')
 
   return (
     <section className={[uiGlassCard, 'px-3 py-2.5'].join(' ')}>
       <div className="flex items-center gap-2">
         <button type="button" className={['shrink-0 text-xs font-semibold', uiLink].join(' ')} onClick={onBack}>
-          ← {t('stats.backToStats')}
+          ← {backText}
         </button>
         {onShare ? (
           <Button variant="ghost" className="ml-auto min-h-8 px-2.5 py-1 text-xs" onClick={onShare}>
@@ -86,12 +89,7 @@ export function ProfileIdentityCard({
           ) : null}
         </article>
       </div>
-      <div className="mt-2.5 space-y-2 rounded-lg border border-[var(--ui-border)] bg-surface/30 px-2.5 py-2">
-        <Recent20WinRateBar
-          wins={recent20?.wins ?? 0}
-          total={recent20?.total ?? 0}
-          winRate={recent20?.winRate ?? null}
-        />
+      <div className="mt-2.5 rounded-lg border border-[var(--ui-border)] bg-surface/30 px-2.5 py-2">
         <RecentMatchWinStrip matches={recentMatches} playerId={playerId} />
       </div>
       <button type="button" className={['mt-2 text-xs font-semibold', uiLink].join(' ')} onClick={onViewDetails}>

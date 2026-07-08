@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react'
-import { AppCredit } from '@/components/layout/AppCredit'
+import { AppBrandCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
-import { uiBottomNav, uiHeaderBar, uiLink } from '@/lib/uiSurface'
+import { uiBottomNav, uiHeaderBar } from '@/lib/uiSurface'
 import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
 import type { TabId } from '@/types'
@@ -113,17 +113,14 @@ export function AppShell({
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
         <SyncStatusBanner />
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base font-bold tracking-tight">{title}</h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">
+              {title}
               {subtitle ? (
-                <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-text-secondary">{subtitle}</p>
+                <span className="font-normal text-text-secondary"> · {subtitle}</span>
               ) : null}
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <p className={['text-[11px] font-semibold tracking-wide', uiLink].join(' ')}>OPCG Tracker</p>
-              <AppCredit showVersion />
-            </div>
+            </h1>
+            <AppBrandCredit />
           </div>
         </header>
 

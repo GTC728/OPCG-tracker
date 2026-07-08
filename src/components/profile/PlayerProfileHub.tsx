@@ -66,6 +66,7 @@ export function PlayerProfileHub({
   language,
   achievementUnlocks,
   onBack,
+  backLabel,
   onShare,
   onOpenDeck,
   renderFirstSecond,
@@ -80,6 +81,7 @@ export function PlayerProfileHub({
   language: Language
   achievementUnlocks: AchievementUnlock[]
   onBack: () => void
+  backLabel?: string
   onShare?: () => void
   onOpenDeck: (deckId: string) => void
   renderFirstSecond: (playerMatches: Match[]) => ReactNode
@@ -140,6 +142,7 @@ export function PlayerProfileHub({
         recentMatches={recentMatches}
         playerId={player.id}
         onBack={onBack}
+        backLabel={backLabel}
         onShare={onShare}
         onViewDetails={() => setPanel('overview')}
       />

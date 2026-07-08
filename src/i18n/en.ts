@@ -330,6 +330,7 @@ export const en = {
   'stats.headToHead': 'Head-to-head',
   'stats.noHeadToHead': 'Win rates vs each opponent appear after matches are recorded.',
   'stats.backToStats': 'Back to stats',
+  'stats.back': 'Back',
   'stats.playerProfile': 'Player profile',
   'stats.matchesUnit': 'matches',
   'stats.deckUsagePie': 'Deck usage',

@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface BottomSheetProps {
   open: boolean
@@ -28,22 +29,27 @@ export function BottomSheet({ open, title, onClose, children, manageScroll = fal
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-start sm:overflow-y-auto sm:p-3 sm:pt-4">
+  return createPortal(
+    <div className="ui-sheet-root fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="關閉"
-        className="ui-sheet-backdrop fixed inset-0 bg-black/60"
+        className="ui-sheet-backdrop absolute inset-0 bg-black/60"
         onClick={onClose}
       />
       <div
         className={[
-          'ui-sheet-panel safe-bottom relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface-elevated shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl',
-          manageScroll ? 'max-h-[92dvh]' : 'max-h-[92dvh] sm:max-h-[calc(100dvh-2rem)]',
+          'ui-sheet-panel safe-bottom relative flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface-elevated shadow-2xl sm:rounded-2xl',
+          'max-h-[min(calc(100dvh-var(--bottom-chrome-height,4.5rem)-0.5rem),88dvh)] sm:max-h-[min(88dvh,720px)]',
         ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bottom-sheet-title"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-surface-muted px-5 py-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-muted px-5 py-3.5">
+          <h2 id="bottom-sheet-title" className="text-lg font-semibold">
+            {title}
+          </h2>
           <button
             type="button"
             className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-muted"
@@ -56,12 +62,13 @@ export function BottomSheet({ open, title, onClose, children, manageScroll = fal
           className={
             manageScroll
               ? 'flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4'
-              : 'scrollbar-subtle max-h-[calc(92dvh-4.5rem)] overflow-y-auto px-5 py-4 sm:max-h-[calc(100dvh-6rem)]'
+              : 'scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-5 py-4'
           }
         >
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

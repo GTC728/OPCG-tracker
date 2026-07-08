@@ -9,18 +9,42 @@ function GitHubMark({ className }: { className?: string }) {
   )
 }
 
-export function AppCredit({
-  showVersion = false,
-  className = '',
-}: {
-  showVersion?: boolean
-  className?: string
-}) {
+/** Single-line brand + version + GitHub credit for header. */
+export function AppBrandCredit({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={[
+        'flex max-w-[52%] shrink-0 flex-wrap items-center justify-end gap-x-1.5 gap-y-0 text-[10px] leading-tight text-text-secondary',
+        className,
+      ].join(' ')}
+    >
+      <span className="font-semibold text-brand-400/90">OPCG Tracker</span>
+      <span className="opacity-40" aria-hidden>
+        ·
+      </span>
+      <span className="tabular-nums">v{APP_VERSION}</span>
+      <span className="opacity-40" aria-hidden>
+        ·
+      </span>
+      <a
+        href={GITHUB_REPO_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={['inline-flex items-center gap-0.5 hover:text-brand-400', uiLink].join(' ')}
+        title={`GitHub @${GITHUB_CREDIT_HANDLE}`}
+      >
+        <GitHubMark className="size-2.5 shrink-0 opacity-80" />
+        <span>@{GITHUB_CREDIT_HANDLE}</span>
+      </a>
+    </div>
+  )
+}
+
+/** Stacked credit block for Settings about section. */
+export function AppCredit({ className = '' }: { className?: string }) {
   return (
     <div className={['flex flex-col items-end gap-0.5 text-right', className].join(' ')}>
-      {showVersion ? (
-        <span className="text-[10px] font-semibold tracking-wide text-text-secondary">v{APP_VERSION}</span>
-      ) : null}
+      <span className="text-[10px] font-semibold tracking-wide text-text-secondary">v{APP_VERSION}</span>
       <a
         href={GITHUB_REPO_URL}
         target="_blank"

@@ -5,6 +5,38 @@ import { uiGlassCard, uiLabel, uiSectionTitle } from '@/lib/uiSurface'
 import { useI18n } from '@/lib/i18n'
 import type { DeckUsageSlice } from '@/lib/stats'
 
+function DeckSliceLegend({
+  slices,
+  compact = false,
+}: {
+  slices: DeckUsageSlice[]
+  compact?: boolean
+}) {
+  return (
+    <ul className={compact ? 'grid grid-cols-1 gap-1.5 sm:grid-cols-2' : 'space-y-2'}>
+      {slices.map((slice, index) => (
+        <li
+          key={slice.deckId}
+          className={[
+            'flex items-center gap-2',
+            compact ? 'rounded-md bg-surface/35 px-2 py-1 text-[11px]' : 'text-sm',
+          ].join(' ')}
+        >
+          <span
+            className={['shrink-0 rounded-full ring-2 ring-white/15', compact ? 'size-2.5' : 'size-3'].join(' ')}
+            style={{ background: getDeckSliceFill(slice, index, slices) }}
+          />
+          <ColorDots colors={slice.colors} />
+          <span className="min-w-0 truncate font-medium">{slice.deckName}</span>
+          <span className="ml-auto shrink-0 tabular-nums text-text-secondary">
+            {slice.count} · {Math.round(slice.percentage * 100)}%
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function DeckUsagePieChart({
   slices,
   title,
@@ -78,25 +110,7 @@ export function DeckUsagePieChart({
         </ResponsiveContainer>
       </div>
 
-      <ul className="space-y-2">
-        {!compact
-          ? slices.map((slice, index) => (
-              <li key={slice.deckId} className="flex items-center justify-between gap-2 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="size-3 shrink-0 rounded-full ring-2 ring-white/20"
-                    style={{ background: getDeckSliceFill(slice, index, slices) }}
-                  />
-                  <ColorDots colors={slice.colors} />
-                  <span className="truncate font-medium">{slice.deckName}</span>
-                </span>
-                <span className="shrink-0 tabular-nums text-text-secondary">
-                  {slice.count} · {Math.round(slice.percentage * 100)}%
-                </span>
-              </li>
-            ))
-          : null}
-      </ul>
+      <DeckSliceLegend slices={slices} compact={compact} />
       {!compact ? <p className={uiLabel}>{t('stats.deckColorHint')}</p> : null}
     </section>
   )

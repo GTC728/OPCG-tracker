@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.4 - 2026-07-09
+
+### Changed
+
+- **Header**: single-line layout — page title + subtitle inline on the left; brand, version, and GitHub credit on one line right.
+- **Profile card**: removed duplicate recent-20 win-rate bar; kept W/L strip only.
+- **Deck pie preview**: color swatch legend maps each slice to deck name and usage %.
+- **Stats navigation**: profile/deck views use a stack — back returns to previous profile (e.g. deck → player) instead of always resetting to main stats.
+
+### Fixed
+
+- Bottom sheet panels portal to `document.body`, center on desktop, cap height above bottom nav — no more off-screen or inconsistent placement.
+
 ## V4.7.3 - 2026-07-09
 
 ### Changed

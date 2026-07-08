@@ -330,6 +330,7 @@ export const zhHans = {
   'stats.headToHead': '对手勝率',
   'stats.noHeadToHead': '完成对局后会显示与各对手的勝率。',
   'stats.backToStats': '返回统计',
+  'stats.back': '返回',
   'stats.playerProfile': '玩家资料',
   'stats.matchesUnit': '场对局',
   'stats.deckUsagePie': '牌组使用率',

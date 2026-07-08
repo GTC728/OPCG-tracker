@@ -57,33 +57,3 @@ export function RecentMatchWinStrip({
     </div>
   )
 }
-
-export function Recent20WinRateBar({
-  wins,
-  total,
-  winRate,
-}: {
-  wins: number
-  total: number
-  winRate: number | null
-}) {
-  const { t } = useI18n()
-  const pct = winRate !== null ? Math.round(winRate * 100) : 0
-
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between gap-2 text-[10px]">
-        <span className="text-text-secondary">{t('profile.recent20WinRate')}</span>
-        <span className="font-semibold tabular-nums">
-          {total ? `${formatPercent(winRate)} · ${wins}/${total}` : '—'}
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-surface-muted/80">
-        <div
-          className="h-full rounded-full bg-brand-500 transition-all"
-          style={{ width: total ? `${pct}%` : '0%' }}
-        />
-      </div>
-    </div>
-  )
-}

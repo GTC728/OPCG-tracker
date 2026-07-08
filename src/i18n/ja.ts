@@ -330,6 +330,7 @@ export const ja = {
   'stats.headToHead': '相手別勝率',
   'stats.noHeadToHead': '対戦を記録すると相手別勝率が表示されます。',
   'stats.backToStats': '統計に戻る',
+  'stats.back': '戻る',
   'stats.playerProfile': 'プレイヤープロフィール',
   'stats.matchesUnit': '試合',
   'stats.deckUsagePie': 'デッキ使用率',
