@@ -901,7 +901,6 @@ function MiniStatGrid({ stat }: { stat: RecordStat | null }) {
 
 function PlayerProfileView({
   player,
-  matches,
   allMatches,
   players,
   decks,
@@ -912,7 +911,6 @@ function PlayerProfileView({
   onOpenPlayer,
 }: {
   player: Player
-  matches: Match[]
   allMatches: Match[]
   players: Player[]
   decks: Deck[]
@@ -922,12 +920,7 @@ function PlayerProfileView({
   onOpenDeck: (deckId: string) => void
   onOpenPlayer: (playerId: string) => void
 }) {
-  const { t } = useI18n()
   const [shareOpen, setShareOpen] = useState(false)
-  const playerMatches = getCompletedMatches(allMatches).filter(
-    (match) => match.player1Id === player.id || match.player2Id === player.id,
-  )
-  const playerStat = buildPlayerStats(players, allMatches).find((item) => item.id === player.id)
   const deckStats = buildPlayerDeckStats(players, decks, allMatches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -940,20 +933,13 @@ function PlayerProfileView({
     <>
       <PlayerProfileHub
         player={player}
-        matches={matches}
         allMatches={allMatches}
         players={players}
         decks={decks}
         language={language}
         achievementUnlocks={achievementUnlocks}
-        header={
-          <ProfileHeader
-            title={player.name}
-            subtitle={`${playerStat?.wins ?? 0}W-${playerStat?.losses ?? 0}L · ${formatPercent(playerStat?.winRate ?? null)} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
-            onBack={onBack}
-            onShare={() => setShareOpen(true)}
-          />
-        }
+        onBack={onBack}
+        onShare={() => setShareOpen(true)}
         onOpenDeck={onOpenDeck}
         renderFirstSecond={(scopeMatches) => <FirstSecondSection stats={buildFirstSecondStats(scopeMatches)} />}
         renderMatchups={
@@ -1132,7 +1118,6 @@ export function StatsPage() {
       <>
         <PlayerProfileView
           player={selectedPlayer}
-          matches={scopedMatches}
           allMatches={matches}
           players={players}
           decks={decks}

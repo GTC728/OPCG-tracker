@@ -70,19 +70,26 @@ export function WeeklyWinRateChart({ stats, title }: { stats: WeeklyWinRateStat[
 export function WinStreakSummary({
   currentStreak,
   longestStreak,
+  currentLossStreak = 0,
   currentType,
 }: {
   currentStreak: number
   longestStreak: number
+  currentLossStreak?: number
   currentType: 'win' | 'loss' | 'none'
 }) {
+  const currentLabel =
+    currentType === 'win' && currentStreak > 0
+      ? String(currentStreak)
+      : currentType === 'loss' && currentLossStreak > 0
+        ? `${currentLossStreak}連敗`
+        : '0'
+
   return (
     <section className="grid grid-cols-2 gap-3">
       <article className={[uiGlassCard, 'p-3'].join(' ')}>
         <p className="text-xs font-medium text-text-secondary">目前連勝</p>
-        <p className="mt-1 text-2xl font-bold tracking-tight">
-          {currentType === 'win' ? currentStreak : '—'}
-        </p>
+        <p className="mt-1 text-2xl font-bold tracking-tight">{currentLabel}</p>
       </article>
       <article className={[uiGlassCard, 'p-3'].join(' ')}>
         <p className="text-xs font-medium text-text-secondary">最高連勝</p>
