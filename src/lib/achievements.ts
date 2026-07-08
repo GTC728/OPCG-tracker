@@ -1190,14 +1190,34 @@ export function filterAchievementProgress(
   return items.filter((item) => item.definition.category === category)
 }
 
+export function getAchievementPreviewItems(
+  items: AchievementProgress[],
+  limit = 8,
+): { items: AchievementProgress[]; mode: 'recent' | 'highlights' } {
+  const withTimestamp = items
+    .filter((item) => item.currentLevel > 0 && item.unlockedAt)
+    .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime())
+
+  if (withTimestamp.length > 0) {
+    return { items: withTimestamp.slice(0, limit), mode: 'recent' }
+  }
+
+  const highlights = [...items]
+    .filter((item) => item.currentLevel > 0)
+    .sort((a, b) => {
+      const ratioDiff = b.currentLevel / b.maxLevel - a.currentLevel / a.maxLevel
+      if (ratioDiff !== 0) return ratioDiff
+      return b.currentLevel - a.currentLevel
+    })
+
+  return { items: highlights.slice(0, limit), mode: 'highlights' }
+}
+
 export function getRecentAchievementProgress(
   items: AchievementProgress[],
   limit = 8,
 ): AchievementProgress[] {
-  return [...items]
-    .filter((item) => item.currentLevel > 0 && item.unlockedAt)
-    .sort((a, b) => new Date(b.unlockedAt!).getTime() - new Date(a.unlockedAt!).getTime())
-    .slice(0, limit)
+  return getAchievementPreviewItems(items, limit).items
 }
 
 export function formatAchievementToast(

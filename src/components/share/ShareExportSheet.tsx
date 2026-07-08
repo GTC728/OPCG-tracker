@@ -7,13 +7,12 @@ import { shareElementAsPng } from '@/lib/shareExport'
 import { getCompletedMatches, formatPercent, buildPlayerStats } from '@/lib/stats'
 import { buildWinStreakStats } from '@/lib/stats'
 import { useI18n } from '@/lib/i18n'
-import { uiGlassCard } from '@/lib/uiSurface'
 import type { Deck, Match, Player, Session } from '@/types'
 
 function ShareCardFrame({ children, title, subtitle }: { children: ReactNode; title: string; subtitle: string }) {
   return (
-    <div className="overflow-hidden rounded-xl bg-surface ring-1 ring-white/[0.08]">
-      <div className="border-b border-white/[0.06] bg-surface-elevated/90 px-4 py-3">
+    <div className="share-export-card overflow-hidden rounded-xl border border-[var(--ui-border)] bg-[var(--color-surface-elevated)]">
+      <div className="border-b border-[var(--ui-border)] bg-[var(--color-surface-muted)]/25 px-4 py-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-400">OPCG Tracker</p>
         <h3 className="mt-1 text-lg font-bold">{title}</h3>
         <p className="text-xs text-text-secondary">{subtitle}</p>
@@ -40,15 +39,15 @@ export function PlayerShareCard({
       subtitle={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${formatPercent(stat?.winRate ?? null)}`}
     >
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className={[uiGlassCard, 'p-2'].join(' ')}>
+        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
           <p className="text-[10px] text-text-secondary">連勝</p>
           <p className="text-lg font-bold">{streak.currentStreak || '—'}</p>
         </div>
-        <div className={[uiGlassCard, 'p-2'].join(' ')}>
+        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
           <p className="text-[10px] text-text-secondary">最高</p>
           <p className="text-lg font-bold">{streak.longestStreak || '—'}</p>
         </div>
-        <div className={[uiGlassCard, 'p-2'].join(' ')}>
+        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
           <p className="text-[10px] text-text-secondary">場數</p>
           <p className="text-lg font-bold">{stat?.total ?? 0}</p>
         </div>
@@ -147,11 +146,17 @@ export function ShareExportSheet({
   return (
     <BottomSheet open={open} onClose={onClose} title={t('share.title')}>
       <div className="space-y-4">
-        <div ref={cardRef}>{children}</div>
-        {message ? <p className="text-sm text-text-secondary">{message}</p> : null}
+        <div ref={cardRef} className="share-export-root isolate">
+          {children}
+        </div>
         <Button fullWidth loading={loading} onClick={handleExport}>
           {t('share.exportButton')}
         </Button>
+        {message ? (
+          <p className="text-sm text-text-secondary" data-export-exclude="true">
+            {message}
+          </p>
+        ) : null}
       </div>
     </BottomSheet>
   )

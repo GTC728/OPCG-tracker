@@ -43,7 +43,7 @@ export function Button({
         'inline-flex min-h-[var(--ui-btn-min-h)] items-center justify-center gap-2 rounded-lg px-4 py-3 text-base font-semibold',
         uiPressable,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
-        'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
+        'disabled:cursor-not-allowed disabled:opacity-50',
         variantClasses[variant],
         fullWidth ? 'w-full' : '',
         className,

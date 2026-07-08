@@ -25,10 +25,24 @@ export async function shareElementAsPng(
   element: HTMLElement,
   options: { title: string; filename: string },
 ): Promise<'shared' | 'downloaded'> {
+  const backgroundColor =
+    getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim() || '#0b1220'
+
   const dataUrl = await toPng(element, {
     cacheBust: true,
     pixelRatio: 2,
-    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim() || '#0b1220',
+    backgroundColor,
+    skipAutoScale: true,
+    style: {
+      transform: 'none',
+      animation: 'none',
+      backdropFilter: 'none',
+    } as Partial<CSSStyleDeclaration>,
+    filter: (node) => {
+      if (!(node instanceof HTMLElement)) return true
+      if (node.dataset.exportExclude === 'true') return false
+      return true
+    },
   })
 
   if (navigator.share && navigator.canShare) {

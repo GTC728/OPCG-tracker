@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.1 - 2026-07-08
+
+### Fixed
+
+- **Achievement preview**: fallback to top unlocked achievements when no `unlockedAt` timestamps (legacy players).
+- **Deck pie colors**: Black vs Blue hue separation; dual-color decks use 50/50 blend + split color-preference stats.
+- **Profile share export**: solid export card (no backdrop-blur stacking artifacts).
+- **Button press animation**: global `.ui-pressable` CSS active scale.
+
+### Changed
+
+- **Achievements UX**: tier metal segment bars; global rate as side pill (not row background); default sort = personal progress.
+- **Peer ranking**: collapsible compact panel; tap player to view their achievement page.
+- **Achievement wall title**: "我的成就" by default; global rate decoupled from primary sort.
+
 ## V4.3.0 - 2026-07-08
 
 ### New
