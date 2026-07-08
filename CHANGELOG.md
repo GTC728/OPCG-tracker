@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.6 - 2026-07-09
+
+### Changed
+
+- **Deck usage chart**: high-contrast indexed palette for pie slices and card accents; deck color dots still show identity.
+- **Weekly win rate**: dashed cumulative-average trend line alongside weekly dots; sparse weeks no longer imply a broken chart.
+- **Achievement balance**: year-scale tier curves for backlog catalog; UI/export achievements no longer inherit match totals; core social/meta tiers raised.
+- **zh-Hant copy**: achievement catalog titles and stats chart hints use Traditional Chinese.
+
+### Fixed
+
+- **Achievement inflation**: ~70 backlog achievements incorrectly bound to total match count (e.g. 卡圖工匠 maxing at 82 games).
+
 ## V4.7.5 - 2026-07-09
 
 ### Changed

@@ -8,7 +8,8 @@ import {
   YAxis,
 } from 'recharts'
 import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
-import { formatPercent, type WeeklyWinRateStat } from '@/lib/stats'
+import { buildWeeklyWinRateChartPoints, formatPercent, type WeeklyWinRateStat } from '@/lib/stats'
+import { useI18n } from '@/lib/i18n'
 
 export function WeeklyWinRateChart({
   stats,
@@ -19,17 +20,16 @@ export function WeeklyWinRateChart({
   title: string
   compact?: boolean
 }) {
-  const chartData = stats.map((item) => ({
-    label: item.label,
-    winRate: item.total > 0 && item.winRate !== null ? Math.round(item.winRate * 100) : null,
-    total: item.total,
-  }))
+  const { t } = useI18n()
+  const chartData = buildWeeklyWinRateChartPoints(stats)
 
   return (
     <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
       <div className="flex items-end justify-between gap-2">
         <h2 className={uiSectionTitle}>{title}</h2>
-        {!compact ? <p className="text-xs text-text-secondary">無對局週次不顯示數據點</p> : null}
+        {!compact ? (
+          <p className="text-xs text-text-secondary">{t('stats.weeklyWinRateLegend')}</p>
+        ) : null}
       </div>
       <div className={compact ? 'h-36' : 'h-52'}>
         <ResponsiveContainer width="100%" height="100%">
@@ -43,11 +43,16 @@ export function WeeklyWinRateChart({
               width={36}
             />
             <Tooltip
-              formatter={(value, _name, item) => {
+              formatter={(value, name, item) => {
                 const numeric = typeof value === 'number' ? value : null
-                const payload = item?.payload as { label?: string; total?: number } | undefined
+                const payload = item?.payload as
+                  | { label?: string; total?: number; cumulativeWinRate?: number | null }
+                  | undefined
                 if (numeric === null) return ['—', payload?.label ?? '']
-                return [`${numeric}% · ${payload?.total ?? 0} 場`, payload?.label ?? '']
+                if (name === 'cumulativeWinRate') {
+                  return [`${numeric}% · ${t('stats.weeklyWinRateTrend')}`, payload?.label ?? '']
+                }
+                return [`${numeric}% · ${payload?.total ?? 0} ${t('stats.matchUnitShort')}`, payload?.label ?? '']
               }}
               contentStyle={{
                 background: 'color-mix(in srgb, var(--color-surface-elevated) 92%, transparent)',
@@ -58,7 +63,17 @@ export function WeeklyWinRateChart({
             />
             <Line
               type="monotone"
-              dataKey="winRate"
+              dataKey="cumulativeWinRate"
+              stroke="color-mix(in srgb, var(--color-text-secondary) 70%, transparent)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+              connectNulls
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="weeklyWinRate"
               stroke="var(--color-brand-500)"
               strokeWidth={2.5}
               dot={{ r: 3, fill: 'var(--color-brand-500)' }}
@@ -68,9 +83,7 @@ export function WeeklyWinRateChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-text-secondary">
-        最近 {stats.length} 週 · 有對局週次才顯示勝率點，空週保留走勢線但不落點。
-      </p>
+      <p className="text-xs text-text-secondary">{t('stats.weeklyWinRateHint')}</p>
     </section>
   )
 }

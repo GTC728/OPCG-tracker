@@ -754,3 +754,31 @@ export function buildWeeklyWinRateStats(
 
   return weeks
 }
+
+export interface WeeklyWinRateChartPoint {
+  label: string
+  weeklyWinRate: number | null
+  cumulativeWinRate: number | null
+  total: number
+}
+
+/** Weekly dots plus cumulative win-rate trend for sparse weeks. */
+export function buildWeeklyWinRateChartPoints(stats: WeeklyWinRateStat[]): WeeklyWinRateChartPoint[] {
+  let cumulativeWins = 0
+  let cumulativeTotal = 0
+
+  return stats.map((item) => {
+    if (item.total > 0) {
+      cumulativeWins += item.wins
+      cumulativeTotal += item.total
+    }
+    return {
+      label: item.label,
+      weeklyWinRate:
+        item.total > 0 && item.winRate !== null ? Math.round(item.winRate * 100) : null,
+      cumulativeWinRate:
+        cumulativeTotal > 0 ? Math.round((cumulativeWins / cumulativeTotal) * 100) : null,
+      total: item.total,
+    }
+  })
+}

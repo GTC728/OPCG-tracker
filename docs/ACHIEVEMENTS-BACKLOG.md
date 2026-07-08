@@ -188,7 +188,7 @@ New proposals (2026-07-09). Focus: V4 features (share, profile, achievements UI)
 | # | Proposed id | Title (zh) | Category | Data |
 |---|-------------|------------|----------|------|
 | C01 | `share_first` | 初次分享 | milestone | 🟢 export PNG once |
-| C02 | `share_evangelist` | 分享 evangelist | social | 🟢 export 10× |
+| C02 | `share_evangelist` | 分享推廣 | social | 🟢 export 10× |
 | C03 | `session_poster` | 場報記者 | fun | 🟢 session export |
 | C04 | `card_case_artist` | 卡圖工匠 | fun | 🟢 profile export w/ decks |
 | C05 | `community_peek` | 社群窺探 | fun | 🟢 open community sheet |
@@ -218,7 +218,7 @@ New proposals (2026-07-09). Focus: V4 features (share, profile, achievements UI)
 | C29 | `slot_one_legend` | 一號桌傳奇 | fun | 🟢 50 wins at table slot 1 |
 | C30 | `slot_wanderer` | 桌號游牧 | fun | 🟢 win on 8 different slots |
 | C31 | `assign_speedrun` | 閃電分配 | fun | 🟡 time from open assign → complete |
-| C32 | `dock_master` | 分配坞大師 | fun | 🟢 100 assigns via mobile dock |
+| C32 | `dock_master` | 分配塢大師 | fun | 🟢 100 assigns via mobile dock |
 | C33 | `first_second_balance` | 攻守平衡 | skill | 🟢 FP win% & SP win% both ≥50%, n≥20 |
 | C34 | `first_only` | 先攻依賴 | skill | 🟢 FP WR ≥70%, SP WR <40% (fun label) |
 | C35 | `second_only` | 後攻依賴 | skill | 🟢 inverse |
@@ -248,33 +248,33 @@ Theme: calendar / rhythm, match-number milestones, stats & heatmap, workflow edg
 |---|-------------|------------|----------|------|
 | D01 | `new_year_first` | 新年首戰 | fun | 🟢 first match Jan 1 |
 | D02 | `lunar_spark` | 新春火花 | fun | 🟢 win during LNY window (config) |
-| D03 | `halloween_night` | 万圣夜 | fun | 🟡 seasonal window |
-| D04 | `christmas_clash` | 圣诞對局 | fun | 🟢 Dec 24–26 match |
+| D03 | `halloween_night` | 萬聖夜 | fun | 🟡 seasonal window |
+| D04 | `christmas_clash` | 聖誕對局 | fun | 🟢 Dec 24–26 match |
 | D05 | `summer_surge` | 暑假高峰 | fun | 🟢 20 matches Jul–Aug |
 | D06 | `friday_night` | 周五夜牌 | fun | 🟢 10 wins Fri 18:00–24:00 |
-| D07 | `sunday_league` | 周日联赛 | fun | 🟢 15 wins on Sunday |
-| D08 | `leap_day` | 闰日稀有 | fun | 🟢 match on Feb 29 |
-| D09 | `monthly_spread` | 十二个月 | milestone | 🟢 matches in 12 calendar months |
+| D07 | `sunday_league` | 週日聯賽 | fun | 🟢 15 wins on Sunday |
+| D08 | `leap_day` | 閏日稀有 | fun | 🟢 match on Feb 29 |
+| D09 | `monthly_spread` | 十二個月 | milestone | 🟢 matches in 12 calendar months |
 | D10 | `quarterly_regular` | 季度常客 | milestone | 🟢 30 matches per quarter |
-| D11 | `match_100` | 第100战 | milestone | 🟢 matchNumber or total=100 |
+| D11 | `match_100` | 第100戰 | milestone | 🟢 matchNumber or total=100 |
 | D12 | `match_500` | 第500战 | milestone | 🟢 |
 | D13 | `match_777` | 777 吉利 | fun | 🟢 777th completed match |
-| D14 | `match_1000` | 千场记 | milestone | 🟢 |
-| D15 | `win_100` | 百胜里程碑 | milestone | 🟢 |
-| D16 | `win_250` | 二百五…胜 | milestone | 🟢 |
+| D14 | `match_1000` | 千場記 | milestone | 🟢 |
+| D15 | `win_100` | 百勝里程碑 | milestone | 🟢 |
+| D16 | `win_250` | 二百五…勝 | milestone | 🟢 |
 | D17 | `exactly_fifty` | 五十整 | fun | 🟢 career WR exactly 50% at n≥20 |
 | D18 | `fibonacci_win` | 斐波那契 | fun | 🟢 win totals hit 1,2,3,5,8,13… |
-| D19 | `prime_hunter` | 质数猎手 | fun | 🟢 win on prime-numbered match # |
-| D20 | `heatmap_reader` | 读热图者 | meta | 🟡 open stats heatmap 20× |
-| D21 | `counter_pick` | 针对性选出 | skill | 🟢 beat session top deck 3× |
+| D19 | `prime_hunter` | 質數獵手 | fun | 🟢 win on prime-numbered match # |
+| D20 | `heatmap_reader` | 讀熱圖者 | meta | 🟡 open stats heatmap 20× |
+| D21 | `counter_pick` | 針對性選出 | skill | 🟢 beat session top deck 3× |
 | D22 | `anti_meta_day` | 反环境日 | skill | 🟢 beat 3 decks never used by you before |
 | D23 | `same_deck_different_pilots` | 同构异人 | meta | 🟢 same deck id, 3 different your pilots |
 | D24 | `pilot_swap_win` | 换牌胜 | meta | 🟢 win deck A then deck B same session |
 | D25 | `debut_win` | 初阵告捷 | skill | 🟢 first use of deck → win |
 | D26 | `debut_redemption` | 初阵雪耻 | skill | 🟢 lose debut then win rematch same deck |
-| D27 | `scope_toggle` | 双视野 | fun | 🟢 win in session scope stats mindset |
-| D28 | `all_time_legend` | 全史传说 | milestone | 🟢 200 all-time wins linked player |
-| D29 | `pie_master` | 饼图大师 | meta | 🟢 deck usage pie ≥5 slices each ≥10% |
+| D27 | `scope_toggle` | 雙視野 | fun | 🟢 win in session scope stats mindset |
+| D28 | `all_time_legend` | 全史傳說 | milestone | 🟢 200 all-time wins linked player |
+| D29 | `pie_master` | 餅圖大師 | meta | 🟢 deck usage pie ≥5 slices each ≥10% |
 | D30 | `trend_rider` | 趋势骑手 | skill | 🟢 4-week WR uptrend |
 | D31 | `trend_faller` | 低谷行者 | fun | 🟢 4-week WR down then recover week 5 |
 | D32 | `break_opp_streak` | 断火者 | skill | 🟢 beat opponent on 3+ win streak |
@@ -295,7 +295,7 @@ Theme: calendar / rhythm, match-number milestones, stats & heatmap, workflow edg
 | D47 | `filter_master` | 筛选大师 | fun | 🟡 history 5 filter combos used |
 | D48 | `date_range_archaeologist` | 日期考古 | fun | 🟢 history custom range spans 90 days |
 | D49 | `deck_search_sniper` | 牌组狙击 | fun | 🟢 history deck filter → 1 match win |
-| D50 | `onboarding_graduate` | 结业生 | milestone | 🟢 onboarding done + 10 matches |
+| D50 | `onboarding_graduate` | 結業生 | milestone | 🟢 onboarding done + 10 matches |
 
 ---
 
@@ -308,11 +308,11 @@ Theme: rival narratives, color/set deep cuts, achievement-system meta, collab/sy
 | E01 | `rival_win5` | 五胜宿敌 | social | 🟢 5 opponents each 5+ wins vs |
 | E02 | `rival_even` | 五五波 | social | 🟢 3 rivals WR 48–52%, n≥12 |
 | E03 | `rival_dominate` | 压制 | social | 🟢 one rival 10+ wins, ≤2 losses |
-| E04 | `rival_respect` | 敬对手 | social | 🟢 20 rivals each ≥3 games |
+| E04 | `rival_respect` | 敬對手 | social | 🟢 20 rivals each ≥3 games |
 | E05 | `nemesis_chain` | 宿敌连环 | social | 🟢 beat nemesis 3 sessions in row |
 | E06 | `new_rival` | 新敌初逢 | social | 🟢 first match vs new player → win |
 | E07 | `old_rival` | 老友再战 | social | 🟢 vs same opp 2 years apart |
-| E08 | `color_clash_red_blue` | 红蓝对决 | meta | 🟢 red deck beat blue deck 10× |
+| E08 | `color_clash_red_blue` | 紅藍對決 | meta | 🟢 red deck beat blue deck 10× |
 | E09 | `color_clash_green_purple` | 绿紫恩怨 | meta | 🟢 |
 | E10 | `black_vs_yellow` | 黑黄相克 | meta | 🟢 |
 | E11 | `tricolor_win` | 三色胜利 | meta | 🟢 win with 3-color deck |
@@ -347,12 +347,12 @@ Theme: rival narratives, color/set deep cuts, achievement-system meta, collab/sy
 | E40 | `event_3_0` | 瑞士三胜 | skill | 🔴 V5 Swiss 3 wins |
 | E41 | `event_top8` | 八强 | skill | 🔴 V5 top 8 |
 | E42 | `event_champion` | 冠军 | skill | 🔴 V5 win event |
-| E43 | `league_points_100` | 联赛百分 | milestone | 🔴 V5 league points |
+| E43 | `league_points_100` | 聯賽百分 | milestone | 🔴 V5 league points |
 | E44 | `secret_lucky_roll` | ??? 骰子神 | fun | 🟢 hidden: win after table roll |
-| E45 | `secret_all_dash` | ??? 全划线 | fun | 🟢 hidden: notes only "———" |
-| E46 | `secret_midnight_mirror` | ??? 午夜镜像 | fun | 🟢 hidden: mirror + night_owl |
-| E47 | `secret_zero_note_streak` | ??? 沉默十胜 | fun | 🟢 10 wins no notes |
-| E48 | `secret_achievement_hunter` | ??? 猎猎猎 | fun | 🟢 unlock hunter while unlocking 5th |
+| E45 | `secret_all_dash` | ??? 全劃線 | fun | 🟢 hidden: notes only "———" |
+| E46 | `secret_midnight_mirror` | ??? 午夜鏡像 | fun | 🟢 hidden: mirror + night_owl |
+| E47 | `secret_zero_note_streak` | ??? 沉默十勝 | fun | 🟢 10 wins no notes |
+| E48 | `secret_achievement_hunter` | ??? 獵獵獵 | fun | 🟢 unlock hunter while unlocking 5th |
 | E49 | `palindrome_session` | 回文场次 | fun | 🟢 session W-L palindrome ≥6 games |
 | E50 | `chaos_session` | 混沌之夜 | fun | 🟢 8 players 8 decks 8 matches no repeat |
 

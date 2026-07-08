@@ -96,15 +96,64 @@ const iconFor = (category: string) => {
   }
 }
 
-const tierFor = (id: string) => {
-  if (id.startsWith('secret_') || id === 'onboarding_graduate' || id === 'profile_complete') return [1]
+const tierFor = (id: string, category: string) => {
+  if (
+    id.startsWith('secret_') ||
+    id === 'onboarding_graduate' ||
+    id === 'profile_complete' ||
+    id === 'share_first' ||
+    id === 'exactly_fifty' ||
+    id === 'leap_day' ||
+    id === 'new_year_first'
+  ) {
+    return [1]
+  }
+  if (id === 'match_100' || id === 'match_500' || id === 'match_777' || id === 'match_1000') return [1]
+  if (id === 'win_100') return [100]
+  if (id === 'win_250') return [250]
+  if (id === 'weighted_progress_50') return [50]
+  if (id === 'weighted_progress_100') return [100]
   if (id.startsWith('event_') || id.startsWith('league_') || id === 'bo3_ready') return [1, 3, 5]
-  if (id.endsWith('_gold') || id.includes('hunter_')) return [1, 5, 15]
-  return [1, 3, 8, 15, 25]
+  if (id.endsWith('_gold') || id === 'hunter_75' || id === 'completionist_90') return [12, 30, 60]
+  if (id === 'streak_legend') return [8, 12, 16, 20, 25]
+  if (id === 'tier_maxer') return [5, 12, 25, 45, 70]
+  if (id === 'tier_triple' || id === 'skill_trifecta') return [3, 5, 8, 12, 18]
+  if (id.includes('day') || id.includes('regular') || id.includes('sign')) return [8, 20, 45, 90, 180]
+  if (id.includes('session') && !id.includes('opener') && !id.includes('closer')) return [8, 20, 45, 80, 150]
+  if (id.includes('win') && !id.includes('rate') && !id.includes('learn')) return [15, 40, 80, 150, 250]
+  if (id.includes('loss') || id.includes('learn')) return [20, 50, 100, 200, 400]
+  if (id.includes('rival') || id.includes('nemesis') || id.includes('friend') || id.includes('opponent')) {
+    return [6, 15, 30, 50, 75]
+  }
+  if (id.includes('deck') || id.includes('leader') || id.includes('set') || id.includes('meta') || id.includes('pie')) {
+    return [4, 10, 22, 38, 60]
+  }
+  if (id.includes('note') || id.includes('gg_')) return [8, 25, 55, 100, 180]
+  if (id.includes('edit') || id.includes('history')) return [5, 15, 40, 80, 150]
+  if (id.includes('streak')) return [4, 7, 11, 16, 22]
+  if (id.includes('import') || id.includes('sync') || id.includes('cloud')) return [1, 5, 15, 40, 100]
+  if (id.includes('table') || id.includes('slot')) return [10, 25, 50, 80, 120]
+
+  switch (category) {
+    case 'milestone':
+      return [20, 50, 100, 200, 400]
+    case 'streak':
+      return [4, 8, 12, 18, 25]
+    case 'skill':
+      return [5, 15, 35, 65, 110]
+    case 'meta':
+      return [4, 10, 22, 38, 60]
+    case 'social':
+      return [6, 15, 30, 50, 75]
+    case 'fun':
+      return [3, 10, 25, 50, 90]
+    default:
+      return [10, 30, 70, 140, 280]
+  }
 }
 
 const lines = rows.map((r) => {
-  const tiers = tierFor(r.id)
+  const tiers = tierFor(r.id, r.category)
   const kind = r.id.startsWith('secret_') || r.id.includes('event_') ? 'special' : 'grind'
   return `  { id: '${r.id}', category: '${r.category}', kind: '${kind}', ease: ${easeFor(r.category)}, icon: '${iconFor(r.category)}', titleZh: ${JSON.stringify(r.title)}, tiers: ${JSON.stringify(tiers)} },`
 })

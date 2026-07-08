@@ -9,6 +9,20 @@ const COLOR_HSL: Record<string, { h: number; s: number; l: number }> = {
   Yellow: { h: 45, s: 90, l: 54 },
 }
 
+/** High-contrast fills for pie slices and card accents on dark UI. */
+export const CHART_SLICE_PALETTE = [
+  'hsl(142 58% 48%)',
+  'hsl(271 62% 62%)',
+  'hsl(45 90% 56%)',
+  'hsl(215 76% 58%)',
+  'hsl(4 72% 56%)',
+  'hsl(188 62% 46%)',
+  'hsl(28 82% 54%)',
+  'hsl(320 58% 58%)',
+  'hsl(160 45% 42%)',
+  'hsl(250 48% 68%)',
+] as const
+
 function hslString(color: string): string {
   const tone = COLOR_HSL[color] ?? COLOR_HSL.Blue
   return `hsl(${tone.h} ${tone.s}% ${tone.l}%)`
@@ -23,6 +37,21 @@ export function blendDeckColors(colors: string[]): string {
   return hslString(unique[0] ?? 'Blue')
 }
 
+/** Indexed palette fill — distinct on dark backgrounds; links pie slice to card accent. */
+export function getChartSliceFill(index: number): string {
+  return CHART_SLICE_PALETTE[index % CHART_SLICE_PALETTE.length]
+}
+
+/** Deck identity color for dots / labels; lifts very dark tones for visibility. */
+export function getDeckIdentityFill(slice: DeckUsageSlice, index: number, slices: DeckUsageSlice[]): string {
+  const base = blendDeckColors(slice.colors)
+  const primary = slice.colors[0] ?? 'Blue'
+  if (primary !== 'Black' && !slice.colors.includes('Black')) {
+    return getDeckSliceFill(slice, index, slices)
+  }
+  return `color-mix(in srgb, ${base} 55%, ${getChartSliceFill(index)} 45%)`
+}
+
 /** Distinct fill per deck slice; dual-color decks use a 50/50 blend. */
 export function getDeckSliceFill(slice: DeckUsageSlice, index: number, slices: DeckUsageSlice[]): string {
   const base = blendDeckColors(slice.colors)
@@ -34,8 +63,9 @@ export function getDeckSliceFill(slice: DeckUsageSlice, index: number, slices: D
       .filter((item) => item.colors.length === 1 && (item.colors[0] ?? 'Blue') === primary).length
     const tone = COLOR_HSL[primary] ?? COLOR_HSL.Blue
     const lightnessOffsets = [0, -10, 12, -18, 20]
-    const l = Math.min(88, Math.max(16, tone.l + lightnessOffsets[sameBefore % lightnessOffsets.length]))
-    return `hsl(${tone.h} ${tone.s}% ${l}%)`
+    let l = Math.min(88, Math.max(16, tone.l + lightnessOffsets[sameBefore % lightnessOffsets.length]))
+    if (primary === 'Black') l = Math.max(l, 42)
+    return `hsl(${tone.h} ${Math.max(tone.s, 18)}% ${l}%)`
   }
 
   const sameBlendBefore = slices

@@ -125,7 +125,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Wins between midnight and 4 AM.',
       ja: '0–4時の勝利。',
     },
-    tiers: makeTiers([1, 3, 8, 15, 25], (n) => ({
+    tiers: makeTiers([3, 8, 20, 40, 70], (n) => ({
       'zh-Hant': `${n} 勝`,
       'zh-Hans': `${n} 胜`,
       en: `${n} wins`,
@@ -160,7 +160,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '白之精通', 'zh-Hans': '白之精通', en: 'White Mastery', ja: '白の精通' },
     description: { 'zh-Hant': '以白色為主色勝場。', 'zh-Hans': '以白色为主色胜场。', en: 'Wins with White primary.', ja: '白メインの勝利。' },
-    tiers: makeTiers([3, 8, 15, 25, 40], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
   },
   {
     id: 'blue_mastery',
@@ -170,7 +170,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '藍之精通', 'zh-Hans': '蓝之精通', en: 'Blue Mastery', ja: '青の精通' },
     description: { 'zh-Hant': '以藍色為主色勝場。', 'zh-Hans': '以蓝色为主色胜场。', en: 'Wins with Blue primary.', ja: '青メインの勝利。' },
-    tiers: makeTiers([3, 8, 15, 25, 40], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
   },
   {
     id: 'red_mastery',
@@ -180,7 +180,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '紅色快攻', 'zh-Hans': '红色快攻', en: 'Red Rush', ja: '赤の快攻' },
     description: { 'zh-Hant': '以紅色為主色勝場。', 'zh-Hans': '以红色为主色胜场。', en: 'Wins with Red primary.', ja: '赤メインの勝利。' },
-    tiers: makeTiers([3, 8, 15, 25, 40], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
   },
   {
     id: 'green_mastery',
@@ -190,7 +190,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '綠色中速', 'zh-Hans': '绿色中速', en: 'Green Midrange', ja: '緑の中速' },
     description: { 'zh-Hant': '以綠色為主色勝場。', 'zh-Hans': '以绿色为主色胜场。', en: 'Wins with Green primary.', ja: '緑メインの勝利。' },
-    tiers: makeTiers([3, 8, 15, 25, 40], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
   },
   {
     id: 'purple_mastery',
@@ -200,7 +200,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '紫色試手', 'zh-Hans': '紫色试手', en: 'Purple Pilot', ja: '紫の試手' },
     description: { 'zh-Hant': '以紫色為主色勝場。', 'zh-Hans': '以紫色为主色胜场。', en: 'Wins with Purple primary.', ja: '紫メインの勝利。' },
-    tiers: makeTiers([3, 8, 15, 25, 40], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
   },
   {
     id: 'win_or_learn',
