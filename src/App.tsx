@@ -9,7 +9,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { StatsPage } from '@/pages/StatsPage'
 import { Button } from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
-import { formatAchievementToast } from '@/components/achievements/AchievementsWall'
+import { formatAchievementToast } from '@/lib/achievements'
 import { applyThemeSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
@@ -97,10 +97,10 @@ function AchievementToastBridge() {
 
   useEffect(() => {
     if (!enabled || !pending.length) return
-    for (const achievementId of pending) {
+    for (const unlock of pending) {
       showToast({
         type: 'success',
-        message: `${t('achievements.unlocked')}: ${formatAchievementToast(achievementId, language)}`,
+        message: `${t('achievements.unlocked')}: ${formatAchievementToast(unlock.achievementId, unlock.level, language)}`,
         durationMs: 6500,
       })
     }

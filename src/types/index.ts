@@ -209,6 +209,7 @@ export interface ImportSummary {
 export interface AchievementUnlock {
   achievementId: string
   playerId: string
+  level: number
   unlockedAt: string
 }
 

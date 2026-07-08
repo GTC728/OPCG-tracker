@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.1.0 - 2026-07-08
+
+### New
+
+- **Profile hub layout**: horizontal preview cards (overview, trends, decks, matches, achievements, rivals) — tap for full detail in bottom sheets.
+- **Tiered achievements**: grouped levels (e.g. Veteran Lv.1–7 for 1→500 matches); tap any badge for tier breakdown.
+- **Skill / fun achievements**: Color Spectrum (win with each primary color), Giant Slayer, Upset Alarm, Rainbow Session, Second Striker tiers, etc.
+- **SVG achievement icons** (`AchievementIcon`) — category-colored badges instead of emoji-only.
+
+### Changed
+
+- **Deck usage pie**: hue from leader color preference; same-hue decks distinguished by lightness + ring stroke; color-preference summary chips.
+- Schema v8: `AchievementUnlock.level` + legacy achievement ID migration.
+- Profile main page shows summaries + horizontal recent matches; details moved to sheets.
+
 ## V4.0.0 - 2026-07-07
 
 ### New

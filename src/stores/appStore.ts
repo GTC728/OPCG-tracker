@@ -9,7 +9,8 @@ import {
   pauseGroupCollabNotify,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
-import { evaluateNewAchievementUnlocks } from '@/lib/achievements'
+import { evaluateNewAchievementUnlocks, mergeAchievementUnlocks } from '@/lib/achievements'
+import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
 import { loadAppState, saveAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
@@ -31,7 +32,7 @@ import type {
 interface AppStore extends AppState {
   hydrated: boolean
   activeTab: TabId
-  pendingAchievementToasts: string[]
+  pendingAchievementToasts: AchievementUnlock[]
   hydrate: () => Promise<void>
   setActiveTab: (tab: TabId) => void
   replaceState: (state: AppState) => void
@@ -107,23 +108,23 @@ function toPersistedState(store: AppStore): AppState {
   }
 }
 
-function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state: AppState; unlockedIds: string[] } {
+function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state: AppState; fresh: AchievementUnlock[] } {
   const linkedId = state.settings.linkedPlayerId
   const targets = linkedId && playerIds.includes(linkedId) ? [linkedId] : playerIds
-  const unlockedIds: string[] = []
+  const fresh: AchievementUnlock[] = []
   let nextState = state
 
   for (const playerId of targets) {
-    const fresh = evaluateNewAchievementUnlocks(nextState, playerId)
-    if (!fresh.length) continue
-    unlockedIds.push(...fresh.map((item) => item.achievementId))
+    const earned = evaluateNewAchievementUnlocks(nextState, playerId)
+    if (!earned.length) continue
+    fresh.push(...earned)
     nextState = {
       ...nextState,
-      achievementUnlocks: [...nextState.achievementUnlocks, ...fresh],
+      achievementUnlocks: mergeAchievementUnlocks(nextState.achievementUnlocks, earned),
     }
   }
 
-  return { state: nextState, unlockedIds }
+  return { state: nextState, fresh }
 }
 
 let lastPersistedAppState: AppState | null = null
@@ -794,7 +795,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ...persisted,
       pendingAchievementToasts: [
         ...get().pendingAchievementToasts,
-        ...achievementResult.unlockedIds,
+        ...achievementResult.fresh,
       ],
     })
     return match

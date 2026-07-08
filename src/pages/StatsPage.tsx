@@ -1,23 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AchievementsWall } from '@/components/achievements/AchievementsWall'
+import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
 import { PlayerShareCard, SessionShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
-import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
-import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
-import { MatchListItem } from '@/components/match/MatchResultRow'
-import { getPlayerAchievementProgress } from '@/lib/achievements'
 import { getLinkedPlayer } from '@/lib/profileClaim'
 import { useI18n } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 import {
   buildDashboardStats,
   buildDeckStats,
-  buildDeckUsageDistribution,
   buildFirstSecondStats,
-  buildHeadToHeadStats,
   buildInsightMessages,
   buildMatchupStats,
   buildMetaSummaryStats,
@@ -25,8 +19,6 @@ import {
   buildPlayerMatchupStats,
   buildPlayerStats,
   buildRecentForm,
-  buildWeeklyWinRateStats,
-  buildWinStreakStats,
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
@@ -934,11 +926,6 @@ function PlayerProfileView({
   const playerMatches = getCompletedMatches(matches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
-  const stat = buildPlayerStats(players, matches).find((item) => item.id === player.id) ?? null
-  const streak = buildWinStreakStats(player.id, matches)
-  const deckUsage = buildDeckUsageDistribution(player.id, decks, matches, language)
-  const weeklyStats = buildWeeklyWinRateStats(player.id, allMatches)
-  const achievements = getPlayerAchievementProgress(player.id, achievementUnlocks)
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
@@ -946,84 +933,41 @@ function PlayerProfileView({
   const relevantMatchups = buildMatchupStats(decks, matches, language).filter(
     (matchup) => playerDeckIds.has(matchup.deckAId) || playerDeckIds.has(matchup.deckBId),
   )
-  const headToHead = buildHeadToHeadStats(player.id, players, matches)
-  const recentMatches = [...playerMatches]
-    .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
-    .slice(0, 8)
 
   return (
-    <div className="space-y-4">
-      <ProfileHeader
-        title={player.name}
-        subtitle={`${t('stats.playerProfile')} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
-        onBack={onBack}
-        onShare={() => setShareOpen(true)}
-      />
-      <MiniStatGrid stat={stat} />
-      <WinStreakSummary
-        currentStreak={streak.currentStreak}
-        longestStreak={streak.longestStreak}
-        currentType={streak.currentType}
-      />
-      <DeckUsagePieChart slices={deckUsage} title={t('stats.deckUsagePie')} />
-      <WeeklyWinRateChart stats={weeklyStats} title={t('stats.weeklyWinRate')} />
-      <RecentFormSection recentForm={buildRecentForm(matches, player.id)} />
-      <AchievementsWall achievements={achievements} />
-      <section className="space-y-3">
-        <h2 className={uiSectionTitle}>{t('stats.recentMatches')}</h2>
-        {recentMatches.length ? (
-          recentMatches.map((match) => (
-            <MatchListItem
-              key={match.id}
-              match={match}
-              players={players}
-              decks={decks}
-              perspectivePlayerId={player.id}
-              showTurnOrder
-              showWinLossBadge
-              showResultColors={false}
-            />
-          ))
-        ) : (
-          <EmptyState>{t('stats.noRecentMatches')}</EmptyState>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">使用牌組</h2>
-        {deckStats.length ? (
-          deckStats.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="block w-full text-left"
-              onClick={() => onOpenDeck(item.deckId)}
-            >
-              <StatRow
-                stat={{ ...item, id: item.deckId, name: item.deckName }}
-                deck={decks.find((deck) => deck.id === item.deckId)}
-              />
-            </button>
-          ))
-        ) : (
-          <EmptyState>此玩家未有牌組數據。</EmptyState>
-        )}
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">玩家對位</h2>
-        {headToHead.length ? (
-          headToHead.map((item) => (
-            <StatRow key={item.id} stat={item} onSelect={() => onOpenPlayer(item.opponentId)} />
-          ))
-        ) : (
-          <EmptyState>{t('stats.noHeadToHead')}</EmptyState>
-        )}
-      </section>
-      <FirstSecondSection stats={buildFirstSecondStats(playerMatches)} />
-      <ProfileMatchupSection
-        title="對位分析"
-        matchups={relevantMatchups}
+    <>
+      <PlayerProfileHub
+        player={player}
+        matches={matches}
+        allMatches={allMatches}
+        players={players}
         decks={decks}
-        playerDeckIds={playerDeckIds}
+        language={language}
+        achievementUnlocks={achievementUnlocks}
+        header={
+          <ProfileHeader
+            title={player.name}
+            subtitle={`${t('stats.playerProfile')} · ${playerMatches.length} ${t('stats.matchesUnit')}`}
+            onBack={onBack}
+            onShare={() => setShareOpen(true)}
+          />
+        }
+        onOpenDeck={onOpenDeck}
+        renderFirstSecond={(scopeMatches) => <FirstSecondSection stats={buildFirstSecondStats(scopeMatches)} />}
+        renderMatchups={
+          <ProfileMatchupSection
+            title="對位分析"
+            matchups={relevantMatchups}
+            decks={decks}
+            playerDeckIds={playerDeckIds}
+          />
+        }
+        renderDeckRow={(stat, deck) => (
+          <StatRow stat={{ ...stat, id: stat.deckId, name: stat.deckName }} deck={deck} />
+        )}
+        renderHeadToHeadRow={(stat) => (
+          <StatRow stat={stat} onSelect={() => onOpenPlayer(stat.opponentId)} />
+        )}
       />
       <ShareExportSheet
         open={shareOpen}
@@ -1033,7 +977,7 @@ function PlayerProfileView({
       >
         <PlayerShareCard player={player} matches={matches} decks={decks} />
       </ShareExportSheet>
-    </div>
+    </>
   )
 }
 
