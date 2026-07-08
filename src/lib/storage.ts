@@ -1,5 +1,6 @@
 import { getLocaleAliasesForLeader } from '@/data/leaderLocaleAliases'
 import { createDefaultAppState, SCHEMA_VERSION, STORAGE_KEY } from '@/lib/constants'
+import { migrateLegacyUnlocks } from '@/lib/achievements'
 import {
   buildDefaultVariantsFromDecks,
   buildLeadersFromDecks,
@@ -108,6 +109,19 @@ const migrations: Record<number, Migration> = {
         statsDefaultScope: settings.statsDefaultScope ?? 'profile',
         achievementNotifications: settings.achievementNotifications ?? true,
       },
+    }
+  },
+  8: (state) => {
+    const unlocks = Array.isArray(state.achievementUnlocks) ? state.achievementUnlocks : []
+    return {
+      ...state,
+      schemaVersion: 8,
+      achievementUnlocks: migrateLegacyUnlocks(
+        unlocks.map((item) => ({
+          ...item,
+          level: typeof item.level === 'number' ? item.level : 1,
+        })),
+      ),
     }
   },
 }

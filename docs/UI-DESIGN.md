@@ -98,11 +98,16 @@ Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead o
 - Trigger: Profile header「輸出」、Stats my-profile「場次卡」.
 - PNG via `html-to-image`; Web Share API when available.
 
-### Personal profile UX
+### Personal profile UX (V4.1)
 
-- Settings → **個人玩家**：create-or-link sheet with name confirmation.
-- Device claim stored on `Player.profileClaimDeviceId`; settings mirror via `linkedPlayerId`.
-- Stats default scope configurable (`profile` / `session` / `all`).
+- **Hub page**: horizontal `ProfilePreviewCard` rail — each section shows 1–2 metrics; tap opens `BottomSheet` with full content.
+- **Never stack** all charts + lists on one scroll on the hub; keep hub ≤ header + rail + achievements preview + 4 recent matches.
+- **Achievements**: one card per achievement family showing `Lv.X/Y`; detail sheet lists all tiers.
+
+### Achievement icons (V4.1)
+
+- Use `AchievementIcon` SVG badges (`src/components/achievements/AchievementIcon.tsx`) — category tint, not emoji-only.
+- Emoji acceptable as fallback in toasts only.
 
 ---
 

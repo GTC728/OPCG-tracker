@@ -3,8 +3,8 @@ import { SEEDED_LEADER_DECKS } from '@/data/leaderDecks'
 import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/dataModel'
 import type { AppState, Deck } from '@/types'
 
-export const SCHEMA_VERSION = 7
-export const APP_VERSION = '4.0.0'
+export const SCHEMA_VERSION = 8
+export const APP_VERSION = '4.1.0'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
 export const STORAGE_KEY = 'opcg-tracker-state'
 

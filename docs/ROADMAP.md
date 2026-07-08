@@ -31,7 +31,7 @@
 | V3.9 | Bottom Chrome + Listed Players | 完成 | 統一底欄、玩家可見性規則、歷史自訂日期篩選 |
 | V3.10 | Group Sync + Stats + i18n | 完成 | 強制群組同步、離線 queue、繁簡中、對手勝率、heatmap 放大 |
 | V3.10.1 | Session Merge | 完成 | 場次合併、名單/桌數移轉、群組同步 |
-| **V4.0** | **Personal System & UI** | **完成** | 個人玩家連結（A+C 混合驗證）、連勝/牌組 pie/週勝率線圖、分享卡 PNG 輸出、成就系統、霧面層次 UI、主題/強調色/密度自訂、1st/2nd 先後攻 badge |
+| **V4.1** | **Profile UX & Tiered Achievements** | **完成** | Profile 橫向摘要卡 + 詳情 sheet、牌組 pie 同色分離、分級成就系統 |
 | V5.0 | Event / League Foundation | 規劃中 | Event / League 資料結構、與現有玩家/Leader/Match 串接、草稿建立 |
 | V5.1 | Store Tournament | 規劃中 | 16 人瑞士輪、抽籤 pairing、結果輸入、standings、event report |
 | V5.2 | League Ruleset | 規劃中 | Leader 計分賽、Top Tier 規則、ban/restriction、從既有 matches 計算 leaderboard |

@@ -1,50 +1,63 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { ColorDots } from '@/components/deck/ColorDots'
-import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
+import { getDeckSliceFill, summarizeColorPreference } from '@/lib/deckChartColors'
+import { uiGlassCard, uiLabel, uiSectionTitle } from '@/lib/uiSurface'
+import { useI18n } from '@/lib/i18n'
 import type { DeckUsageSlice } from '@/lib/stats'
 
-const colorHex: Record<string, string> = {
-  Red: '#ef4444',
-  Green: '#22c55e',
-  Blue: '#3b82f6',
-  Purple: '#a855f7',
-  Black: '#334155',
-  Yellow: '#eab308',
-}
-
-function sliceColor(colors: string[], index: number): string {
-  const primary = colors[0]
-  if (primary && colorHex[primary]) return colorHex[primary]
-  const fallback = ['#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4']
-  return fallback[index % fallback.length]
-}
-
-export function DeckUsagePieChart({ slices, title }: { slices: DeckUsageSlice[]; title: string }) {
+export function DeckUsagePieChart({
+  slices,
+  title,
+  compact = false,
+}: {
+  slices: DeckUsageSlice[]
+  title: string
+  compact?: boolean
+}) {
+  const { t } = useI18n()
   if (!slices.length) return null
 
+  const colorPref = summarizeColorPreference(slices)
   const chartData = slices.map((slice, index) => ({
     name: slice.deckName,
     value: slice.count,
-    fill: sliceColor(slice.colors, index),
+    fill: getDeckSliceFill(slice, index, slices),
+    deckId: slice.deckId,
   }))
 
   return (
-    <section className={[uiGlassCard, 'space-y-3 p-4'].join(' ')}>
+    <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
       <h2 className={uiSectionTitle}>{title}</h2>
-      <div className="h-48">
+
+      {!compact && colorPref.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
+          {colorPref.map((item) => (
+            <span
+              key={item.color}
+              className="inline-flex items-center gap-1.5 rounded-md bg-surface/50 px-2 py-1 text-[10px] ring-1 ring-white/[0.06]"
+            >
+              <ColorDots colors={[item.color]} />
+              <span className="text-text-secondary">{Math.round(item.pct * 100)}%</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className={compact ? 'h-36' : 'h-48'}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               dataKey="value"
               nameKey="name"
-              innerRadius={42}
-              outerRadius={68}
+              innerRadius={compact ? 34 : 42}
+              outerRadius={compact ? 54 : 68}
               paddingAngle={2}
-              stroke="transparent"
+              stroke="color-mix(in srgb, var(--color-surface) 40%, transparent)"
+              strokeWidth={2}
             >
-              {chartData.map((entry) => (
-                <Cell key={entry.name} fill={entry.fill} />
+              {chartData.map((entry, index) => (
+                <Cell key={entry.deckId} fill={getDeckSliceFill(slices[index], index, slices)} />
               ))}
             </Pie>
             <Tooltip
@@ -52,10 +65,7 @@ export function DeckUsagePieChart({ slices, title }: { slices: DeckUsageSlice[];
                 const numeric = typeof value === 'number' ? value : 0
                 const total = slices.reduce((sum, slice) => sum + slice.count, 0)
                 const payload = item?.payload as { name?: string } | undefined
-                return [
-                  `${numeric} 場 (${Math.round((numeric / total) * 100)}%)`,
-                  payload?.name ?? '',
-                ]
+                return [`${numeric} (${Math.round((numeric / total) * 100)}%)`, payload?.name ?? '']
               }}
               contentStyle={{
                 background: 'color-mix(in srgb, var(--color-surface-elevated) 92%, transparent)',
@@ -67,23 +77,25 @@ export function DeckUsagePieChart({ slices, title }: { slices: DeckUsageSlice[];
           </PieChart>
         </ResponsiveContainer>
       </div>
+
       <ul className="space-y-2">
         {slices.map((slice, index) => (
           <li key={slice.deckId} className="flex items-center justify-between gap-2 text-sm">
             <span className="flex min-w-0 items-center gap-2">
               <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ background: sliceColor(slice.colors, index) }}
+                className="size-3 shrink-0 rounded-full ring-2 ring-white/20"
+                style={{ background: getDeckSliceFill(slice, index, slices) }}
               />
               <ColorDots colors={slice.colors} />
-              <span className="truncate">{slice.deckName}</span>
+              <span className="truncate font-medium">{slice.deckName}</span>
             </span>
             <span className="shrink-0 tabular-nums text-text-secondary">
-              {Math.round(slice.percentage * 100)}%
+              {slice.count} · {Math.round(slice.percentage * 100)}%
             </span>
           </li>
         ))}
       </ul>
+      <p className={uiLabel}>{t('stats.deckColorHint')}</p>
     </section>
   )
 }
