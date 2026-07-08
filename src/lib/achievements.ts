@@ -1106,6 +1106,31 @@ export interface AchievementProgress {
   globalRate: number
 }
 
+export interface AchievementSummary {
+  familiesUnlocked: number
+  totalFamilies: number
+  familyRate: number
+  tiersEarned: number
+  totalTiers: number
+  tierRate: number
+}
+
+/** Family unlock count vs tier-weighted progress — avoids treating Lv.1/5 as a full achievement. */
+export function computeAchievementSummary(achievements: AchievementProgress[]): AchievementSummary {
+  const totalFamilies = achievements.length
+  const familiesUnlocked = achievements.filter((item) => item.currentLevel > 0).length
+  const tiersEarned = achievements.reduce((sum, item) => sum + item.currentLevel, 0)
+  const totalTiers = achievements.reduce((sum, item) => sum + item.maxLevel, 0)
+  return {
+    familiesUnlocked,
+    totalFamilies,
+    familyRate: totalFamilies ? Math.round((familiesUnlocked / totalFamilies) * 1000) / 10 : 0,
+    tiersEarned,
+    totalTiers,
+    tierRate: totalTiers ? Math.round((tiersEarned / totalTiers) * 1000) / 10 : 0,
+  }
+}
+
 export function getPlayerAchievementProgress(
   playerId: string,
   players: Player[],

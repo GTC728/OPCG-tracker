@@ -112,8 +112,6 @@ function AssignmentPanelBody({
   onSelectAssignment,
   onClearAssignment,
   recentDeckLimit,
-  showMoreDecks,
-  onShowMoreDecks,
   compact = false,
 }: {
   sessionId: string
@@ -125,8 +123,6 @@ function AssignmentPanelBody({
   onSelectAssignment: (assignment: PendingTableAssignment | null) => void
   onClearAssignment: () => void
   recentDeckLimit: number
-  showMoreDecks: boolean
-  onShowMoreDecks: () => void
   compact?: boolean
 }) {
   const { t } = useI18n()
@@ -247,11 +243,6 @@ function AssignmentPanelBody({
           </p>
         )}
       </div>
-      {showMoreDecks ? (
-        <button type="button" className="px-2.5 text-[9px] text-brand-400 outline-none" onClick={onShowMoreDecks}>
-          {t('assignment.showMoreDecks')}
-        </button>
-      ) : null}
     </div>
   ) : (
     <div className={deckZoneActive ? zoneHighlightClass : undefined}>
@@ -281,11 +272,6 @@ function AssignmentPanelBody({
           </p>
         )}
       </div>
-      {showMoreDecks ? (
-        <button type="button" className="mt-0.5 text-[9px] text-brand-400 outline-none" onClick={onShowMoreDecks}>
-          {t('assignment.showMoreDecks')}
-        </button>
-      ) : null}
     </div>
   )
 
@@ -343,26 +329,12 @@ export function AssignmentDock({
 }) {
   const { t } = useI18n()
   const [expandedInternal, setExpandedInternal] = useState(variant === 'drawer')
-  const [recentExpanded, setRecentExpanded] = useState(false)
-
   const expanded = expandedProp ?? expandedInternal
   const setExpanded = onExpandedChange ?? setExpandedInternal
 
   const selectablePlayers = useMemo(() => players.filter(isSelectablePlayer), [players])
-  const activeMatches = useAppStore((store) => store.activeMatches)
 
-  const recentDeckLimit = variant === 'drawer' && !recentExpanded ? 8 : 12
-  const hasMoreRecentDecks =
-    variant === 'drawer' &&
-    !recentExpanded &&
-    getAssignmentRecentDeckIds(
-      matches,
-      activeMatches,
-      decks,
-      sessionId,
-      players.map((player) => player.id),
-      12,
-    ).length > 8
+  const recentDeckLimit = 12
 
   const pendingLabel = pendingAssignment
     ? pendingAssignment.kind === 'player'
@@ -428,8 +400,6 @@ export function AssignmentDock({
               onSelectAssignment={onSelectAssignment}
               onClearAssignment={onClearAssignment}
               recentDeckLimit={recentDeckLimit}
-              showMoreDecks={hasMoreRecentDecks}
-              onShowMoreDecks={() => setRecentExpanded(true)}
               compact
             />
           </div>
@@ -494,8 +464,6 @@ export function AssignmentDock({
         onSelectAssignment={onSelectAssignment}
         onClearAssignment={onClearAssignment}
         recentDeckLimit={recentDeckLimit}
-        showMoreDecks={false}
-        onShowMoreDecks={() => setRecentExpanded(true)}
       />
     </section>
   )

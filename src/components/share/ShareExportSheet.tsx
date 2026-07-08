@@ -4,10 +4,26 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { TurnOrderBadge, WinLossBadge } from '@/components/match/TurnOrderBadge'
 import { shareElementAsPng } from '@/lib/shareExport'
-import { getCompletedMatches, formatPercent, buildPlayerStats } from '@/lib/stats'
-import { buildWinStreakStats } from '@/lib/stats'
+import {
+  getCompletedMatches,
+  formatPercent,
+  buildPlayerStats,
+  buildWinStreakStats,
+  buildHeadToHeadStats,
+  buildFirstSecondStats,
+  buildRecentForm,
+  buildPlayerDeckStats,
+  buildDashboardStats,
+  buildMetaSummaryStats,
+} from '@/lib/stats'
+import {
+  computeGlobalAchievementRates,
+  computeAchievementSummary,
+  getPlayerAchievementProgress,
+} from '@/lib/achievements'
 import { useI18n } from '@/lib/i18n'
-import type { Deck, Match, Player, Session } from '@/types'
+import { formatDateTime } from '@/lib/utils'
+import type { AchievementUnlock, Deck, Language, Match, Player, Session } from '@/types'
 
 function ShareCardFrame({ children, title, subtitle }: { children: ReactNode; title: string; subtitle: string }) {
   return (
@@ -22,36 +38,229 @@ function ShareCardFrame({ children, title, subtitle }: { children: ReactNode; ti
   )
 }
 
+function ShareStatGrid({ items }: { items: Array<{ label: string; value: string }> }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 text-center">
+      {items.map((item) => (
+        <div key={item.label} className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
+          <p className="text-[10px] text-text-secondary">{item.label}</p>
+          <p className="text-sm font-bold">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ShareRowList({ title, rows }: { title: string; rows: Array<{ left: string; right: string }> }) {
+  if (!rows.length) return null
+  return (
+    <section>
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">{title}</p>
+      <ol className="space-y-1">
+        {rows.map((row, index) => (
+          <li
+            key={`${row.left}-${index}`}
+            className="flex items-center justify-between rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs"
+          >
+            <span className="truncate font-medium">{row.left}</span>
+            <span className="shrink-0 pl-2 font-semibold text-brand-400">{row.right}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 export function PlayerShareCard({
   player,
   matches,
+  players = [],
+  decks = [],
+  language = 'zh-Hant',
+  achievementUnlocks = [],
 }: {
   player: Player
   matches: Match[]
+  players?: Player[]
   decks?: Deck[]
+  language?: Language
+  achievementUnlocks?: AchievementUnlock[]
 }) {
-  const stat = buildPlayerStats([player], matches).find((item) => item.id === player.id)
+  const playerMatches = getCompletedMatches(matches).filter(
+    (match) => match.player1Id === player.id || match.player2Id === player.id,
+  )
+  const stat = buildPlayerStats(players.length ? players : [player], matches).find((item) => item.id === player.id)
   const streak = buildWinStreakStats(player.id, matches)
+  const headToHead = buildHeadToHeadStats(player.id, players.length ? players : [player], matches)
+  const topRival = headToHead[0]
+  const deckStats = buildPlayerDeckStats(players.length ? players : [player], decks, matches, language).filter(
+    (item) => item.playerId === player.id,
+  )
+  const topDeck = deckStats[0]
+  const firstSecond = buildFirstSecondStats(playerMatches)
+  const recent5 = buildRecentForm(matches, player.id).find((item) => item.label.includes('5'))
+  const globalRates = players.length
+    ? computeGlobalAchievementRates(players, decks, matches)
+    : new Map()
+  const achievements = getPlayerAchievementProgress(
+    player.id,
+    players.length ? players : [player],
+    decks,
+    matches,
+    achievementUnlocks,
+    globalRates,
+  )
+  const achievementSummary = computeAchievementSummary(achievements)
 
   return (
     <ShareCardFrame
       title={player.name}
-      subtitle={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${formatPercent(stat?.winRate ?? null)}`}
+      subtitle={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${formatPercent(stat?.winRate ?? null)} · ${stat?.total ?? 0} 場`}
     >
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
-          <p className="text-[10px] text-text-secondary">連勝</p>
-          <p className="text-lg font-bold">{streak.currentStreak || '—'}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
-          <p className="text-[10px] text-text-secondary">最高</p>
-          <p className="text-lg font-bold">{streak.longestStreak || '—'}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--ui-border)] bg-[var(--color-surface)] p-2">
-          <p className="text-[10px] text-text-secondary">場數</p>
-          <p className="text-lg font-bold">{stat?.total ?? 0}</p>
-        </div>
-      </div>
+      <ShareStatGrid
+        items={[
+          { label: '勝率', value: formatPercent(stat?.winRate ?? null) },
+          { label: '連勝', value: streak.currentStreak > 0 ? String(streak.currentStreak) : '—' },
+          { label: '最高連勝', value: streak.longestStreak > 0 ? String(streak.longestStreak) : '—' },
+        ]}
+      />
+      <ShareStatGrid
+        items={[
+          {
+            label: '先攻',
+            value: formatPercent(firstSecond.find((item) => item.label === '先攻')?.winRate ?? null),
+          },
+          {
+            label: '後攻',
+            value: formatPercent(firstSecond.find((item) => item.label === '後攻')?.winRate ?? null),
+          },
+          {
+            label: '近5場',
+            value: recent5?.total
+              ? `${recent5.wins}W · ${formatPercent(recent5.winRate)}`
+              : '—',
+          },
+        ]}
+      />
+      <ShareRowList
+        title="常用牌組"
+        rows={deckStats.slice(0, 3).map((item) => ({
+          left: item.deckName,
+          right: `${item.total}場 · ${formatPercent(item.winRate)}`,
+        }))}
+      />
+      <ShareRowList
+        title="對手戰績"
+        rows={headToHead.slice(0, 4).map((item) => ({
+          left: item.name,
+          right: `${item.wins}W-${item.losses}L`,
+        }))}
+      />
+      <ShareStatGrid
+        items={[
+          {
+            label: '成就項目',
+            value: `${achievementSummary.familiesUnlocked}/${achievementSummary.totalFamilies}`,
+          },
+          {
+            label: '階段進度',
+            value: `${achievementSummary.tierRate}%`,
+          },
+          {
+            label: '頭號對手',
+            value: topRival ? `${topRival.wins}W-${topRival.losses}L` : '—',
+          },
+        ]}
+      />
+      {topDeck ? (
+        <p className="text-center text-[10px] text-text-secondary">
+          主牌組 {topDeck.deckName} · {Math.round((topDeck.total / Math.max(stat?.total ?? 1, 1)) * 100)}% 使用率
+        </p>
+      ) : null}
+    </ShareCardFrame>
+  )
+}
+
+export function SessionDashboardShareCard({
+  session,
+  players,
+  decks,
+  matches,
+  language = 'zh-Hant',
+}: {
+  session: Session
+  players: Player[]
+  decks: Deck[]
+  matches: Match[]
+  language?: Language
+}) {
+  const scoped = getCompletedMatches(matches).filter((match) => match.sessionId === session.id)
+  const dashboard = buildDashboardStats(players, decks, scoped, language)
+  const meta = buildMetaSummaryStats(scoped)
+  const leaderboard = buildPlayerStats(players, scoped)
+    .filter((item) => item.total > 0)
+    .sort((a, b) => {
+      if ((b.winRate ?? 0) !== (a.winRate ?? 0)) return (b.winRate ?? 0) - (a.winRate ?? 0)
+      return b.total - a.total
+    })
+    .slice(0, 6)
+  const deckStats = buildPlayerDeckStats(players, decks, scoped, language)
+    .reduce<Map<string, { name: string; total: number; wins: number }>>((map, item) => {
+      const current = map.get(item.deckId) ?? { name: item.deckName, total: 0, wins: 0 }
+      current.total += item.total
+      current.wins += item.wins
+      map.set(item.deckId, current)
+      return map
+    }, new Map())
+  const topDecks = [...deckStats.entries()]
+    .map(([id, value]) => ({ id, ...value, winRate: value.total ? value.wins / value.total : 0 }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 4)
+
+  return (
+    <ShareCardFrame
+      title={session.name}
+      subtitle={`${formatDateTime(session.startedAt)} · ${dashboard.totalMatches} 場完成`}
+    >
+      <ShareStatGrid
+        items={[
+          { label: '對局', value: String(dashboard.totalMatches) },
+          { label: '玩家', value: String(meta.uniquePlayers) },
+          { label: '牌組', value: String(meta.uniqueDecks) },
+        ]}
+      />
+      <ShareStatGrid
+        items={[
+          { label: '先攻勝率', value: formatPercent(dashboard.firstPlayerWinRate) },
+          {
+            label: 'MVP',
+            value: dashboard.topPlayer ? formatPercent(dashboard.topPlayer.winRate) : '—',
+          },
+          {
+            label: '熱門牌組',
+            value: dashboard.mostUsedDeck ? String(dashboard.mostUsedDeck.total) : '—',
+          },
+        ]}
+      />
+      <ShareRowList
+        title="玩家排行"
+        rows={leaderboard.map((item, index) => ({
+          left: `${index + 1}. ${item.name}`,
+          right: `${item.wins}W-${item.losses}L · ${formatPercent(item.winRate)}`,
+        }))}
+      />
+      <ShareRowList
+        title="牌組使用"
+        rows={topDecks.map((item) => ({
+          left: item.name,
+          right: `${item.total}場 · ${formatPercent(item.winRate)}`,
+        }))}
+      />
+      {dashboard.topPlayer ? (
+        <p className="text-center text-[10px] text-text-secondary">
+          MVP {dashboard.topPlayer.name} · {dashboard.topPlayer.wins}W-{dashboard.topPlayer.losses}L
+        </p>
+      ) : null}
     </ShareCardFrame>
   )
 }

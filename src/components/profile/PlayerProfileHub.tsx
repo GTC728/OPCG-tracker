@@ -7,6 +7,7 @@ import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerT
 import {
   computeGlobalAchievementRates,
   computePerPlayerAchievementRates,
+  computeAchievementSummary,
   getPlayerAchievementProgress,
 } from '@/lib/achievements'
 import type { AchievementPeerRate } from '@/lib/achievements'
@@ -141,12 +142,7 @@ export function PlayerProfileHub({
       rate: peerRateMap.get(p.id) ?? 0,
     }))
     .sort((a, b) => b.rate - a.rate)
-  const playerCompletionRate =
-    achievements.length > 0
-      ? Math.round(
-          (achievements.filter((a) => a.currentLevel > 0).length / achievements.length) * 1000,
-        ) / 10
-      : 0
+  const playerCompletionRate = computeAchievementSummary(achievements).tierRate
   const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
     (item) => item.playerId === player.id,
   )
