@@ -9,6 +9,15 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.3.4 - 2026-07-08
+
+### Changed
+
+- **App header**: restored「OPCG Tracker」branding with GitHub repo link.
+- **Profile layout**: each detail category (overview, trends, decks, rivals) is its own section with glass preview cards; unified `ProfileSection` headers.
+- **Cross-session profile data**: achievements, streaks, and recent matches always use all-time data regardless of stats scope toggle.
+- **Achievement section**: clearer meta line (項 + 階段進度) separate from「查看全部」link.
+
 ## V4.3.3 - 2026-07-08
 
 ### Changed
