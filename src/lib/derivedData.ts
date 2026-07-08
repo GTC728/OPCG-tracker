@@ -8,20 +8,24 @@ import {
 } from '@/lib/achievements'
 import type { BacklogExtras } from '@/lib/achievementsBacklogStats'
 import {
-  buildDashboardStats,
+  materializedDashboardStats,
+  materializedDeckStats,
+  materializedFirstSecondStats,
+  materializedMatchupStats,
+  materializedMetaSummary,
+  materializedPlayerDeckStats,
+  materializedPlayerMatchupStats,
+  materializedPlayerStats,
+  syncMaterializedStats,
+  resetMaterializedStats,
+} from '@/lib/materializedStats'
+import {
   buildDeckUsageDistribution,
-  buildFirstSecondStats,
   buildHeadToHeadStats,
   buildInsightMessages,
-  buildMetaSummaryStats,
-  buildMatchupStats,
-  buildPlayerDeckStats,
-  buildPlayerMatchupStats,
-  buildPlayerStats,
   buildRecentForm,
   buildWeeklyWinRateStats,
   buildWinStreakStats,
-  buildDeckStats,
   getCompletedMatches,
   type DashboardStats,
   type DeckUsageSlice,
@@ -153,17 +157,18 @@ export function getScopedStatsBundle(
   if (cached) return cached
 
   const index = getMatchIndex(slice)
+  syncMaterializedStats(index.completed)
   const scopedMatches = resolveScopedMatches(index, scope)
   const bundle: ScopedStatsBundle = {
     scopedMatches,
-    dashboard: buildDashboardStats(slice.players, slice.decks, scopedMatches, language),
-    playerStats: buildPlayerStats(slice.players, scopedMatches),
-    deckStats: buildDeckStats(slice.decks, scopedMatches, language),
-    playerDeckStats: buildPlayerDeckStats(slice.players, slice.decks, scopedMatches, language),
-    matchupStats: buildMatchupStats(slice.decks, scopedMatches, language),
-    playerMatchupStats: buildPlayerMatchupStats(slice.players, scopedMatches),
-    metaSummary: buildMetaSummaryStats(scopedMatches),
-    firstSecondStats: buildFirstSecondStats(scopedMatches),
+    dashboard: materializedDashboardStats(slice.players, slice.decks, scope, language),
+    playerStats: materializedPlayerStats(slice.players, scope),
+    deckStats: materializedDeckStats(slice.decks, scope, language),
+    playerDeckStats: materializedPlayerDeckStats(slice.players, slice.decks, scope, language),
+    matchupStats: materializedMatchupStats(slice.decks, scope, language),
+    playerMatchupStats: materializedPlayerMatchupStats(slice.players, scope),
+    metaSummary: materializedMetaSummary(scope),
+    firstSecondStats: materializedFirstSecondStats(scope),
     globalRecentForm: buildRecentForm(scopedMatches),
   }
   statsBundleCache.set(key, bundle)
@@ -219,8 +224,10 @@ export function getPlayerProfileBundle(
   if (cached) return cached
 
   const completed = getMatchIndex(slice).completed
+  syncMaterializedStats(completed)
+  const scope = { type: 'all' as const }
   const playerMatches = completed.filter((m) => m.player1Id === playerId || m.player2Id === playerId)
-  const stat = buildPlayerStats(slice.players, completed).find((item) => item.id === playerId) ?? null
+  const stat = materializedPlayerStats(slice.players, scope).find((item) => item.id === playerId) ?? null
   const deckUsage = buildDeckUsageDistribution(playerId, slice.decks, completed, language)
   const bundle: PlayerProfileBundle = {
     playerMatches,
@@ -229,7 +236,7 @@ export function getPlayerProfileBundle(
     deckUsage,
     deckUsageById: new Map(deckUsage.map((sliceItem) => [sliceItem.deckId, sliceItem])),
     weeklyStats: buildWeeklyWinRateStats(playerId, completed),
-    deckStats: buildPlayerDeckStats(slice.players, slice.decks, completed, language).filter(
+    deckStats: materializedPlayerDeckStats(slice.players, slice.decks, scope, language).filter(
       (item) => item.playerId === playerId,
     ),
     headToHead: buildHeadToHeadStats(playerId, slice.players, completed),
@@ -342,6 +349,7 @@ export function getCachedPlayerAchievementProgress(
 }
 
 export function invalidateDerivedCache(): void {
+  resetMaterializedStats()
   matchIndexCache.clear()
   statsBundleCache.clear()
   insightsCache.clear()

@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.1 - 2026-07-09
+
+### Changed
+
+- **Materialized stats layer** (`materializedStats.ts`): win/loss, deck usage, matchup, and meta aggregates update incrementally on match CRUD (O(1) per match) instead of rescanning all matches on every stats read.
+- **Store wiring**: hydrate, import, merge, undo/delete, and group sync paths keep materialized aggregates in sync with entity state.
+- **Achievements wall**: flat list mode virtualizes 50+ rows; panel shows skeleton while achievement eval runs on idle callback.
+
+### Fixed
+
+- Stats bundle reads no longer trigger full-match rescans when materialized fingerprint is already current.
+
 ## V4.7.0 - 2026-07-09
 
 ### Changed

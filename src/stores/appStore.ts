@@ -10,6 +10,13 @@ import {
 } from '@/lib/persistScheduler'
 import { invalidateDerivedCache } from '@/lib/derivedData'
 import {
+  applyMaterializedMatch,
+  rebuildMaterializedIfStale,
+  rebuildMaterializedStats,
+  removeMaterializedMatch,
+  replaceMaterializedMatch,
+} from '@/lib/materializedStats'
+import {
   pauseGroupCollabNotify,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
@@ -132,6 +139,19 @@ function applyAchievementUnlocks(state: AppState, playerIds: string[]): { state:
   }
 
   return { state: nextState, fresh }
+}
+
+function syncMaterializedFromState(state: AppState): void {
+  rebuildMaterializedStats(state.matches)
+}
+
+function afterMatchAdded(match: Match): void {
+  applyMaterializedMatch(match)
+}
+
+function afterMatchRemoved(state: AppState, match: Match): void {
+  removeMaterializedMatch(match)
+  rebuildMaterializedIfStale(state.matches)
 }
 
 function persist(state: AppState, immediate = false): AppState {
@@ -334,6 +354,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const { state } = ensureSessionState(loaded)
       invalidateDerivedCache()
       initPersistScheduler({ ...state, appVersion: APP_VERSION })
+      syncMaterializedFromState(state)
       const persisted = persist(state, true)
       set({ ...persisted, hydrated: true })
     } catch (error) {
@@ -341,6 +362,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const { state } = ensureSessionState(createDefaultAppState())
       invalidateDerivedCache()
       initPersistScheduler({ ...state, appVersion: APP_VERSION })
+      syncMaterializedFromState(state)
       const persisted = persist(state, true)
       set({ ...persisted, hydrated: true })
     }
@@ -354,6 +376,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       invalidateDerivedCache()
       const { state: nextState } = ensureSessionState(state)
       initPersistScheduler({ ...nextState, appVersion: APP_VERSION })
+      syncMaterializedFromState(nextState)
       const persisted = persist(nextState, true)
       set({ ...persisted, hydrated: true })
     } finally {
@@ -365,6 +388,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const { state } = ensureSessionState(createDefaultAppState())
     invalidateDerivedCache()
     initPersistScheduler({ ...state, appVersion: APP_VERSION })
+    syncMaterializedFromState(state)
     const persisted = persist(state, true)
     set({ ...persisted, hydrated: true })
   },
@@ -535,7 +559,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   mergeSessions: (sourceSessionId, targetSessionId) => {
     const current = getAppState()
-    const next = persist(mergeSessionsState(current, sourceSessionId, targetSessionId))
+    const merged = mergeSessionsState(current, sourceSessionId, targetSessionId)
+    syncMaterializedFromState(merged)
+    const next = persist(merged)
     set({ ...next })
   },
 
@@ -795,6 +821,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       notes: activeMatch.notes,
     }
 
+    afterMatchAdded(match)
+
     const next = appendAuditEntry(
       persist({
         ...current,
@@ -861,6 +889,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       notes: input.notes?.trim() || null,
       source: 'manual_edit',
     }
+    replaceMaterializedMatch(beforeMatch, afterMatch)
     const next = appendAuditEntry(
       persist({
         ...current,
@@ -911,6 +940,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       notes: match.notes,
     }
 
+    afterMatchRemoved(current, match)
+
     const next = appendAuditEntry(
       persist({
         ...current,
@@ -928,6 +959,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const match = current.matches.find((item) => item.id === matchId)
     if (!match) throw new Error('找不到對局')
     if (match.deletedAt !== null) return
+
+    afterMatchRemoved(current, match)
 
     const next = appendAuditEntry(
       persist({
@@ -1111,6 +1144,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       importRows: [...importRows, ...state.importRows],
       importRecords: [importRecord, ...state.importRecords],
     })
+    syncMaterializedFromState(next)
     set({ ...next })
 
     return {
@@ -1405,6 +1439,7 @@ export function updateAppState(updater: (state: AppState) => AppState) {
   pauseGroupCollabNotify()
   try {
     const next = updater(current)
+    syncMaterializedFromState(next)
     const persisted = persist(next, true)
     useAppStore.setState({ ...persisted })
   } finally {

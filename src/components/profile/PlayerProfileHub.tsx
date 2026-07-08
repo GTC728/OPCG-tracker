@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { AchievementsPreviewRail, AchievementsWall } from '@/components/achievements/AchievementsWall'
+import { AchievementsPreviewRail, AchievementsWall, AchievementsWallSkeleton } from '@/components/achievements/AchievementsWall'
 import { MatchListItem } from '@/components/match/MatchResultRow'
 import { DeckPreviewCard } from '@/components/profile/DeckPreviewCard'
 import { ProfileIdentityCard } from '@/components/profile/ProfileIdentityCard'
@@ -286,7 +286,7 @@ export function PlayerProfileHub({
             peerContext={peerContext}
           />
         ) : (
-          <p className="py-8 text-center text-sm text-text-secondary">{t('app.loading')}</p>
+          <AchievementsWallSkeleton />
         )}
       </PanelSheet>
 

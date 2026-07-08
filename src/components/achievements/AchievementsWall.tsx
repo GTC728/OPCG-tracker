@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback, type UIEvent } from 'react'
 import { AchievementCommunitySheet } from '@/components/achievements/AchievementCommunitySheet'
 import { AchievementIcon } from '@/components/achievements/AchievementIcon'
 import { AchievementTierBar } from '@/components/achievements/AchievementTierBar'
@@ -445,6 +445,101 @@ function CollapsibleAchievementGroup({
   )
 }
 
+const VIRTUAL_LIST_THRESHOLD = 50
+const VIRTUAL_ROW_HEIGHT = 96
+const VIRTUAL_OVERSCAN = 6
+
+function VirtualAchievementList({
+  items,
+  language,
+  onSelect,
+}: {
+  items: AchievementProgress[]
+  language: Language
+  onSelect: (item: AchievementProgress) => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [viewportHeight, setViewportHeight] = useState(480)
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) return
+    const observer = new ResizeObserver(([entry]) => {
+      setViewportHeight(entry.contentRect.height)
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  const onScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop)
+  }, [])
+
+  const totalHeight = items.length * VIRTUAL_ROW_HEIGHT
+  const startIndex = Math.max(0, Math.floor(scrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN)
+  const endIndex = Math.min(
+    items.length,
+    Math.ceil((scrollTop + viewportHeight) / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN,
+  )
+  const visibleItems = items.slice(startIndex, endIndex)
+
+  return (
+    <div
+      ref={containerRef}
+      className="max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain"
+      onScroll={onScroll}
+    >
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        {visibleItems.map((item, index) => {
+          const absoluteIndex = startIndex + index
+          return (
+            <div
+              key={item.definition.id}
+              style={{
+                position: 'absolute',
+                top: absoluteIndex * VIRTUAL_ROW_HEIGHT,
+                left: 0,
+                right: 0,
+                height: VIRTUAL_ROW_HEIGHT,
+                paddingBottom: 8,
+              }}
+            >
+              <AchievementListRow
+                item={item}
+                language={language}
+                onClick={() => onSelect(item)}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function AchievementsWallSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="flex items-center justify-between gap-2">
+        <div className="h-5 w-32 rounded bg-surface-muted/60" />
+        <div className="h-8 w-24 rounded bg-surface-muted/60" />
+      </div>
+      <div className="flex gap-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-7 w-16 rounded-lg bg-surface-muted/50" />
+        ))}
+      </div>
+      <div className="h-10 w-full rounded-lg bg-surface-muted/40" />
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-[88px] rounded-lg bg-surface-muted/30" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AchievementGrid({
   items,
   language,
@@ -457,6 +552,9 @@ function AchievementGrid({
   onSelect: (item: AchievementProgress) => void
 }) {
   if (viewMode === 'list') {
+    if (items.length >= VIRTUAL_LIST_THRESHOLD) {
+      return <VirtualAchievementList items={items} language={language} onSelect={onSelect} />
+    }
     return (
       <div className="space-y-2">
         {items.map((item) => (
