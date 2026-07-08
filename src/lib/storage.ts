@@ -147,6 +147,27 @@ const migrations: Record<number, Migration> = {
       },
     }
   },
+  10: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    return {
+      ...state,
+      schemaVersion: 10,
+      importBatches: (Array.isArray(state.importBatches) ? state.importBatches : []).map((batch) => ({
+        ...batch,
+        revertedAt: batch.revertedAt ?? null,
+        targetSessionId: batch.targetSessionId ?? null,
+      })),
+      settings: {
+        ...settings,
+        groupSyncPaused: settings.groupSyncPaused ?? false,
+        groupSyncPausedAt: settings.groupSyncPausedAt ?? null,
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

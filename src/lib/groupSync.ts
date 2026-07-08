@@ -156,6 +156,13 @@ export function isGroupCollabActive(state: AppState): boolean {
   return Boolean(state.settings.lastGroupCode)
 }
 
+/** Push to group is allowed when collab is active and not paused. Pull still runs when paused. */
+export function isGroupCollabPushEnabled(state: AppState): boolean {
+  return isGroupCollabActive(state) && !state.settings.groupSyncPaused
+}
+
+const MATCH_SYNC_PAGE = 500
+
 function isOnline(): boolean {
   return typeof navigator !== 'undefined' ? navigator.onLine : true
 }
@@ -500,7 +507,7 @@ export function resumeGroupCollabNotify(): void {
 
 /** Central sync entry: diff prev/next after local persist. */
 export function notifyGroupCollabChange(prev: AppState | null, next: AppState): void {
-  if (groupCollabNotifyPaused || !prev || !isGroupCollabActive(next)) return
+  if (groupCollabNotifyPaused || !prev || !isGroupCollabPushEnabled(next)) return
   const groupCode = next.settings.lastGroupCode
   if (!groupCode) return
 
@@ -660,16 +667,87 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
     if (error) throw error
   }
 
-  const matchRows = state.matches
-    .slice(0, 500)
-    .map((match) => toMatchRow(groupKey, match, userId))
-  if (matchRows.length) {
-    const { error } = await supabase.from('sync_matches').upsert(matchRows)
+  const matchRows = state.matches.map((match) => toMatchRow(groupKey, match, userId))
+  for (let offset = 0; offset < matchRows.length; offset += MATCH_SYNC_PAGE) {
+    const chunk = matchRows.slice(offset, offset + MATCH_SYNC_PAGE)
+    if (!chunk.length) continue
+    const { error } = await supabase.from('sync_matches').upsert(chunk)
     if (error) throw error
   }
 
   await pushSyncedActiveMatches(groupCode, state.activeMatches)
   await flushGroupCollabSync(groupCode, state)
+}
+
+async function fetchAllRemoteMatches(
+  supabase: Awaited<ReturnType<typeof getSupabaseClient>>,
+  groupKey: string,
+): Promise<SyncMatchRow[]> {
+  if (!supabase) return []
+  const all: SyncMatchRow[] = []
+  let offset = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('sync_matches')
+      .select('*')
+      .eq('group_key', groupKey)
+      .order('finished_at', { ascending: false })
+      .range(offset, offset + MATCH_SYNC_PAGE - 1)
+    if (error) throw error
+    if (!data?.length) break
+    all.push(...(data as SyncMatchRow[]))
+    if (data.length < MATCH_SYNC_PAGE) break
+    offset += MATCH_SYNC_PAGE
+  }
+  return all
+}
+
+/** Push all local entities after sync pause ends (LWW merge — tombstones included). */
+export async function pushFullGroupState(groupCode: string, state: AppState): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) throw new Error('Supabase 未設定')
+  const userId = await requireUserId()
+  const groupKey = await resolveGroupKey(groupCode)
+
+  const sessionRows = state.sessions.map((session: Session) => ({
+    id: session.id,
+    group_key: groupKey,
+    name: session.name,
+    started_at: session.startedAt,
+    ended_at: session.endedAt,
+    archived_at: session.archivedAt,
+    deleted_at: session.deletedAt,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  }))
+  if (sessionRows.length) {
+    const { error } = await supabase.from('sync_sessions').upsert(sessionRows)
+    if (error) throw error
+  }
+
+  const playerRows = state.players.map((player: Player) => ({
+    id: player.id,
+    group_key: groupKey,
+    name: player.name,
+    archived: player.archived,
+    deleted_at: player.deletedAt,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  }))
+  if (playerRows.length) {
+    const { error } = await supabase.from('sync_players').upsert(playerRows)
+    if (error) throw error
+  }
+
+  const matchRows = state.matches.map((match) => toMatchRow(groupKey, match, userId))
+  for (let offset = 0; offset < matchRows.length; offset += MATCH_SYNC_PAGE) {
+    const chunk = matchRows.slice(offset, offset + MATCH_SYNC_PAGE)
+    if (!chunk.length) continue
+    const { error } = await supabase.from('sync_matches').upsert(chunk)
+    if (error) throw error
+  }
+
+  await pushSyncedActiveMatches(groupCode, state.activeMatches)
 }
 
 export async function pullGroupCollabState(groupCode: string): Promise<void> {
@@ -679,19 +757,18 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
 
   const [activeRes, matchRes, playerRes, sessionRes] = await Promise.all([
     supabase.from('sync_active_matches').select('*').eq('group_key', groupKey),
-    supabase.from('sync_matches').select('*').eq('group_key', groupKey).order('finished_at', { ascending: false }).limit(500),
+    fetchAllRemoteMatches(supabase, groupKey),
     supabase.from('sync_players').select('*').eq('group_key', groupKey),
     supabase.from('sync_sessions').select('*').eq('group_key', groupKey),
   ])
 
   if (activeRes.error) throw activeRes.error
-  if (matchRes.error) throw matchRes.error
   if (playerRes.error) throw playerRes.error
   if (sessionRes.error) throw sessionRes.error
 
   updateAppState((current) => {
     const remoteActive = activeRes.data as SyncActiveRow[]
-    const remoteMatches = matchRes.data as SyncMatchRow[]
+    const remoteMatches = matchRes
     const remotePlayers = playerRes.data as {
       id: string
       name: string

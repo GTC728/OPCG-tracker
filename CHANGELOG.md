@@ -9,6 +9,22 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.8.0 - 2026-07-09
+
+### New
+
+- **Import safety**: auto snapshot before each import (keeps last 5); revert whole import batches; impact preview, test-data warning, typed confirm for ≥100 rows; default target is a new import session.
+- **Sync controls**: pause/resume group push from System settings; LWW merge model explained in UI; paginated match sync (fixes 500-match cap on pull/push/bootstrap).
+
+### Changed
+
+- **Fine achievement tier**: fun-category ladder now **5 → 10 → 15 → 30 → 50** (was 5/10/10/20/30 style steps).
+- **Large imports in groups**: auto-pause push during ≥50-row imports; resume triggers full state push.
+
+### Fixed
+
+- Group collab bootstrap and pull no longer silently drop matches beyond the first 500.
+
 ## V4.7.8 - 2026-07-09
 
 ### Changed

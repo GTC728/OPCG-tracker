@@ -18,8 +18,11 @@ import {
 } from '@/lib/materializedStats'
 import {
   pauseGroupCollabNotify,
+  pushFullGroupState,
   resumeGroupCollabNotify,
 } from '@/lib/groupSync'
+import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
+import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
 import { appendAuditEntry } from '@/lib/auditLog'
 import { evaluateNewAchievementUnlocks, mergeAchievementUnlocks } from '@/lib/achievements'
 import { getPlayerName } from '@/lib/entities'
@@ -32,6 +35,7 @@ import type {
   ActiveMatchInput,
   AppState,
   ImportMatchInput,
+  ImportMatchOptions,
   ImportSummary,
   Language,
   Match,
@@ -74,7 +78,10 @@ interface AppStore extends AppState {
   deleteMatch: (matchId: string) => void
   deletePlayer: (playerId: string) => void
   permanentlyDeleteDeck: (deckId: string) => void
-  importMatches: (rows: ImportMatchInput[], filename: string, rawData: string) => ImportSummary
+  importMatches: (rows: ImportMatchInput[], filename: string, rawData: string, options?: ImportMatchOptions) => ImportSummary
+  revertImportBatch: (batchId: string) => number
+  restoreImportSnapshot: (snapshotId: string) => void
+  setGroupSyncPaused: (paused: boolean) => Promise<void>
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
@@ -1007,13 +1014,52 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
-  importMatches: (rows, filename, rawData) => {
-    let state = getAppState()
+  importMatches: (rows, filename, rawData, options = {}) => {
+    pauseGroupCollabNotify()
+    const wasPaused = getAppState().settings.groupSyncPaused
+    let syncPausedForImport = false
+
+    try {
+      if (!options.skipSnapshot) {
+        saveImportSnapshot(getAppState(), `匯入前 · ${filename}`)
+      }
+
+      let state = getAppState()
+      const shouldPauseForBulk =
+        options.pauseSyncDuringImport ??
+        (Boolean(state.settings.lastGroupCode) && rows.length >= LARGE_IMPORT_THRESHOLD)
+
+      if (shouldPauseForBulk && !wasPaused) {
+        state = {
+          ...state,
+          settings: {
+            ...state.settings,
+            groupSyncPaused: true,
+            groupSyncPausedAt: nowIso(),
+          },
+        }
+        syncPausedForImport = true
+      }
+
+      let session: Session
+      if (options.createNewSession !== false) {
+        const sessionName =
+          options.sessionName ?? `匯入 · ${filename.replace(/\.[^.]+$/, '')}`
+        session = createSession(sessionName)
+        state = {
+          ...state,
+          currentSessionId: session.id,
+          sessions: [session, ...state.sessions],
+        }
+      } else {
+        const ensured = ensureSessionState(state)
+        state = ensured.state
+        session = ensured.session
+      }
+
     const errors: Array<{ row: number; message: string }> = []
     const createdMatches: Match[] = []
       const createdMatchIdsByRow = new Map<number, string>()
-    const { state: stateWithSession, session } = ensureSessionState(state)
-    state = stateWithSession
 
     rows.forEach((row, index) => {
         const rowNumber = index + 2
@@ -1112,6 +1158,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       successCount: createdMatches.length,
       errorCount: errors.length,
       rawFileHash: `${rawData.length}:${filename}`,
+      revertedAt: null,
+      targetSessionId: session.id,
     }
     const importRows = rows.map((row, index) => {
       const rowNumber = index + 2
@@ -1137,19 +1185,125 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
     })
 
-    const next = persist({
-      ...state,
-      matches: [...createdMatches, ...state.matches],
-      importBatches: [importBatch, ...state.importBatches],
-      importRows: [...importRows, ...state.importRows],
-      importRecords: [importRecord, ...state.importRecords],
-    })
+    const next = appendAuditEntry(
+      {
+        ...state,
+        matches: [...createdMatches, ...state.matches],
+        importBatches: [importBatch, ...state.importBatches],
+        importRows: [...importRows, ...state.importRows],
+        importRecords: [importRecord, ...state.importRecords],
+      },
+      'import',
+      `匯入 ${filename}：成功 ${createdMatches.length} 場${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
+    )
     syncMaterializedFromState(next)
-    set({ ...next })
+    const persisted = persist(next)
+    set({ ...persisted })
 
     return {
       importRecord,
       createdMatches: createdMatches.length,
+    }
+    } finally {
+      resumeGroupCollabNotify()
+    }
+  },
+
+  revertImportBatch: (batchId) => {
+    const current = getAppState()
+    const batch = current.importBatches.find((item) => item.id === batchId)
+    if (!batch || batch.revertedAt) return 0
+
+    const matchIds = new Set(
+      current.importRows
+        .filter((row) => row.batchId === batchId && row.status === 'imported' && row.matchId)
+        .map((row) => row.matchId as string),
+    )
+    if (!matchIds.size) return 0
+
+    pauseGroupCollabNotify()
+    try {
+      const timestamp = nowIso()
+      const next = appendAuditEntry(
+        {
+          ...current,
+          matches: current.matches.map((match) =>
+            matchIds.has(match.id) && match.deletedAt === null
+              ? { ...match, deletedAt: timestamp, source: 'manual_edit' as const }
+              : match,
+          ),
+          importBatches: current.importBatches.map((item) =>
+            item.id === batchId ? { ...item, revertedAt: timestamp } : item,
+          ),
+        },
+        'import_revert',
+        `撤銷匯入 ${batch.filename}：${matchIds.size} 場`,
+      )
+      syncMaterializedFromState(next)
+      const persisted = persist(next)
+      set({ ...persisted })
+      return matchIds.size
+    } finally {
+      resumeGroupCollabNotify()
+    }
+  },
+
+  restoreImportSnapshot: (snapshotId) => {
+    const restored = loadImportSnapshot(snapshotId)
+    if (!restored) throw new Error('找不到匯入前快照')
+    pauseGroupCollabNotify()
+    try {
+      invalidateDerivedCache()
+      const { state: nextState } = ensureSessionState(restored)
+      initPersistScheduler({ ...nextState, appVersion: APP_VERSION })
+      syncMaterializedFromState(nextState)
+      const next = appendAuditEntry(nextState, 'import', '已還原匯入前快照')
+      const persisted = persist(next, true)
+      set({ ...persisted, hydrated: true })
+    } finally {
+      resumeGroupCollabNotify()
+    }
+  },
+
+  setGroupSyncPaused: async (paused) => {
+    const current = getAppState()
+    const groupCode = current.settings.lastGroupCode
+    let next = appendAuditEntry(
+      {
+        ...current,
+        settings: {
+          ...current.settings,
+          groupSyncPaused: paused,
+          groupSyncPausedAt: paused ? nowIso() : null,
+          lastGroupSyncError: paused ? null : current.settings.lastGroupSyncError,
+        },
+      },
+      'sync',
+      paused ? '已暫停群組推送' : '已恢復群組推送',
+    )
+    next = persist(next)
+    set({ ...next })
+
+    if (!paused && groupCode) {
+      try {
+        await pushFullGroupState(groupCode, getAppState())
+        const synced = persist({
+          ...getAppState(),
+          settings: {
+            ...getAppState().settings,
+            lastGroupSyncAt: nowIso(),
+            lastGroupSyncError: null,
+          },
+        })
+        set({ ...synced })
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : '群組推送失敗'
+        set({
+          ...getAppState(),
+          settings: { ...getAppState().settings, lastGroupSyncError: message },
+        })
+        throw caught
+      }
     }
   },
 

@@ -1,7 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
+import { ImportHistoryPanel } from '@/components/settings/ImportHistoryPanel'
 import { exportAppStateExcel } from '@/lib/excelExport'
+import {
+  detectTestImportWarning,
+  needsTypedConfirm,
+  summarizeImportRows,
+} from '@/lib/importSafety'
 import { useI18n } from '@/lib/i18n'
 import { importAppStateJson } from '@/lib/storage'
 import { getAppState, useAppStore } from '@/stores/appStore'
@@ -207,6 +213,10 @@ function ImportTool() {
   const bodyRows = useMemo(() => rows.slice(1), [rows])
   const [mapping, setMapping] = useState<Mapping>(emptyMapping)
   const [message, setMessage] = useState<string | null>(null)
+  const [createNewSession, setCreateNewSession] = useState(true)
+  const [confirmText, setConfirmText] = useState('')
+  const inGroup = useAppStore((state) => Boolean(state.settings.lastGroupCode))
+  const groupSyncPaused = useAppStore((state) => state.settings.groupSyncPaused)
 
   const mappedRows = useMemo<ImportMatchInput[]>(() => {
     return bodyRows.map((row) => ({
@@ -221,13 +231,26 @@ function ImportTool() {
     }))
   }, [bodyRows, mapping])
 
+  const importSummary = useMemo(
+    () => (mappedRows.length ? summarizeImportRows(mappedRows) : null),
+    [mappedRows],
+  )
+  const importWarning = useMemo(
+    () => (mappedRows.length ? detectTestImportWarning(filename, mappedRows) : null),
+    [mappedRows, filename],
+  )
+  const typedConfirmRequired = mappedRows.length ? needsTypedConfirm(mappedRows.length) : false
+  const typedConfirmOk =
+    !typedConfirmRequired || confirmText.trim() === t('data.importConfirmPlaceholder')
+
   const canImport =
     mappedRows.length > 0 &&
     mapping.player1Name &&
     mapping.deck1Query &&
     mapping.player2Name &&
     mapping.deck2Query &&
-    mapping.winnerName
+    mapping.winnerName &&
+    typedConfirmOk
 
   return (
     <section className="rounded-2xl bg-surface-elevated p-4">
@@ -333,6 +356,36 @@ function ImportTool() {
           </div>
 
           <div className="mt-4 rounded-2xl bg-surface p-3 text-xs text-text-secondary">
+            <p className="font-semibold text-text-primary">{t('data.importImpactTitle')}</p>
+            {importSummary ? (
+              <p className="mt-2">
+                {importSummary.rowCount} 場 · {importSummary.uniquePlayers.length} 位玩家
+                {importSummary.dateMin ? ` · ${importSummary.dateMin} ~ ${importSummary.dateMax}` : ''}
+              </p>
+            ) : null}
+            {importWarning ? (
+              <p className="mt-2 rounded-lg bg-amber-500/15 p-2 text-amber-100">{importWarning}</p>
+            ) : null}
+            {inGroup ? (
+              <p className="mt-2 text-text-secondary">
+                {t('data.importGroupNote')}
+                {groupSyncPaused ? '（目前推送已暫停）' : ''}
+              </p>
+            ) : null}
+            <label className="mt-3 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={createNewSession}
+                onChange={(event) => setCreateNewSession(event.target.checked)}
+              />
+              <span>{t('data.importTargetNew')}</span>
+            </label>
+            {!createNewSession ? (
+              <p className="mt-1 text-amber-200">{t('data.importTargetCurrent')}</p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-surface p-3 text-xs text-text-secondary">
             <p className="font-semibold text-text-primary">{t('data.preview')}</p>
             {mappedRows.slice(0, 3).map((row, index) => (
               <p key={index} className="mt-2">
@@ -342,12 +395,27 @@ function ImportTool() {
             ))}
           </div>
 
+          {typedConfirmRequired ? (
+            <label className="mt-4 block">
+              <span className="text-sm text-text-secondary">{t('data.importConfirmType')}</span>
+              <input
+                className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
+                value={confirmText}
+                placeholder={t('data.importConfirmPlaceholder')}
+                onChange={(event) => setConfirmText(event.target.value)}
+              />
+            </label>
+          ) : null}
+
           <Button
             className="mt-4"
             fullWidth
             disabled={!canImport}
             onClick={() => {
-              const result = importMatches(mappedRows, filename || 'import.csv', raw)
+              const result = importMatches(mappedRows, filename || 'import.csv', raw, {
+                createNewSession,
+              })
+              setConfirmText('')
               const nextMessage = `匯入完成：成功 ${result.importRecord.successCount}，錯誤 ${result.importRecord.errorCount}`
               setMessage(nextMessage)
               toast.success(nextMessage)
@@ -435,6 +503,7 @@ export function DataTools() {
     <>
       <ExportTool />
       <ImportTool />
+      <ImportHistoryPanel />
     </>
   )
 }

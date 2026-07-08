@@ -117,6 +117,7 @@ export type AuditKind =
   | 'match_edit'
   | 'match_delete'
   | 'import'
+  | 'import_revert'
   | 'sync'
   | 'session'
 
@@ -195,6 +196,25 @@ export interface ImportBatch {
   successCount: number
   errorCount: number
   rawFileHash: string
+  revertedAt: string | null
+  targetSessionId: string | null
+}
+
+export interface ImportSnapshotMeta {
+  id: string
+  label: string
+  createdAt: string
+  matchCount: number
+  playerCount: number
+}
+
+export interface ImportMatchOptions {
+  /** Default true in UI — writes into a dedicated import session. */
+  createNewSession?: boolean
+  sessionName?: string
+  skipSnapshot?: boolean
+  /** When true, temporarily pauses group push during import (restored after). */
+  pauseSyncDuringImport?: boolean
 }
 
 export interface ImportRow {
@@ -252,6 +272,9 @@ export interface AppSettings {
   achievementNotifications: boolean
   lastGroupSyncAt: string | null
   lastGroupSyncError: string | null
+  /** When true, local edits are not pushed to the group until resumed. Pull still applies. */
+  groupSyncPaused: boolean
+  groupSyncPausedAt: string | null
 }
 
 export interface AppState {
