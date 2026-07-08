@@ -1,6 +1,7 @@
 import type { AchievementDefinition, AchievementIconKind } from '@/lib/achievements'
 import type { Language } from '@/types'
 import type { RemainingCatalogEntry } from '@/data/achievementBacklogRemainingCatalog.generated'
+import { getRemainingAchievementDescription } from '@/lib/achievementDescriptions'
 
 const LANGS: Language[] = ['zh-Hant', 'zh-Hans', 'en', 'ja']
 
@@ -60,12 +61,7 @@ export function buildRemainingAchievementDefinition(entry: RemainingCatalogEntry
     ease: entry.ease,
     icon: entry.icon as AchievementIconKind,
     title: titleRecord(entry.titleZh),
-    description: {
-      'zh-Hant': `${entry.titleZh} — 累積進度成就。`,
-      'zh-Hans': `${toSimplified(entry.titleZh)} — 累积进度成就。`,
-      en: `${entry.titleZh} — cumulative progress.`,
-      ja: `${entry.titleZh} — 累積達成。`,
-    },
+    description: getRemainingAchievementDescription(entry.id, entry.titleZh),
     tiers: entry.tiers.map((threshold, index) => ({
       level: index + 1,
       threshold,

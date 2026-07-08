@@ -24,6 +24,68 @@ const SHIPPED = new Set([
   'midnight_duel', 'lunch_break', 'white_mastery', 'blue_mastery', 'red_mastery', 'green_mastery',
   'purple_mastery', 'win_or_learn', 'weekly_grinder', 'store_regular', 'opening_act', 'closer',
   'profile_linked', 'marathon_mind', 'speed_demon',
+  // Batch B — already in BACKLOG_BATCH_DEFINITIONS
+  'set_sail', 'expansion_regular', 'class_loyalist', 'noted_perfection', 'same_turn_sweep',
+  'no_rematch_streak', 'bo3_ready', 'table_flip', 'red_rush', 'green_midrange', 'black_control',
+  'purple_pilot', 'pauper_hero', 'event_entered', 'swiss_survivor', 'monthly_mythic',
+  'secret_first_blood', 'secret_mirror_hell', 'secret_silent_win', 'secret_unknown_deck', 'secret_exodia',
+  'damage_clock', 'long_game', 'ot_champion', 'zero_undo_session', 'perfect_table_four',
+  'league_sign_in', 'teacher', 'ambassador', 'sportsmanship', 'weekly_cap', 'season_lore',
+  'login_streak', 'profile_complete', 'hunter_75', 'rare_trophy', 'showcase_master',
+  'data_importer', 'cloud_guardian', 'daily_duelist', 'daily_winner', 'quest_reroll', 'battle_pass_tier',
+])
+
+/** Pruned: unimplemented UI, future V5, or merged into another achievement family. */
+const EXCLUDED = new Set([
+  // UI / settings — not wired to stats yet
+  'share_first', 'share_evangelist', 'session_poster', 'card_case_artist', 'community_peek',
+  'peer_parity', 'lonely_elite', 'claim_reclaim', 'alias_spirit', 'locale_polyglot',
+  'roster_solo', 'merge_survivor', 'session_merged', 'archive_diver', 'soft_delete_phoenix',
+  'copy_reopen', 'assign_speedrun', 'dock_master', 'first_only', 'second_only',
+  'multi_device', 'backup_hero', 'appearance_guru', 'compact_veteran', 'light_mode_hero',
+  'sound_checker', 'lunar_spark', 'heatmap_reader', 'scope_toggle', 'trend_rider', 'trend_faller',
+  'overflow_veteran', 'drag_drop_debut', 'tap_assign_only', 'roster_prompt_hero',
+  'merge_session_witness', 'tombstone_purge', 'filter_master', 'date_range_archaeologist',
+  'deck_search_sniper', 'starter_only_month', 'achievement_sort_all', 'grind_level_up_live',
+  'read_every_desc', 'email_login', 'group_upload_first', 'group_download_first', 'queue_hero',
+  'login_streak', 'rare_trophy', 'showcase_master', 'no_rematch_streak', 'fibonacci_win',
+  'anti_meta_day', 'same_deck_different_pilots', 'pilot_swap_win', 'zero_undo_session',
+  'secret_first_blood', 'secret_silent_win', 'secret_unknown_deck', 'share_unlock',
+  'community_bottom10', 'offline_warrior',
+  // V5 / events / league — future features
+  'global_top100', 'community_top10', 'realtime_witness', 'conflict_survivor', 'multi_group_tourist',
+  'event_check_in', 'event_3_0', 'event_top8', 'event_champion', 'league_points_100',
+  'bo3_ready', 'event_entered', 'swiss_survivor', 'ot_champion', 'teacher', 'sportsmanship',
+  'quest_reroll', 'battle_pass_tier',
+  // Merged duplicates (keep the canonical family elsewhere)
+  'tier_maxer', 'tier_triple', // → completionist_90 / hunter_75
+  'claim_creator', // → profile_linked / profile_complete
+  'history_editor', // → history_keeper
+  'mirror_breaker', // → mirror_master
+  'counter_expert', // → counter_pick / meta_breaker
+  'loss_streak_iron', // → streak_saver / loss_survivor
+  'first_blood', 'second_wind', // → first_player_king / second_striker
+  'extend_own_streak', // → win_streak / streak_legend
+  'notes_streak', // → note_poet / noted_perfection
+  'rival_win5', 'rival_even', 'rival_dominate', // → rival_top5 / balanced_rival / nemesis_slayer
+  'nemesis_reversed', // → revenge_win / nemesis_70
+  'table_32_touch', // → table_veteran / table_tactician
+  'palindrome_session', // → palindrome_score
+  'daily_regular', // → store_regular / daily_duelist
+  'season_opener', // → set_sail
+  'sync_same_day', 'sync_pioneer', // → cloud_guardian / group_code_join
+  'excel_surgeon', // → data_importer / import_archivist
+  'win_100', // → centurion_wins
+  'quarterly_regular', 'monthly_spread', // → monthly_mythic / season_lore / marathon_month
+  'peacemaker', 'hill_king', // → balanced_rival / nemesis_slayer
+  'red_rush', 'green_midrange', 'black_control', 'purple_pilot', 'pauper_hero', // → color masteries
+  'leader_wall', 'class_loyalist', 'set_pair_master', 'pie_master', // → leader_collector / meta_explorer
+  'all_time_legend', // → centurion_wins
+  'damage_clock', // → same_turn_sweep / speed_demon
+  'skill_gold', 'fun_gold', 'social_gold', 'meta_gold', // → category_sweep
+  'nemesis_chain', 'new_rival', 'old_rival', // → rival_bond / group_star
+  'noted_perfection', // → note_poet (batch duplicate in catalog)
+  'set_sail', 'expansion_regular', // batch dupes if doc re-parses
 ])
 
 const VALID_CATEGORIES = new Set(['milestone', 'streak', 'skill', 'meta', 'social', 'fun'])
@@ -52,7 +114,7 @@ const rows: Row[] = []
 const seen = new Set<string>()
 
 function add(id: string, title: string, category: string) {
-  if (SHIPPED.has(id) || seen.has(id)) return
+  if (SHIPPED.has(id) || EXCLUDED.has(id) || seen.has(id)) return
   seen.add(id)
   rows.push({ id, title, category: VALID_CATEGORIES.has(category) ? category : 'fun' })
 }

@@ -81,7 +81,7 @@ export function AchievementCommunitySheet({
             {globalItems.map((item, index) => (
               <li key={item.definition.id} className={[uiGlassCard, 'flex items-center gap-3 p-3'].join(' ')}>
                 <span className="w-5 shrink-0 text-center text-xs font-bold text-text-secondary">{index + 1}</span>
-                <AchievementIcon kind={item.definition.icon} category={item.definition.category} size="sm" />
+                <AchievementIcon achievementId={item.definition.id} kind={item.definition.icon} category={item.definition.category} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{item.definition.title[language]}</p>
                   <p className="text-[10px] text-text-secondary">{t('achievements.globalRateHint')}</p>

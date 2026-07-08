@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.7 - 2026-07-09
+
+### Changed
+
+- **Achievement consolidation**: pruned ~146 redundant/unimplemented families (UI stubs, V5 events, duplicates of core/batch). Wall now shows **156** meaningful families.
+- **Achievement icons**: Lucide stroke icons — each family gets a distinct icon (160 unique glyphs).
+- **Achievement copy**: remaining families use plain-language zh-Hant descriptions instead of generic「累積進度成就」.
+
+### Removed (merged elsewhere)
+
+- UI-only stubs (分享、備份、外觀…), unimplemented V5 events, and duplicates such as `tier_maxer`/`tier_triple` → `completionist_90`, `mirror_breaker` → `mirror_master`, etc.
+
 ## V4.7.6 - 2026-07-09
 
 ### Changed

@@ -71,6 +71,7 @@ function AchievementCard({
     >
       <div className="flex items-start justify-between gap-2">
         <AchievementIcon
+          achievementId={item.definition.id}
           kind={item.definition.icon}
           category={item.definition.category}
           size={compact ? 'sm' : 'md'}
@@ -151,6 +152,7 @@ function AchievementListRow({
       >
         <div className="flex items-center gap-2 px-2 py-1.5">
           <AchievementIcon
+            achievementId={item.definition.id}
             kind={item.definition.icon}
             category={item.definition.category}
             size="sm"
@@ -187,6 +189,7 @@ function AchievementListRow({
     >
       <div className="flex items-start gap-3 p-3">
         <AchievementIcon
+          achievementId={item.definition.id}
           kind={item.definition.icon}
           category={item.definition.category}
           size="sm"
@@ -242,7 +245,7 @@ function AchievementDetailSheet({
     <BottomSheet open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <AchievementIcon kind={item.definition.icon} category={item.definition.category} size="lg" />
+          <AchievementIcon achievementId={item.definition.id} kind={item.definition.icon} category={item.definition.category} size="lg" />
           <div className="min-w-0 flex-1">
             <p className="text-sm text-text-secondary">{desc}</p>
             <div className="mt-2">

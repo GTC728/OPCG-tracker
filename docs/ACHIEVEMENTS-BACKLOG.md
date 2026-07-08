@@ -277,10 +277,10 @@ Theme: calendar / rhythm, match-number milestones, stats & heatmap, workflow edg
 | D29 | `pie_master` | 餅圖大師 | meta | 🟢 deck usage pie ≥5 slices each ≥10% |
 | D30 | `trend_rider` | 趋势骑手 | skill | 🟢 4-week WR uptrend |
 | D31 | `trend_faller` | 低谷行者 | fun | 🟢 4-week WR down then recover week 5 |
-| D32 | `break_opp_streak` | 断火者 | skill | 🟢 beat opponent on 3+ win streak |
-| D33 | `extend_own_streak` | 续火专家 | streak | 🟢 reach 5 streak twice in month |
-| D34 | `session_opener_5` | 五连开场 | streak | 🟢 first 5 session matches all wins |
-| D35 | `session_closer_5` | 五连收尾 | streak | 🟢 last 5 session matches all wins |
+| D32 | `break_opp_streak` | 斷火者 | skill | 🟢 beat opponent on 3+ win streak |
+| D33 | `extend_own_streak` | 續火專家 | streak | 🟢 reach 5 streak twice in month |
+| D34 | `session_opener_5` | 五連開場 | streak | 🟢 first 5 session matches all wins |
+| D35 | `session_closer_5` | 五連收尾 | streak | 🟢 last 5 session matches all wins |
 | D36 | `table_32_touch` | 满桌体验 | fun | 🟢 complete match at table slot 32 |
 | D37 | `single_table_night` | 单桌之夜 | fun | 🟢 session tableCount=1, ≥8 matches |
 | D38 | `overflow_veteran` | 溢出老手 | fun | 🟢 20 wins from overflow/unassigned legacy |
@@ -288,7 +288,7 @@ Theme: calendar / rhythm, match-number milestones, stats & heatmap, workflow edg
 | D40 | `tap_assign_only` | 点选流派 | fun | 🟢 50 assigns via tap-only mobile |
 | D41 | `roster_prompt_hero` | 名单英雄 | social | 🟢 complete roster prompt same day |
 | D42 | `session_end_ritual` | 收工仪式 | milestone | 🟢 end session after ≥10 matches |
-| D43 | `new_session_starter` | 开季者 | milestone | 🟢 create 10 sessions |
+| D43 | `new_session_starter` | 開季者 | milestone | 🟢 create 10 sessions |
 | D44 | `session_archive` | 封存者 | milestone | 🟢 archive session w/ ≥20 matches |
 | D45 | `merge_session_witness` | 合场见证 | milestone | 🟢 after session merge, play 1 match |
 | D46 | `tombstone_purge` | 清理幽灵 | fun | 🟡 permanent delete restored entity |
@@ -313,10 +313,10 @@ Theme: rival narratives, color/set deep cuts, achievement-system meta, collab/sy
 | E06 | `new_rival` | 新敌初逢 | social | 🟢 first match vs new player → win |
 | E07 | `old_rival` | 老友再战 | social | 🟢 vs same opp 2 years apart |
 | E08 | `color_clash_red_blue` | 紅藍對決 | meta | 🟢 red deck beat blue deck 10× |
-| E09 | `color_clash_green_purple` | 绿紫恩怨 | meta | 🟢 |
-| E10 | `black_vs_yellow` | 黑黄相克 | meta | 🟢 |
-| E11 | `tricolor_win` | 三色胜利 | meta | 🟢 win with 3-color deck |
-| E12 | `single_color_session_sweep` | 纯色横扫 | meta | 🟢 mono color 8-0 session |
+| E09 | `color_clash_green_purple` | 綠紫恩怨 | meta | 🟢 |
+| E10 | `black_vs_yellow` | 黑黃相克 | meta | 🟢 |
+| E11 | `tricolor_win` | 三色勝利 | meta | 🟢 win with 3-color deck |
+| E12 | `single_color_session_sweep` | 純色橫掃 | meta | 🟢 mono color 8-0 session |
 | E13 | `set_pair_master` | 双集精通 | meta | 🟢 OP15+OP16 combined 30 wins |
 | E14 | `starter_only_month` | 预组月 | meta | 🟢 20 wins ST decks in 30 days |
 | E15 | `leader_wall` | 主将墙 | meta | 🟢 display 20 leaders in profile rail |
