@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.9.0 - 2026-07-09
+
+### Changed
+
+- **Group-bound local data**: sessions, players, and matches follow the active group. Leaving a group clears local collab data automatically; joining pulls that group's cloud data (or seeds a new empty group once). No join-mode picker — behavior is automatic.
+- **Join logic**: existing groups pull-first (no more blind bootstrap upload); new empty groups still receive local data once when appropriate.
+- **Leave flow**: flushes pending sync, clears the outbox, and resets local collab slice before disconnecting.
+- **Excel export**: human-readable match sheet shows active matches only; README splits active vs deleted counts.
+
+### Fixed
+
+- Switching test ↔ production groups no longer mixes local datasets or uploads stale data to the wrong group (upgrade triggers one rebind on next load).
+
 ## V4.8.0 - 2026-07-09
 
 ### New

@@ -275,6 +275,8 @@ export interface AppSettings {
   /** When true, local edits are not pushed to the group until resumed. Pull still applies. */
   groupSyncPaused: boolean
   groupSyncPausedAt: string | null
+  /** Which group's data is currently loaded locally; null when not in a group. */
+  groupDataBoundCode: string | null
 }
 
 export interface AppState {

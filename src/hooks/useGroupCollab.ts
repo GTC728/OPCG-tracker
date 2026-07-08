@@ -1,16 +1,17 @@
 import { useEffect } from 'react'
 import {
-  bootstrapGroupCollab,
   flushGroupCollabSyncNow,
+  initializeGroupCollab,
   pullGroupCollabState,
   startGroupCollabRealtime,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
-import { getAppState, useAppStore } from '@/stores/appStore'
+import { useAppStore } from '@/stores/appStore'
 
 export function useGroupCollab() {
   const hydrated = useAppStore((state) => state.hydrated)
   const groupCollabBootstrapped = useAppStore((state) => state.settings.groupCollabBootstrapped)
+  const groupDataBoundCode = useAppStore((state) => state.settings.groupDataBoundCode)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const updateSettings = useAppStore((state) => state.updateSettings)
 
@@ -24,10 +25,15 @@ export function useGroupCollab() {
 
     async function init() {
       try {
-        if (!groupCollabBootstrapped) {
-          await bootstrapGroupCollab(groupCode!, getAppState())
+        const needsRebind = !groupCollabBootstrapped || groupDataBoundCode !== groupCode
+        if (needsRebind) {
+          await initializeGroupCollab(groupCode!)
           if (!cancelled) {
-            updateSettings({ groupCollabBootstrapped: true, groupCollabEnabled: true })
+            updateSettings({
+              groupCollabBootstrapped: true,
+              groupCollabEnabled: true,
+              groupDataBoundCode: groupCode,
+            })
           }
         } else {
           await pullGroupCollabState(groupCode!)
@@ -38,6 +44,11 @@ export function useGroupCollab() {
         }
       } catch (error) {
         console.error('Group collab init failed', error)
+        if (!cancelled) {
+          updateSettings({
+            lastGroupSyncError: error instanceof Error ? error.message : '群組同步失敗',
+          })
+        }
       }
     }
 
@@ -76,5 +87,5 @@ export function useGroupCollab() {
       window.clearInterval(pollId)
       stopGroupCollabRealtime()
     }
-  }, [groupCode, groupCollabBootstrapped, hydrated, updateSettings])
+  }, [groupCode, groupCollabBootstrapped, groupDataBoundCode, hydrated, updateSettings])
 }

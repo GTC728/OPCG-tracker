@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { ImportHistoryPanel } from '@/components/settings/ImportHistoryPanel'
+import { isDeletedPlayer, isDeletedSession } from '@/lib/entityVisibility'
 import { exportAppStateExcel } from '@/lib/excelExport'
 import {
   detectTestImportWarning,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/importSafety'
 import { useI18n } from '@/lib/i18n'
 import { importAppStateJson } from '@/lib/storage'
+import { getCompletedMatches } from '@/lib/stats'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import type { AppState, ImportMatchInput } from '@/types'
 
@@ -433,11 +435,15 @@ function ImportTool() {
 function ExportTool() {
   const { t } = useI18n()
   const toast = useToast()
-  const matches = useAppStore((state) => state.matches.length)
-  const players = useAppStore((state) => state.players.length)
+  const allMatches = useAppStore((state) => state.matches)
+  const allPlayers = useAppStore((state) => state.players)
+  const allSessions = useAppStore((state) => state.sessions)
+  const matches = getCompletedMatches(allMatches).length
+  const players = allPlayers.filter((player) => !isDeletedPlayer(player)).length
   const leaders = useAppStore((state) => state.leaders.length)
   const deckVariants = useAppStore((state) => state.deckVariants.length)
-  const sessions = useAppStore((state) => state.sessions.length)
+  const sessions = allSessions.filter((session) => !isDeletedSession(session)).length
+  const deletedMatches = allMatches.length - matches
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -469,6 +475,11 @@ function ExportTool() {
           <dd className="mt-1 text-base font-semibold text-text-primary">{sessions}</dd>
         </div>
       </dl>
+      {deletedMatches > 0 ? (
+        <p className="mt-2 text-xs text-text-secondary">
+          另有 {deletedMatches} 場已刪除對局（含撤銷匯入）僅保留在完整備份表，不列入上方統計與「對局總表」。
+        </p>
+      ) : null}
       <Button
         className="mt-4"
         fullWidth

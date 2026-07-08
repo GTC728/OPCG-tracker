@@ -1,5 +1,11 @@
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
 import {
+  applyGroupScopedSnapshot,
+  captureGroupScopedSnapshot,
+  hasGroupScopedData,
+  stripGroupScopedEntities,
+} from '@/lib/groupScope'
+import {
   enqueueSyncOp,
   listSyncQueue,
   markSyncQueueFailed,
@@ -610,6 +616,74 @@ export function flushGroupCollabSyncNow(groupCode: string): void {
   flushQueued = true
   if (flushRunning) return
   void runFlushQueue(groupCode)
+}
+
+export async function flushGroupCollabSyncNowAsync(groupCode: string): Promise<void> {
+  if (flushTimer) {
+    clearTimeout(flushTimer)
+    flushTimer = null
+  }
+  flushQueued = true
+  await runFlushQueue(groupCode)
+}
+
+export async function remoteGroupHasData(groupCode: string): Promise<boolean> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return false
+  const groupKey = await resolveGroupKey(groupCode)
+
+  const checks = await Promise.all([
+    supabase
+      .from('sync_matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_key', groupKey)
+      .is('deleted_at', null),
+    supabase
+      .from('sync_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_key', groupKey)
+      .is('deleted_at', null),
+    supabase
+      .from('sync_players')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_key', groupKey)
+      .is('deleted_at', null),
+    supabase.from('sync_active_matches').select('id', { count: 'exact', head: true }).eq('group_key', groupKey),
+  ])
+
+  for (const result of checks) {
+    if (result.error) throw result.error
+    if ((result.count ?? 0) > 0) return true
+  }
+  return false
+}
+
+/**
+ * Bind local collab slice to a group: clear stale local data, pull remote or seed empty group once.
+ * Keeps UX automatic — no join-mode picker.
+ */
+export async function initializeGroupCollab(groupCode: string): Promise<void> {
+  const current = getAppState()
+  const incomingSnapshot = captureGroupScopedSnapshot(current)
+  const hadLocalData = hasGroupScopedData(current)
+
+  pauseGroupCollabNotify()
+  try {
+    updateAppState((state) => stripGroupScopedEntities(state))
+
+    const hasRemote = await remoteGroupHasData(groupCode)
+    if (hasRemote) {
+      await pullGroupCollabState(groupCode)
+      return
+    }
+
+    if (hadLocalData) {
+      updateAppState((state) => applyGroupScopedSnapshot(state, incomingSnapshot))
+      await bootstrapGroupCollab(groupCode, getAppState())
+    }
+  } finally {
+    resumeGroupCollabNotify()
+  }
 }
 
 async function runFlushQueue(groupCode: string): Promise<void> {

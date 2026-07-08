@@ -168,6 +168,23 @@ const migrations: Record<number, Migration> = {
       },
     }
   },
+  11: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    const inGroup = Boolean(settings.lastGroupCode)
+    return {
+      ...state,
+      schemaVersion: 11,
+      settings: {
+        ...settings,
+        groupDataBoundCode: null,
+        groupCollabBootstrapped: inGroup ? false : settings.groupCollabBootstrapped,
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

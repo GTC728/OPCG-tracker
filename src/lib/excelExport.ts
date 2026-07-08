@@ -1,4 +1,5 @@
 import { APP_VERSION } from '@/lib/constants'
+import { isDeletedMatch, isDeletedPlayer, isDeletedSession } from '@/lib/entityVisibility'
 import { getDeckDisplayName, getLeader, getPlayerAliases } from '@/lib/selectors'
 import type { AppState, DeckVariant, Leader, Match, Player } from '@/types'
 import type { Row, Sheet } from 'write-excel-file/browser'
@@ -86,21 +87,28 @@ function readableSheet(sheetName: string, columns: string[], rows: SheetRow[]): 
 }
 
 function readmeSheet(state: AppState, exportedAt: string): Sheet<Blob> {
+  const activeMatches = state.matches.filter((match) => !isDeletedMatch(match)).length
+  const deletedMatches = state.matches.length - activeMatches
+  const activePlayers = state.players.filter((player) => !isDeletedPlayer(player)).length
+  const activeSessions = state.sessions.filter((session) => !isDeletedSession(session)).length
+
   const rows: Row[] = [
     titleRow('OPCG Tracker Excel Export', 2),
     [null, null],
-    ['先看哪裡', '請先看「對局總表」。這是給人閱讀、篩選、分享的主要表。'],
+    ['先看哪裡', '請先看「對局總表」。這是給人閱讀、篩選、分享的主要表（僅含有效對局）。'],
+    ['已刪除對局', '撤銷匯入或手動刪除的對局不在「對局總表」，但會保留在 matches 表（deleted_at）與完整 JSON，供還原與審計。'],
     ['要還原資料', '在 app 的匯入功能選擇此檔案，系統會辨認 _app_state_json 並要求你確認還原。'],
     ['資料庫表', '底線開頭或英文表名是給程式匯入、兼容、審計用，不需要平常閱讀。'],
     [null, null],
     ['匯出時間', exportedAt],
     ['App 版本', state.appVersion || APP_VERSION],
     ['Schema 版本', state.schemaVersion],
-    ['完成對局', state.matches.length],
-    ['玩家', state.players.length],
+    ['有效對局', activeMatches],
+    ['已刪除對局', deletedMatches],
+    ['有效玩家', activePlayers],
     ['Leader', state.leaders.length],
     ['Deck Variants', state.deckVariants.length],
-    ['Sessions', state.sessions.length],
+    ['有效 Session', activeSessions],
   ]
 
   return {
@@ -186,6 +194,7 @@ function buildReadableMatchRows(state: AppState): SheetRow[] {
   const playersById = new Map(state.players.map((player) => [player.id, player]))
 
   return [...state.matches]
+    .filter((match) => !isDeletedMatch(match))
     .sort((left, right) => right.finishedAt.localeCompare(left.finishedAt))
     .map((match) => {
       const player1Name = getPlayerName(playersById, match.player1Id) ?? '未知玩家'
@@ -205,7 +214,7 @@ function buildReadableMatchRows(state: AppState): SheetRow[] {
         勝方: winnerName,
         先攻: firstPlayerName,
         結果: match.resultType,
-        狀態: match.deletedAt ? '已刪除' : '正常',
+        狀態: '正常',
         來源: match.source,
         備註: match.notes,
       }
@@ -390,6 +399,8 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     'success_count',
     'error_count',
     'raw_file_hash',
+    'reverted_at',
+    'target_session_id',
   ]
   const importRowColumns = [
     'row_id',
@@ -558,6 +569,8 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
         success_count: batch.successCount,
         error_count: batch.errorCount,
         raw_file_hash: batch.rawFileHash,
+        reverted_at: batch.revertedAt,
+        target_session_id: batch.targetSessionId,
       })),
     ),
     sheet(

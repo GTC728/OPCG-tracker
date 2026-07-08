@@ -12,7 +12,6 @@ import {
   type GroupCloudState,
   uploadCloudSnapshot,
 } from '@/lib/cloudSync'
-import { stopGroupCollabRealtime } from '@/lib/groupSync'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import { BackupVersionList } from '@/components/settings/BackupVersionList'
@@ -28,6 +27,7 @@ export function CloudSyncTool() {
   const { t } = useI18n()
   const toast = useToast()
   const replaceState = useAppStore((state) => state.replaceState)
+  const leaveGroupCollab = useAppStore((state) => state.leaveGroupCollab)
   const settings = useAppStore((state) => state.settings)
   const updateSettings = useAppStore((state) => state.updateSettings)
   const [email, setEmail] = useState('')
@@ -133,17 +133,24 @@ export function CloudSyncTool() {
                   fullWidth
                   disabled={busy}
                   onClick={() => {
-                    stopGroupCollabRealtime()
-                    setConnectedGroup(null)
-                    setGroupState(null)
-                    setGroupCode('')
-                    setMessage(null)
-                    updateSettings({
-                      lastGroupCode: null,
-                      groupCollabEnabled: false,
-                      groupCollabBootstrapped: false,
-                    })
-                    toast.info(t('cloud.leftGroup'))
+                    void (async () => {
+                      setBusy(true)
+                      try {
+                        await leaveGroupCollab()
+                        setConnectedGroup(null)
+                        setGroupState(null)
+                        setGroupCode('')
+                        setMessage(null)
+                        toast.info(t('cloud.leftGroup'))
+                      } catch (caught) {
+                        const nextMessage =
+                          caught instanceof Error ? caught.message : t('cloud.leaveGroupFailed')
+                        setMessage(nextMessage)
+                        toast.error(nextMessage)
+                      } finally {
+                        setBusy(false)
+                      }
+                    })()
                   }}
                 >
                   {t('cloud.leaveGroup')}
@@ -173,8 +180,9 @@ export function CloudSyncTool() {
                         lastGroupCode: code,
                         groupCollabEnabled: true,
                         groupCollabBootstrapped: false,
+                        groupDataBoundCode: null,
                       })
-                      const nextMessage = latest ? '已加入群組' : '新群組，先上傳即可建立資料'
+                      const nextMessage = latest ? t('cloud.joinedGroup') : t('cloud.joinedNewGroup')
                       setMessage(nextMessage)
                       toast.success(nextMessage)
                     } catch (caught) {

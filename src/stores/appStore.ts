@@ -17,10 +17,14 @@ import {
   replaceMaterializedMatch,
 } from '@/lib/materializedStats'
 import {
+  flushGroupCollabSyncNowAsync,
   pauseGroupCollabNotify,
   pushFullGroupState,
   resumeGroupCollabNotify,
+  stopGroupCollabRealtime,
 } from '@/lib/groupSync'
+import { stripGroupScopedEntities } from '@/lib/groupScope'
+import { clearSyncQueue } from '@/lib/syncQueue'
 import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
 import { appendAuditEntry } from '@/lib/auditLog'
@@ -82,6 +86,7 @@ interface AppStore extends AppState {
   revertImportBatch: (batchId: string) => number
   restoreImportSnapshot: (snapshotId: string) => void
   setGroupSyncPaused: (paused: boolean) => Promise<void>
+  leaveGroupCollab: () => Promise<void>
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
@@ -1260,6 +1265,40 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const next = appendAuditEntry(nextState, 'import', '已還原匯入前快照')
       const persisted = persist(next, true)
       set({ ...persisted, hydrated: true })
+    } finally {
+      resumeGroupCollabNotify()
+    }
+  },
+
+  leaveGroupCollab: async () => {
+    const current = getAppState()
+    const groupCode = current.settings.lastGroupCode
+    stopGroupCollabRealtime()
+    pauseGroupCollabNotify()
+    try {
+      if (groupCode) {
+        await flushGroupCollabSyncNowAsync(groupCode)
+      }
+      await clearSyncQueue()
+      invalidateDerivedCache()
+      const stripped = stripGroupScopedEntities(current)
+      const next = appendAuditEntry(
+        {
+          ...stripped,
+          settings: {
+            ...stripped.settings,
+            lastGroupCode: null,
+            groupCollabEnabled: false,
+            groupCollabBootstrapped: false,
+            groupDataBoundCode: null,
+          },
+        },
+        'sync',
+        groupCode ? `已離開群組 ${groupCode}` : '已離開群組',
+      )
+      syncMaterializedFromState(next)
+      const persisted = persist(next, true)
+      set({ ...persisted })
     } finally {
       resumeGroupCollabNotify()
     }
