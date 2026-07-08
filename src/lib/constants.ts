@@ -4,8 +4,9 @@ import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/data
 import type { AppState, Deck } from '@/types'
 
 export const SCHEMA_VERSION = 8
-export const APP_VERSION = '4.3.3'
+export const APP_VERSION = '4.3.4'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
+export const GITHUB_REPO_URL = 'https://github.com/GTC728/OPCG-tracker'
 export const STORAGE_KEY = 'opcg-tracker-state'
 
 function seedDecksWithLocale(): Deck[] {

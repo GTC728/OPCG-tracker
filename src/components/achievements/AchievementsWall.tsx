@@ -20,7 +20,8 @@ import {
 import { getHighestUnlockedMetal } from '@/lib/achievementTierStyles'
 import { playInteractionSound, uiPopIn, uiPressable } from '@/lib/motion'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
-import { uiGlassCard, uiHorizontalRail, uiHorizontalRailItem, uiLink, uiSectionTitle } from '@/lib/uiSurface'
+import { ProfileSection } from '@/components/profile/ProfileSection'
+import { uiGlassCard, uiHorizontalRail, uiHorizontalRailItem, uiSectionTitle } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 export type { AchievementPeerRate }
@@ -451,23 +452,11 @@ export function AchievementsPreviewRail({
         : t('achievements.highlightsTitle')
 
   return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className={uiSectionTitle}>{title}</h2>
-        <button
-          type="button"
-          className={['shrink-0 text-right text-[11px] font-semibold leading-tight', uiLink, uiPressable].join(' ')}
-          onClick={() => {
-            playInteractionSound('tap')
-            onOpenAll?.()
-          }}
-        >
-          <span className="block">
-            {summary.familiesUnlocked}/{summary.totalFamilies} · {summary.tierRate}%
-          </span>
-          <span className="block text-[10px] font-medium text-text-secondary">{t('achievements.viewAll')}</span>
-        </button>
-      </div>
+    <ProfileSection
+      title={title}
+      meta={`${summary.familiesUnlocked}/${summary.totalFamilies} ${t('achievements.familiesUnit')} · ${t('achievements.tierProgress')} ${summary.tierRate}%`}
+      onViewAll={onOpenAll}
+    >
       {preview.items.length ? (
         <div className={uiHorizontalRail}>
           {preview.items.map((item) => (
@@ -490,7 +479,7 @@ export function AchievementsPreviewRail({
         open={Boolean(detail)}
         onClose={() => setDetail(null)}
       />
-    </section>
+    </ProfileSection>
   )
 }
 

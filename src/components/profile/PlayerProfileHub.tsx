@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { AchievementsPreviewRail, AchievementsWall } from '@/components/achievements/AchievementsWall'
 import { MatchListItem } from '@/components/match/MatchResultRow'
+import { ProfilePreviewCard } from '@/components/profile/ProfilePreviewCard'
+import { ProfileSection } from '@/components/profile/ProfileSection'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
@@ -13,7 +15,6 @@ import {
 import type { AchievementPeerRate } from '@/lib/achievements'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
 import { useI18n } from '@/lib/i18n'
-import { uiPopIn, uiPressable } from '@/lib/motion'
 import {
   buildDeckUsageDistribution,
   buildHeadToHeadStats,
@@ -26,42 +27,10 @@ import {
   getCompletedMatches,
   type RecordStat,
 } from '@/lib/stats'
-import {
-  uiCard,
-  uiGlassCard,
-  uiHorizontalRail,
-  uiHorizontalRailItem,
-  uiSectionTitle,
-} from '@/lib/uiSurface'
+import { uiCard, uiGlassCard, uiHorizontalRail } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 type ProfilePanel = 'overview' | 'trends' | 'decks' | 'matches' | 'achievements' | 'rivals' | null
-
-function ProfileDetailPreviewCard({
-  title,
-  value,
-  detail,
-  onClick,
-}: {
-  title: string
-  value: string
-  detail?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className={[uiHorizontalRailItem, uiGlassCard, uiPopIn, uiPressable, 'flex h-full flex-col overflow-hidden p-3 text-left'].join(
-        ' ',
-      )}
-      onClick={onClick}
-    >
-      <p className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">{title}</p>
-      <p className="mt-1.5 line-clamp-1 text-lg font-bold tracking-tight">{value}</p>
-      {detail ? <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-text-secondary">{detail}</p> : null}
-    </button>
-  )
-}
 
 function PanelSheet({
   open,
@@ -95,7 +64,7 @@ function getDisplayWinRate(winRate: number | null, total: number): number | null
 
 export function PlayerProfileHub({
   player,
-  matches,
+  matches: _scopedMatches,
   allMatches,
   players,
   decks,
@@ -125,23 +94,25 @@ export function PlayerProfileHub({
   const { t } = useI18n()
   const [panel, setPanel] = useState<ProfilePanel>(null)
 
-  const playerMatches = getCompletedMatches(matches).filter(
+  // Profile personal data is always all-time (achievements, streaks, recent form cross sessions).
+  const lifetimeMatches = allMatches
+  const playerMatches = getCompletedMatches(lifetimeMatches).filter(
     (m) => m.player1Id === player.id || m.player2Id === player.id,
   )
-  const stat = buildPlayerStats(players, matches).find((item) => item.id === player.id) ?? null
-  const streak = buildWinStreakStats(player.id, matches)
-  const deckUsage = buildDeckUsageDistribution(player.id, decks, matches, language)
-  const weeklyStats = buildWeeklyWinRateStats(player.id, allMatches)
-  const globalRates = computeGlobalAchievementRates(players, decks, matches)
+  const stat = buildPlayerStats(players, lifetimeMatches).find((item) => item.id === player.id) ?? null
+  const streak = buildWinStreakStats(player.id, lifetimeMatches)
+  const deckUsage = buildDeckUsageDistribution(player.id, decks, lifetimeMatches, language)
+  const weeklyStats = buildWeeklyWinRateStats(player.id, lifetimeMatches)
+  const globalRates = computeGlobalAchievementRates(players, decks, lifetimeMatches)
   const achievements = getPlayerAchievementProgress(
     player.id,
     players,
     decks,
-    matches,
+    lifetimeMatches,
     achievementUnlocks,
     globalRates,
   )
-  const peerRateMap = computePerPlayerAchievementRates(players, decks, matches)
+  const peerRateMap = computePerPlayerAchievementRates(players, decks, lifetimeMatches)
   const peerRates: AchievementPeerRate[] = players
     .filter((p) => !p.archived && p.id !== player.id)
     .map((p) => ({
@@ -152,20 +123,19 @@ export function PlayerProfileHub({
     .sort((a, b) => b.rate - a.rate)
   const achievementSummary = computeAchievementSummary(achievements)
   const playerCompletionRate = achievementSummary.tierRate
-  const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
+  const deckStats = buildPlayerDeckStats(players, decks, lifetimeMatches, language).filter(
     (item) => item.playerId === player.id,
   )
-  const headToHead = buildHeadToHeadStats(player.id, players, matches)
+  const headToHead = buildHeadToHeadStats(player.id, players, lifetimeMatches)
+  const recentForm = buildRecentForm(lifetimeMatches, player.id)
   const recentMatches = [...playerMatches]
     .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
     .slice(0, 12)
-  const topDeck = deckStats[0]
-  const topRival = headToHead[0]
 
   const close = () => setPanel(null)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {header}
 
       <AchievementsPreviewRail
@@ -174,16 +144,10 @@ export function PlayerProfileHub({
         onOpenAll={() => setPanel('achievements')}
       />
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className={uiSectionTitle}>{t('stats.recentMatches')}</h2>
-          <button type="button" className="text-xs font-semibold text-[var(--color-link)]" onClick={() => setPanel('matches')}>
-            {t('achievements.viewAll')}
-          </button>
-        </div>
+      <ProfileSection title={t('stats.recentMatches')} onViewAll={() => setPanel('matches')}>
         <div className={uiHorizontalRail}>
-          {recentMatches.slice(0, 4).map((match) => (
-            <div key={match.id} className="min-w-[16rem] shrink-0 snap-start">
+          {recentMatches.slice(0, 6).map((match) => (
+            <div key={match.id} className="w-[16rem] shrink-0 snap-start">
               <MatchListItem
                 match={match}
                 players={players}
@@ -196,58 +160,104 @@ export function PlayerProfileHub({
             </div>
           ))}
         </div>
-      </section>
+      </ProfileSection>
 
-      <section className="space-y-2">
-        <h2 className={uiSectionTitle}>{t('profile.detailSections')}</h2>
-        <div className={uiHorizontalRail}>
-          <ProfileDetailPreviewCard
-            title={t('profile.panel.overview')}
-            value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
-            detail={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${stat?.total ?? 0}場`}
-            onClick={() => setPanel('overview')}
-          />
-          <ProfileDetailPreviewCard
-            title={t('profile.panel.trends')}
-            value={streak.currentStreak > 0 ? `${streak.currentStreak}🔥` : `↑${streak.longestStreak}`}
-            detail={t('profile.panel.trendsDetail')}
-            onClick={() => setPanel('trends')}
-          />
-          <ProfileDetailPreviewCard
-            title={t('profile.panel.decks')}
-            value={topDeck ? `${Math.round((topDeck.total / Math.max(stat?.total ?? 1, 1)) * 100)}%` : '—'}
-            detail={topDeck?.deckName}
-            onClick={() => setPanel('decks')}
-          />
-          <ProfileDetailPreviewCard
-            title={t('profile.panel.matches')}
-            value={String(recentMatches.length)}
-            detail={t('profile.panel.matchesDetail')}
-            onClick={() => setPanel('matches')}
-          />
-          <ProfileDetailPreviewCard
-            title={t('profile.panel.rivals')}
-            value={topRival?.name ?? '—'}
-            detail={topRival ? `${topRival.wins}W-${topRival.losses}L` : undefined}
-            onClick={() => setPanel('rivals')}
-          />
-        </div>
-      </section>
+      <div className="space-y-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{t('profile.detailSections')}</p>
+
+        <ProfileSection
+          title={t('profile.panel.overview')}
+          meta={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${stat?.total ?? 0}場`}
+          onViewAll={() => setPanel('overview')}
+        >
+          <div className={uiHorizontalRail}>
+            <ProfilePreviewCard
+              label={t('stats.winRate')}
+              value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
+              detail={getSampleLabel(stat?.total ?? 0)}
+            />
+            <ProfilePreviewCard label={t('stats.wins')} value={String(stat?.wins ?? 0)} />
+            <ProfilePreviewCard label={t('stats.matchesUnit')} value={String(stat?.total ?? 0)} />
+          </div>
+        </ProfileSection>
+
+        <ProfileSection
+          title={t('profile.panel.trends')}
+          meta={t('profile.allTimeScope')}
+          onViewAll={() => setPanel('trends')}
+        >
+          <div className={uiHorizontalRail}>
+            <ProfilePreviewCard
+              label={t('stats.currentStreak')}
+              value={streak.currentStreak > 0 ? `${streak.currentStreak}🔥` : '—'}
+              detail={t('profile.panel.trendsDetail')}
+            />
+            <ProfilePreviewCard
+              label={t('stats.longestStreak')}
+              value={streak.longestStreak > 0 ? String(streak.longestStreak) : '—'}
+            />
+            {recentForm.slice(0, 2).map((item) => (
+              <ProfilePreviewCard
+                key={item.label}
+                label={item.label}
+                value={item.total ? formatPercent(item.winRate) : '—'}
+                detail={item.total ? `${item.wins}/${item.total}` : undefined}
+              />
+            ))}
+          </div>
+        </ProfileSection>
+
+        <ProfileSection title={t('profile.panel.decks')} onViewAll={() => setPanel('decks')}>
+          <div className={uiHorizontalRail}>
+            {deckStats.length ? (
+              deckStats.slice(0, 4).map((item) => (
+                <ProfilePreviewCard
+                  key={item.deckId}
+                  label={item.deckName}
+                  value={formatPercent(item.winRate)}
+                  detail={`${item.wins}W-${item.losses}L · ${item.total}場`}
+                  onClick={() => onOpenDeck(item.deckId)}
+                />
+              ))
+            ) : (
+              <p className="px-[var(--ui-page-px)] text-sm text-text-secondary">{t('stats.noDeckData')}</p>
+            )}
+          </div>
+        </ProfileSection>
+
+        <ProfileSection title={t('profile.panel.rivals')} onViewAll={() => setPanel('rivals')}>
+          <div className={uiHorizontalRail}>
+            {headToHead.length ? (
+              headToHead.slice(0, 4).map((item) => (
+                <ProfilePreviewCard
+                  key={item.opponentId}
+                  label={item.name}
+                  value={`${item.wins}W-${item.losses}L`}
+                  detail={formatPercent(item.winRate)}
+                  onClick={() => setPanel('rivals')}
+                />
+              ))
+            ) : (
+              <p className="px-[var(--ui-page-px)] text-sm text-text-secondary">{t('stats.noHeadToHead')}</p>
+            )}
+          </div>
+        </ProfileSection>
+      </div>
 
       <PanelSheet open={panel === 'overview'} title={t('profile.panel.overview')} onClose={close}>
         <section className="grid grid-cols-3 gap-3">
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>
-            <p className="text-xs text-text-secondary">{t('stats.deckUsagePie')}</p>
+            <p className="text-xs text-text-secondary">{t('stats.winRate')}</p>
             <p className="mt-1 text-2xl font-bold">
               {formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
             </p>
           </article>
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>
-            <p className="text-xs text-text-secondary">勝場</p>
+            <p className="text-xs text-text-secondary">{t('stats.wins')}</p>
             <p className="mt-1 text-2xl font-bold">{stat?.wins ?? 0}</p>
           </article>
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>
-            <p className="text-xs text-text-secondary">場數</p>
+            <p className="text-xs text-text-secondary">{t('stats.matchesUnit')}</p>
             <p className="mt-1 text-2xl font-bold">{stat?.total ?? 0}</p>
             <p className="text-[10px] text-text-secondary">{getSampleLabel(stat?.total ?? 0)}</p>
           </article>
@@ -269,7 +279,7 @@ export function PlayerProfileHub({
         <WeeklyWinRateChart stats={weeklyStats} title={t('stats.weeklyWinRate')} />
         <section className={[uiGlassCard, 'space-y-2 p-4'].join(' ')}>
           <h3 className="text-sm font-semibold">{t('profile.recentForm')}</h3>
-          {buildRecentForm(matches, player.id).map((item) => (
+          {recentForm.map((item) => (
             <div key={item.label} className="flex justify-between text-sm">
               <span className="text-text-secondary">{item.label}</span>
               <span className="font-semibold">
@@ -325,7 +335,7 @@ export function PlayerProfileHub({
           peerContext={{
             players,
             decks,
-            matches,
+            matches: lifetimeMatches,
             achievementUnlocks,
             currentPlayerId: player.id,
           } satisfies AchievementPeerContext}

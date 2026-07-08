@@ -924,15 +924,15 @@ function PlayerProfileView({
 }) {
   const { t } = useI18n()
   const [shareOpen, setShareOpen] = useState(false)
-  const playerMatches = getCompletedMatches(matches).filter(
+  const playerMatches = getCompletedMatches(allMatches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
-  const playerStat = buildPlayerStats(players, matches).find((item) => item.id === player.id)
-  const deckStats = buildPlayerDeckStats(players, decks, matches, language).filter(
+  const playerStat = buildPlayerStats(players, allMatches).find((item) => item.id === player.id)
+  const deckStats = buildPlayerDeckStats(players, decks, allMatches, language).filter(
     (item) => item.playerId === player.id,
   )
   const playerDeckIds = new Set(deckStats.map((item) => item.deckId))
-  const relevantMatchups = buildMatchupStats(decks, matches, language).filter(
+  const relevantMatchups = buildMatchupStats(decks, allMatches, language).filter(
     (matchup) => playerDeckIds.has(matchup.deckAId) || playerDeckIds.has(matchup.deckBId),
   )
 
@@ -979,7 +979,7 @@ function PlayerProfileView({
       >
         <PlayerShareCard
           player={player}
-          matches={matches}
+          matches={allMatches}
           players={players}
           decks={decks}
           language={language}
