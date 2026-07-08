@@ -14,6 +14,8 @@ const dictionaries = {
 
 type TranslationKey = keyof typeof zhHant
 
+export type { TranslationKey }
+
 export const languageLabels: Array<{ value: Language; label: string }> = [
   { value: 'zh-Hant', label: '繁體中文' },
   { value: 'zh-Hans', label: '简体中文' },

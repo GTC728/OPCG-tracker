@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.2.0 - 2026-07-08
+
+### New
+
+- **10 new achievements**: Mono Maniac, Mirror Master, Meta Breaker, Revenge Match, Underdog, Weekend Warrior, Group Star, Note Poet, Achievement Hunter, plus expanded skill tiers.
+- **Achievement browsing**: category filter chips, sort by common-first / progress / category / name; grouped sections when sorted by category.
+- **Profile achievement rail**: shows **recently unlocked** badges (by `unlockedAt`), not definition order.
+
+### Changed
+
+- **Grind achievements** capped at **5 tiers**, calibrated for ~1.5 sessions/month (~100 matches/year max for Veteran).
+- **Repeatable skill achievements** capped at **3 tiers** with count-based progress (comeback, giant slayer, upset alarm, etc.).
+- Each definition has `ease` weight for default sort (more common achievements first).
+
 ## V4.1.0 - 2026-07-08
 
 ### New
