@@ -344,6 +344,7 @@ export const zhHans = {
   'stats.noDeckData': '尚无卡组使用记录。',
   'stats.record': '战绩',
   'stats.deckUsageShort': '使用率',
+  'stats.deckUsageOther': '其他牌组',
   'stats.streakWinSuffix': '🔥',
   'stats.streakLossSuffix': '连败',
   'profile.viewOverview': '战绩详细',

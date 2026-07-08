@@ -344,6 +344,7 @@ export const zhHant = {
   'stats.noDeckData': '尚無牌組使用記錄。',
   'stats.record': '戰績',
   'stats.deckUsageShort': '使用率',
+  'stats.deckUsageOther': '其他牌組',
   'stats.streakWinSuffix': '🔥',
   'stats.streakLossSuffix': '連敗',
   'profile.viewOverview': '戰績詳細',

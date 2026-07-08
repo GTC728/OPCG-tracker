@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback, type UIEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { AchievementCommunitySheet } from '@/components/achievements/AchievementCommunitySheet'
 import { AchievementIcon } from '@/components/achievements/AchievementIcon'
 import { AchievementTierBar } from '@/components/achievements/AchievementTierBar'
@@ -123,15 +123,54 @@ function AchievementListRow({
   item,
   language,
   onClick,
+  dense = false,
 }: {
   item: AchievementProgress
   language: Language
   onClick: () => void
+  dense?: boolean
 }) {
   const { t } = useI18n()
   const title = item.definition.title[language]
   const desc = item.definition.description[language]
   const metal = getHighestUnlockedMetal(item.currentLevel, item.maxLevel)
+
+  if (dense) {
+    return (
+      <button
+        type="button"
+        className={[
+          'w-full rounded-md border border-[var(--ui-border)] bg-[var(--glass-inset-bg)] text-left',
+          uiPressable,
+        ].join(' ')}
+        onClick={() => {
+          playInteractionSound('tap')
+          onClick()
+        }}
+        style={metal ? { boxShadow: `inset 0 0 0 1px ${metal.border}` } : undefined}
+      >
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <AchievementIcon
+            kind={item.definition.icon}
+            category={item.definition.category}
+            size="sm"
+            dimmed={item.currentLevel <= 0}
+          />
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xs font-semibold">{title}</p>
+              <span className="shrink-0 text-[10px] tabular-nums text-text-secondary">
+                {item.currentLevel > 0
+                  ? `Lv.${item.currentLevel}/${item.maxLevel}`
+                  : t('achievements.notUnlocked')}
+              </span>
+            </div>
+            <AchievementTierBar currentLevel={item.currentLevel} maxLevel={item.maxLevel} size="sm" />
+          </div>
+        </div>
+      </button>
+    )
+  }
 
   return (
     <button
@@ -445,137 +484,26 @@ function CollapsibleAchievementGroup({
   )
 }
 
-const VIRTUAL_LIST_THRESHOLD = 50
-const VIRTUAL_ROW_HEIGHT = 96
-const VIRTUAL_OVERSCAN = 6
-
-function VirtualAchievementList({
-  items,
-  language,
-  onSelect,
-  embedded = false,
-}: {
-  items: AchievementProgress[]
-  language: Language
-  onSelect: (item: AchievementProgress) => void
-  embedded?: boolean
-}) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [scrollTop, setScrollTop] = useState(0)
-  const [viewportHeight, setViewportHeight] = useState(480)
-
-  useEffect(() => {
-    const node = containerRef.current
-    if (!node) return
-    const observer = new ResizeObserver(([entry]) => {
-      setViewportHeight(entry.contentRect.height)
-    })
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [])
-
-  const onScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
-    setScrollTop(event.currentTarget.scrollTop)
-  }, [])
-
-  const totalHeight = items.length * VIRTUAL_ROW_HEIGHT
-  const startIndex = Math.max(0, Math.floor(scrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN)
-  const endIndex = Math.min(
-    items.length,
-    Math.ceil((scrollTop + viewportHeight) / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN,
-  )
-  const visibleItems = items.slice(startIndex, endIndex)
-
-  return (
-    <div
-      ref={containerRef}
-      className={[
-        'scrollbar-subtle overflow-y-auto overscroll-contain',
-        embedded ? 'min-h-0 flex-1' : 'max-h-[min(70vh,32rem)]',
-      ].join(' ')}
-      onScroll={onScroll}
-    >
-      <div style={{ height: totalHeight, position: 'relative' }}>
-        {visibleItems.map((item, index) => {
-          const absoluteIndex = startIndex + index
-          return (
-            <div
-              key={item.definition.id}
-              style={{
-                position: 'absolute',
-                top: absoluteIndex * VIRTUAL_ROW_HEIGHT,
-                left: 0,
-                right: 0,
-                height: VIRTUAL_ROW_HEIGHT,
-                paddingBottom: 8,
-              }}
-            >
-              <AchievementListRow
-                item={item}
-                language={language}
-                onClick={() => onSelect(item)}
-              />
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-export function AchievementsWallSkeleton() {
-  return (
-    <div className="space-y-3 animate-pulse">
-      <div className="flex items-center justify-between gap-2">
-        <div className="h-5 w-32 rounded bg-surface-muted/60" />
-        <div className="h-8 w-24 rounded bg-surface-muted/60" />
-      </div>
-      <div className="flex gap-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-7 w-16 rounded-lg bg-surface-muted/50" />
-        ))}
-      </div>
-      <div className="h-10 w-full rounded-lg bg-surface-muted/40" />
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-[88px] rounded-lg bg-surface-muted/30" />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function AchievementGrid({
   items,
   language,
   viewMode,
   onSelect,
-  embedded = false,
 }: {
   items: AchievementProgress[]
   language: Language
   viewMode: 'grid' | 'list'
   onSelect: (item: AchievementProgress) => void
-  embedded?: boolean
 }) {
   if (viewMode === 'list') {
-    if (items.length >= VIRTUAL_LIST_THRESHOLD) {
-      return (
-        <VirtualAchievementList
-          items={items}
-          language={language}
-          onSelect={onSelect}
-          embedded={embedded}
-        />
-      )
-    }
     return (
-      <div className="space-y-2">
+      <div className="space-y-1">
         {items.map((item) => (
           <AchievementListRow
             key={item.definition.id}
             item={item}
             language={language}
+            dense
             onClick={() => onSelect(item)}
           />
         ))}
@@ -659,13 +587,11 @@ export function AchievementsWall({
   playerCompletionRate,
   peerRates = [],
   peerContext,
-  embedded = false,
 }: {
   achievements: AchievementProgress[]
   playerCompletionRate?: number
   peerRates?: AchievementPeerRate[]
   peerContext?: AchievementPeerContext
-  embedded?: boolean
 }) {
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
@@ -702,7 +628,7 @@ export function AchievementsWall({
     : null
 
   return (
-    <section className={embedded ? 'flex min-h-0 flex-1 flex-col gap-3' : 'space-y-3'}>
+    <section className="space-y-2.5">
       {peerViewId && peerName ? (
         <button
           type="button"
@@ -720,14 +646,9 @@ export function AchievementsWall({
         <h2 className={uiSectionTitle}>
           {peerName ? `${peerName} · ${t('achievements.title')}` : t('achievements.myTitle')}
         </h2>
-        <div className="flex flex-col items-end gap-0.5">
-          <span className="rounded-md border border-[var(--ui-border)] bg-surface-muted/40 px-2 py-1 text-xs text-text-secondary">
-            {summary.familiesUnlocked}/{summary.totalFamilies} {t('achievements.familiesUnit')}
-          </span>
-          <span className="text-[10px] text-text-secondary">
-            {t('achievements.tierProgress')}: {summary.tiersEarned}/{summary.totalTiers} ({summary.tierRate}%)
-          </span>
-        </div>
+        <span className="shrink-0 rounded-md border border-[var(--ui-border)] bg-surface-muted/40 px-2 py-0.5 text-[10px] tabular-nums text-text-secondary">
+          {summary.familiesUnlocked}/{summary.totalFamilies} · {summary.tierRate}%
+        </span>
       </div>
 
       <AchievementFilters
@@ -758,7 +679,7 @@ export function AchievementsWall({
       />
 
       {grouped ? (
-        <div className={embedded ? 'min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-subtle' : 'space-y-3'}>
+        <div className="space-y-2">
           {grouped.map((group) => {
             const unlockedCount = group.items.filter((item) => item.currentLevel > 0).length
             const inProgress = group.items.some(
@@ -777,22 +698,18 @@ export function AchievementsWall({
                   language={language}
                   viewMode={viewMode}
                   onSelect={setDetail}
-                  embedded={embedded}
                 />
               </CollapsibleAchievementGroup>
             )
           })}
         </div>
       ) : (
-        <div className={embedded && viewMode === 'list' && filtered.length >= VIRTUAL_LIST_THRESHOLD ? 'flex min-h-0 flex-1 flex-col' : undefined}>
-          <AchievementGrid
-            items={filtered}
-            language={language}
-            viewMode={viewMode}
-            onSelect={setDetail}
-            embedded={embedded}
-          />
-        </div>
+        <AchievementGrid
+          items={filtered}
+          language={language}
+          viewMode={viewMode}
+          onSelect={setDetail}
+        />
       )}
 
       <AchievementDetailSheet

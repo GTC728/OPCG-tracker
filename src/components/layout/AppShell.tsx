@@ -95,7 +95,6 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
 
 interface AppShellProps {
   title: string
-  subtitle?: string
   activeTab: TabId
   onTabChange: (tab: TabId) => void
   children: ReactNode
@@ -103,7 +102,6 @@ interface AppShellProps {
 
 export function AppShell({
   title,
-  subtitle,
   activeTab,
   onTabChange,
   children,
@@ -114,12 +112,7 @@ export function AppShell({
         <SyncStatusBanner />
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <div className="flex items-center justify-between gap-2">
-            <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">
-              {title}
-              {subtitle ? (
-                <span className="font-normal text-text-secondary"> · {subtitle}</span>
-              ) : null}
-            </h1>
+            <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">{title}</h1>
             <AppBrandCredit />
           </div>
         </header>

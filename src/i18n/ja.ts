@@ -344,6 +344,7 @@ export const ja = {
   'stats.noDeckData': 'デッキ使用記録がありません。',
   'stats.record': '戦績',
   'stats.deckUsageShort': '使用率',
+  'stats.deckUsageOther': 'その他',
   'stats.streakWinSuffix': '🔥',
   'stats.streakLossSuffix': '連敗',
   'profile.viewOverview': '戦績詳細',

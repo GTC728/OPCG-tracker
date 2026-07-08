@@ -344,6 +344,7 @@ export const en = {
   'stats.noDeckData': 'No deck usage yet.',
   'stats.record': 'Record',
   'stats.deckUsageShort': 'Usage',
+  'stats.deckUsageOther': 'Other decks',
   'stats.streakWinSuffix': '🔥',
   'stats.streakLossSuffix': 'L streak',
   'profile.viewOverview': 'Full stats',

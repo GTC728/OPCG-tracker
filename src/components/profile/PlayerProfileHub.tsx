@@ -7,7 +7,7 @@ import { ProfilePreviewCard } from '@/components/profile/ProfilePreviewCard'
 import { ProfileSection } from '@/components/profile/ProfileSection'
 import { RecentFormBars } from '@/components/profile/RecentFormBars'
 import { BottomSheet } from '@/components/ui/BottomSheet'
-import { DeckUsagePieChart } from '@/components/stats/DeckUsagePieChart'
+import { DeckUsagePieChart, buildDeckUsageFillMap } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
 import {
@@ -116,6 +116,7 @@ export function PlayerProfileHub({
     panel === 'achievements',
     linkedPlayerId,
   )
+  const deckUsageFillMap = useMemo(() => buildDeckUsageFillMap(deckUsage), [deckUsage])
 
   const peerContext = useMemo(
     (): AchievementPeerContext => ({
@@ -171,6 +172,7 @@ export function PlayerProfileHub({
                   usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
                   winRate={item.winRate}
                   record={`${item.wins}W-${item.losses}L`}
+                  accentFill={deckUsageFillMap.get(item.deckId)}
                   onClick={() => onOpenDeck(item.deckId)}
                 />
               )
@@ -291,14 +293,13 @@ export function PlayerProfileHub({
         )}
       </PanelSheet>
 
-      <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close} manageScroll>
+      <PanelSheet open={panel === 'achievements'} title={t('profile.panel.achievements')} onClose={close}>
         {achievementPanelData ? (
           <AchievementsWall
             achievements={achievementPanelData.achievements}
             playerCompletionRate={achievementPanelData.summary.tierRate}
             peerRates={achievementPanelData.peerRates}
             peerContext={peerContext}
-            embedded
           />
         ) : null}
       </PanelSheet>

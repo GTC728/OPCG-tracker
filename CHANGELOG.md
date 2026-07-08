@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.5 - 2026-07-09
+
+### Changed
+
+- **Achievement list mode**: dense rows (title + tier bar only; details in sheet); removed broken virtual scroll — panel uses native sheet scroll.
+- **Deck usage hub**: compact pie without legend; top-5 cap with “other” slice; deck preview cards show color dots + left accent matching chart.
+- **App header**: page title only — dropped truncated subtitle line.
+
 ## V4.7.4 - 2026-07-09
 
 ### Changed

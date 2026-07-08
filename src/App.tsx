@@ -229,7 +229,6 @@ export default function App() {
       <SessionDayPrompt />
       <AppShell
         title={meta.title}
-        subtitle={meta.subtitle}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       >
