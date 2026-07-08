@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.7.8 - 2026-07-09
+
+### Changed
+
+- **Tier ladders**: unified 5/10-multiple curves via `achievementTierCurves.ts` — fine (lv3≈10), medium (lv5=100), large (lv5=1000). Core, extra, batch, and remaining catalog share the same curves.
+- **老兵 (`veteran`)**: now 10 → 50 → 100 → 500 → 1000 total matches; description updated for long-term goal.
+
+### Removed (merged elsewhere)
+
+- `win_or_learn` → `veteran` (total matches)
+- `match_100` / `match_500` / `match_1000` → `veteran` tiers; `win_250` → `centurion_wins`
+- Achievement count: **151** families (was 156)
+
 ## V4.7.7 - 2026-07-09
 
 ### Changed

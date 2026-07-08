@@ -1,14 +1,7 @@
 import type { AchievementDefinition } from '@/lib/achievements'
+import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
 import { getCompletedMatches } from '@/lib/stats'
 import type { Deck, Match, Player } from '@/types'
-
-function makeTiers(thresholds: number[], labelFn: (n: number) => Record<'zh-Hant' | 'zh-Hans' | 'en' | 'ja', string>) {
-  return thresholds.map((threshold, index) => ({
-    level: index + 1,
-    threshold,
-    label: labelFn(threshold),
-  }))
-}
 
 export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
   {
@@ -24,12 +17,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Lifetime win milestones.',
       ja: '累計勝利の節目。',
     },
-    tiers: makeTiers([50, 100, 150, 200, 300], (n) => ({
-      'zh-Hant': `${n} 勝`,
-      'zh-Hans': `${n} 胜`,
-      en: `${n} wins`,
-      ja: `${n}勝`,
-    })),
+    tiers: tierDefs.winsLarge(),
   },
   {
     id: 'iron_win_rate',
@@ -44,13 +32,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Win rate tiers with 30+ games.',
       ja: '30戦以上で勝率達成。',
     },
-    tiers: [
-      { level: 1, threshold: 55, label: { 'zh-Hant': '55%', 'zh-Hans': '55%', en: '55%', ja: '55%' } },
-      { level: 2, threshold: 58, label: { 'zh-Hant': '58%', 'zh-Hans': '58%', en: '58%', ja: '58%' } },
-      { level: 3, threshold: 62, label: { 'zh-Hant': '62%', 'zh-Hans': '62%', en: '62%', ja: '62%' } },
-      { level: 4, threshold: 65, label: { 'zh-Hant': '65%', 'zh-Hans': '65%', en: '65%', ja: '65%' } },
-      { level: 5, threshold: 70, label: { 'zh-Hant': '70%', 'zh-Hans': '70%', en: '70%', ja: '70%' } },
-    ],
+    tiers: tierDefs.winRate(),
   },
   {
     id: 'rematch_king',
@@ -65,12 +47,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Rematches vs the same opponent across sessions.',
       ja: '同一相手との再戦回数。',
     },
-    tiers: makeTiers([5, 10, 20, 35, 50], (n) => ({
-      'zh-Hant': `${n} 再戰`,
-      'zh-Hans': `${n} 再战`,
-      en: `${n} rematches`,
-      ja: `${n}再戦`,
-    })),
+    tiers: tierDefs.rematch(),
   },
   {
     id: 'leader_collector',
@@ -85,12 +62,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Unique leaders played.',
       ja: '使用したリーダー数。',
     },
-    tiers: makeTiers([8, 15, 25, 40, 60], (n) => ({
-      'zh-Hant': `${n} 主將`,
-      'zh-Hans': `${n} 主将`,
-      en: `${n} leaders`,
-      ja: `${n}体`,
-    })),
+    tiers: tierDefs.leaders(),
   },
   {
     id: 'round_robin',
@@ -105,12 +77,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Unique opponents in one session.',
       ja: '1セッションの対戦相手数。',
     },
-    tiers: makeTiers([3, 5, 8, 12, 16], (n) => ({
-      'zh-Hant': `${n} 人`,
-      'zh-Hans': `${n} 人`,
-      en: `${n} rivals`,
-      ja: `${n}人`,
-    })),
+    tiers: tierDefs.people(),
   },
   {
     id: 'midnight_duel',
@@ -125,12 +92,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Wins between midnight and 4 AM.',
       ja: '0–4時の勝利。',
     },
-    tiers: makeTiers([3, 8, 20, 40, 70], (n) => ({
-      'zh-Hant': `${n} 勝`,
-      'zh-Hans': `${n} 胜`,
-      en: `${n} wins`,
-      ja: `${n}勝`,
-    })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'lunch_break',
@@ -145,12 +107,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Wins during lunch hours.',
       ja: '昼休みの勝利。',
     },
-    tiers: makeTiers([1, 5, 12, 25, 40], (n) => ({
-      'zh-Hant': `${n} 勝`,
-      'zh-Hans': `${n} 胜`,
-      en: `${n} wins`,
-      ja: `${n}勝`,
-    })),
+    tiers: tierDefs.wins(TIERS.times5),
   },
   {
     id: 'white_mastery',
@@ -160,7 +117,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '白之精通', 'zh-Hans': '白之精通', en: 'White Mastery', ja: '白の精通' },
     description: { 'zh-Hant': '以白色為主色勝場。', 'zh-Hans': '以白色为主色胜场。', en: 'Wins with White primary.', ja: '白メインの勝利。' },
-    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'blue_mastery',
@@ -170,7 +127,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '藍之精通', 'zh-Hans': '蓝之精通', en: 'Blue Mastery', ja: '青の精通' },
     description: { 'zh-Hant': '以藍色為主色勝場。', 'zh-Hans': '以蓝色为主色胜场。', en: 'Wins with Blue primary.', ja: '青メインの勝利。' },
-    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'red_mastery',
@@ -180,7 +137,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '紅色快攻', 'zh-Hans': '红色快攻', en: 'Red Rush', ja: '赤の快攻' },
     description: { 'zh-Hant': '以紅色為主色勝場。', 'zh-Hans': '以红色为主色胜场。', en: 'Wins with Red primary.', ja: '赤メインの勝利。' },
-    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'green_mastery',
@@ -190,7 +147,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '綠色中速', 'zh-Hans': '绿色中速', en: 'Green Midrange', ja: '緑の中速' },
     description: { 'zh-Hant': '以綠色為主色勝場。', 'zh-Hans': '以绿色为主色胜场。', en: 'Wins with Green primary.', ja: '緑メインの勝利。' },
-    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'purple_mastery',
@@ -200,27 +157,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     icon: 'palette',
     title: { 'zh-Hant': '紫色試手', 'zh-Hans': '紫色试手', en: 'Purple Pilot', ja: '紫の試手' },
     description: { 'zh-Hant': '以紫色為主色勝場。', 'zh-Hans': '以紫色为主色胜场。', en: 'Wins with Purple primary.', ja: '紫メインの勝利。' },
-    tiers: makeTiers([5, 12, 25, 45, 70], (n) => ({ 'zh-Hant': `${n} 勝`, 'zh-Hans': `${n} 胜`, en: `${n} wins`, ja: `${n}勝` })),
-  },
-  {
-    id: 'win_or_learn',
-    category: 'milestone',
-    kind: 'grind',
-    ease: 85,
-    icon: 'medal',
-    title: { 'zh-Hant': '贏或學', 'zh-Hans': '赢或学', en: 'Win or Learn', ja: '勝つか学ぶ' },
-    description: {
-      'zh-Hant': '參與對局數（勝敗皆計）。',
-      'zh-Hans': '参与对局数（胜败皆计）。',
-      en: 'Games played — wins and losses count.',
-      ja: '参加試合数。',
-    },
-    tiers: makeTiers([20, 50, 100, 200, 400], (n) => ({
-      'zh-Hant': `${n} 場`,
-      'zh-Hans': `${n} 场`,
-      en: `${n} games`,
-      ja: `${n}戦`,
-    })),
+    tiers: tierDefs.wins(),
   },
   {
     id: 'weekly_grinder',
@@ -235,12 +172,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Most games in any rolling 7-day window.',
       ja: '7日間の最多試合数。',
     },
-    tiers: makeTiers([5, 10, 20, 35, 50], (n) => ({
-      'zh-Hant': `${n} 場/週`,
-      'zh-Hans': `${n} 场/周`,
-      en: `${n}/week`,
-      ja: `${n}/週`,
-    })),
+    tiers: tierDefs.weekly(),
   },
   {
     id: 'store_regular',
@@ -255,12 +187,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Distinct calendar days with matches.',
       ja: '対戦した日数。',
     },
-    tiers: makeTiers([3, 7, 14, 30, 60], (n) => ({
-      'zh-Hant': `${n} 天`,
-      'zh-Hans': `${n} 天`,
-      en: `${n} days`,
-      ja: `${n}日`,
-    })),
+    tiers: tierDefs.days(),
   },
   {
     id: 'opening_act',
@@ -275,12 +202,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Session openers won.',
       ja: 'セッション初戦勝利。',
     },
-    tiers: makeTiers([1, 5, 15, 30, 50], (n) => ({
-      'zh-Hant': `${n} 次`,
-      'zh-Hans': `${n} 次`,
-      en: `${n} times`,
-      ja: `${n}回`,
-    })),
+    tiers: tierDefs.times(TIERS.times5),
   },
   {
     id: 'closer',
@@ -295,12 +217,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Session finales won.',
       ja: 'セッション最終戦勝利。',
     },
-    tiers: makeTiers([1, 5, 15, 30, 50], (n) => ({
-      'zh-Hant': `${n} 次`,
-      'zh-Hans': `${n} 次`,
-      en: `${n} times`,
-      ja: `${n}回`,
-    })),
+    tiers: tierDefs.times(TIERS.times5),
   },
   {
     id: 'profile_linked',
@@ -330,12 +247,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Wins in matches over 30 minutes.',
       ja: '30分以上の勝利。',
     },
-    tiers: makeTiers([1, 3, 8, 15, 25], (n) => ({
-      'zh-Hant': `${n} 局`,
-      'zh-Hans': `${n} 局`,
-      en: `${n} wins`,
-      ja: `${n}勝`,
-    })),
+    tiers: tierDefs.wins(TIERS.times5),
   },
   {
     id: 'speed_demon',
@@ -350,12 +262,7 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
       en: 'Wins finished within 15 minutes.',
       ja: '15分以内の勝利。',
     },
-    tiers: makeTiers([1, 5, 15, 30, 50], (n) => ({
-      'zh-Hant': `${n} 局`,
-      'zh-Hans': `${n} 局`,
-      en: `${n} wins`,
-      ja: `${n}勝`,
-    })),
+    tiers: tierDefs.wins(TIERS.times5),
   },
 ]
 
@@ -499,7 +406,6 @@ export function evaluateBacklogBatchMetrics(
     red_mastery: colorWins(playerId, decks, matches, 'red'),
     green_mastery: colorWins(playerId, decks, matches, 'green'),
     purple_mastery: colorWins(playerId, decks, matches, 'purple'),
-    win_or_learn: total,
     weekly_grinder: maxInRollingWeek(relevant),
     store_regular: playDays.size,
     opening_act: openingWins,

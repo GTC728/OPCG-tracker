@@ -1,3 +1,4 @@
+import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
 import { getCompletedMatches } from '@/lib/stats'
 import type { Deck, Match, Player } from '@/types'
 
@@ -42,13 +43,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Matches played with one deck.',
       ja: '同一デッキの累計出場。',
     },
-    tiers: [
-      { level: 1, threshold: 5, label: { 'zh-Hant': '5 場', 'zh-Hans': '5 场', en: '5 games', ja: '5戦' } },
-      { level: 2, threshold: 15, label: { 'zh-Hant': '15 場', 'zh-Hans': '15 场', en: '15 games', ja: '15戦' } },
-      { level: 3, threshold: 30, label: { 'zh-Hant': '30 場', 'zh-Hans': '30 场', en: '30 games', ja: '30戦' } },
-      { level: 4, threshold: 50, label: { 'zh-Hant': '50 場', 'zh-Hans': '50 场', en: '50 games', ja: '50戦' } },
-      { level: 5, threshold: 70, label: { 'zh-Hant': '70 場', 'zh-Hans': '70 场', en: '70 games', ja: '70戦' } },
-    ],
+    tiers: tierDefs.games(),
   },
   {
     id: 'dual_tone',
@@ -63,13 +58,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins with dual-color decks.',
       ja: '二色デッキの累計勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 3, label: { 'zh-Hant': '3 勝', 'zh-Hans': '3 胜', en: '3 wins', ja: '3勝' } },
-      { level: 2, threshold: 8, label: { 'zh-Hant': '8 勝', 'zh-Hans': '8 胜', en: '8 wins', ja: '8勝' } },
-      { level: 3, threshold: 15, label: { 'zh-Hant': '15 勝', 'zh-Hans': '15 胜', en: '15 wins', ja: '15勝' } },
-      { level: 4, threshold: 25, label: { 'zh-Hant': '25 勝', 'zh-Hans': '25 胜', en: '25 wins', ja: '25勝' } },
-      { level: 5, threshold: 40, label: { 'zh-Hant': '40 勝', 'zh-Hans': '40 胜', en: '40 wins', ja: '40勝' } },
-    ],
+    tiers: tierDefs.wins(),
   },
   {
     id: 'color_devotee',
@@ -84,13 +73,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins with one primary color.',
       ja: '同一主色の累計勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-      { level: 2, threshold: 12, label: { 'zh-Hant': '12 勝', 'zh-Hans': '12 胜', en: '12 wins', ja: '12勝' } },
-      { level: 3, threshold: 20, label: { 'zh-Hant': '20 勝', 'zh-Hans': '20 胜', en: '20 wins', ja: '20勝' } },
-      { level: 4, threshold: 30, label: { 'zh-Hant': '30 勝', 'zh-Hans': '30 胜', en: '30 wins', ja: '30勝' } },
-      { level: 5, threshold: 45, label: { 'zh-Hant': '45 勝', 'zh-Hans': '45 胜', en: '45 wins', ja: '45勝' } },
-    ],
+    tiers: tierDefs.wins(),
   },
   {
     id: 'deck_rotator',
@@ -105,13 +88,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Different decks used in one session.',
       ja: '1セッションの異なるデッキ数。',
     },
-    tiers: [
-      { level: 1, threshold: 2, label: { 'zh-Hant': '2 副', 'zh-Hans': '2 副', en: '2 decks', ja: '2種' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 副', 'zh-Hans': '3 副', en: '3 decks', ja: '3種' } },
-      { level: 3, threshold: 4, label: { 'zh-Hant': '4 副', 'zh-Hans': '4 副', en: '4 decks', ja: '4種' } },
-      { level: 4, threshold: 5, label: { 'zh-Hant': '5 副', 'zh-Hans': '5 副', en: '5 decks', ja: '5種' } },
-      { level: 5, threshold: 6, label: { 'zh-Hant': '6 副', 'zh-Hans': '6 副', en: '6 decks', ja: '6種' } },
-    ],
+    tiers: tierDefs.decks(),
   },
   {
     id: 'ice_breaker',
@@ -126,13 +103,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Unique opponents defeated.',
       ja: '倒した異なる相手の数。',
     },
-    tiers: [
-      { level: 1, threshold: 3, label: { 'zh-Hant': '3 人', 'zh-Hans': '3 人', en: '3 rivals', ja: '3人' } },
-      { level: 2, threshold: 5, label: { 'zh-Hant': '5 人', 'zh-Hans': '5 人', en: '5 rivals', ja: '5人' } },
-      { level: 3, threshold: 8, label: { 'zh-Hant': '8 人', 'zh-Hans': '8 人', en: '8 rivals', ja: '8人' } },
-      { level: 4, threshold: 12, label: { 'zh-Hant': '12 人', 'zh-Hans': '12 人', en: '12 rivals', ja: '12人' } },
-      { level: 5, threshold: 18, label: { 'zh-Hant': '18 人', 'zh-Hans': '18 人', en: '18 rivals', ja: '18人' } },
-    ],
+    tiers: tierDefs.people(),
   },
   {
     id: 'circle_session',
@@ -147,13 +118,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Unique opponents in one session.',
       ja: '1セッションの異なる相手数。',
     },
-    tiers: [
-      { level: 1, threshold: 3, label: { 'zh-Hant': '3 人', 'zh-Hans': '3 人', en: '3 rivals', ja: '3人' } },
-      { level: 2, threshold: 4, label: { 'zh-Hant': '4 人', 'zh-Hans': '4 人', en: '4 rivals', ja: '4人' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 人', 'zh-Hans': '5 人', en: '5 rivals', ja: '5人' } },
-      { level: 4, threshold: 6, label: { 'zh-Hant': '6 人', 'zh-Hans': '6 人', en: '6 rivals', ja: '6人' } },
-      { level: 5, threshold: 8, label: { 'zh-Hant': '8 人', 'zh-Hans': '8 人', en: '8 rivals', ja: '8人' } },
-    ],
+    tiers: tierDefs.people(),
   },
   {
     id: 'nemesis_bond',
@@ -168,13 +133,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Losses to your toughest opponent.',
       ja: '同じ相手への累計敗北。',
     },
-    tiers: [
-      { level: 1, threshold: 3, label: { 'zh-Hant': '3 敗', 'zh-Hans': '3 败', en: '3 losses', ja: '3敗' } },
-      { level: 2, threshold: 6, label: { 'zh-Hant': '6 敗', 'zh-Hans': '6 败', en: '6 losses', ja: '6敗' } },
-      { level: 3, threshold: 10, label: { 'zh-Hant': '10 敗', 'zh-Hans': '10 败', en: '10 losses', ja: '10敗' } },
-      { level: 4, threshold: 15, label: { 'zh-Hant': '15 敗', 'zh-Hans': '15 败', en: '15 losses', ja: '15敗' } },
-      { level: 5, threshold: 20, label: { 'zh-Hant': '20 敗', 'zh-Hans': '20 败', en: '20 losses', ja: '20敗' } },
-    ],
+    tiers: tierDefs.losses(),
   },
   {
     id: 'balanced_rival',
@@ -204,11 +163,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins after 10 PM.',
       ja: '22時以降の勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 勝', 'zh-Hans': '1 胜', en: '1 win', ja: '1勝' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 勝', 'zh-Hans': '3 胜', en: '3 wins', ja: '3勝' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-    ],
+    tiers: tierDefs.wins(TIERS.streak),
   },
   {
     id: 'early_bird',
@@ -223,11 +178,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins before 10 AM.',
       ja: '10時前の勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 勝', 'zh-Hans': '1 胜', en: '1 win', ja: '1勝' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 勝', 'zh-Hans': '3 胜', en: '3 wins', ja: '3勝' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-    ],
+    tiers: tierDefs.wins(TIERS.streak),
   },
   {
     id: 'hot_day',
@@ -242,11 +193,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Most wins in one calendar day.',
       ja: '1日の最多勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 3, label: { 'zh-Hant': '3 勝', 'zh-Hans': '3 胜', en: '3 wins', ja: '3勝' } },
-      { level: 2, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-      { level: 3, threshold: 8, label: { 'zh-Hant': '8 勝', 'zh-Hans': '8 胜', en: '8 wins', ja: '8勝' } },
-    ],
+    tiers: tierDefs.wins(TIERS.streak),
   },
   {
     id: 'hot_hand',
@@ -261,11 +208,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Most wins in one session.',
       ja: '1セッションの最多勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 4, label: { 'zh-Hant': '4 勝', 'zh-Hans': '4 胜', en: '4 wins', ja: '4勝' } },
-      { level: 2, threshold: 6, label: { 'zh-Hant': '6 勝', 'zh-Hans': '6 胜', en: '6 wins', ja: '6勝' } },
-      { level: 3, threshold: 8, label: { 'zh-Hant': '8 勝', 'zh-Hans': '8 胜', en: '8 wins', ja: '8勝' } },
-    ],
+    tiers: tierDefs.wins(TIERS.streak),
   },
   {
     id: 'clutch_finisher',
@@ -280,11 +223,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Winning the last match of a 5+ game session.',
       ja: '5戦以上セッションの最終戦勝利回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 次', 'zh-Hans': '3 次', en: '3 times', ja: '3回' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 次', 'zh-Hans': '5 次', en: '5 times', ja: '5回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'weekday_grind',
@@ -299,13 +238,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins Monday through Friday.',
       ja: '平日の累計勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-      { level: 2, threshold: 12, label: { 'zh-Hant': '12 勝', 'zh-Hans': '12 胜', en: '12 wins', ja: '12勝' } },
-      { level: 3, threshold: 20, label: { 'zh-Hant': '20 勝', 'zh-Hans': '20 胜', en: '20 wins', ja: '20勝' } },
-      { level: 4, threshold: 30, label: { 'zh-Hant': '30 勝', 'zh-Hans': '30 胜', en: '30 wins', ja: '30勝' } },
-      { level: 5, threshold: 45, label: { 'zh-Hant': '45 勝', 'zh-Hans': '45 胜', en: '45 wins', ja: '45勝' } },
-    ],
+    tiers: tierDefs.wins(),
   },
   {
     id: 'streak_saver',
@@ -320,11 +253,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Times you ended your own 3+ loss streak.',
       ja: '自分の3連敗以上を止めた回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 次', 'zh-Hans': '3 次', en: '3 times', ja: '3回' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 次', 'zh-Hans': '5 次', en: '5 times', ja: '5回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'clean_sweep',
@@ -339,11 +268,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Undefeated vs one opponent in a session (3+ games).',
       ja: 'セッション内で同一相手に全勝（3戦以上）した回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 2, label: { 'zh-Hant': '2 次', 'zh-Hans': '2 次', en: 'Twice', ja: '2回' } },
-      { level: 3, threshold: 4, label: { 'zh-Hant': '4 次', 'zh-Hans': '4 次', en: '4 times', ja: '4回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'leader_loyalty',
@@ -358,13 +283,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Matches with the same leader.',
       ja: '同一リーダーの累計出場。',
     },
-    tiers: [
-      { level: 1, threshold: 5, label: { 'zh-Hant': '5 場', 'zh-Hans': '5 场', en: '5 games', ja: '5戦' } },
-      { level: 2, threshold: 15, label: { 'zh-Hant': '15 場', 'zh-Hans': '15 场', en: '15 games', ja: '15戦' } },
-      { level: 3, threshold: 30, label: { 'zh-Hant': '30 場', 'zh-Hans': '30 场', en: '30 games', ja: '30戦' } },
-      { level: 4, threshold: 50, label: { 'zh-Hant': '50 場', 'zh-Hans': '50 场', en: '50 games', ja: '50戦' } },
-      { level: 5, threshold: 70, label: { 'zh-Hant': '70 場', 'zh-Hans': '70 场', en: '70 games', ja: '70戦' } },
-    ],
+    tiers: tierDefs.games(),
   },
   {
     id: 'import_archivist',
@@ -379,13 +298,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Matches from import source.',
       ja: 'インポート由来の対戦数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 場', 'zh-Hans': '1 场', en: '1 match', ja: '1戦' } },
-      { level: 2, threshold: 5, label: { 'zh-Hant': '5 場', 'zh-Hans': '5 场', en: '5 matches', ja: '5戦' } },
-      { level: 3, threshold: 15, label: { 'zh-Hant': '15 場', 'zh-Hans': '15 场', en: '15 matches', ja: '15戦' } },
-      { level: 4, threshold: 30, label: { 'zh-Hant': '30 場', 'zh-Hans': '30 场', en: '30 matches', ja: '30戦' } },
-      { level: 5, threshold: 50, label: { 'zh-Hant': '50 場', 'zh-Hans': '50 场', en: '50 matches', ja: '50戦' } },
-    ],
+    tiers: tierDefs.importGames(),
   },
   {
     id: 'marathon_month',
@@ -400,13 +313,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Most matches in one calendar month.',
       ja: '1ヶ月の最多対戦数。',
     },
-    tiers: [
-      { level: 1, threshold: 8, label: { 'zh-Hant': '8 場', 'zh-Hans': '8 场', en: '8 games', ja: '8戦' } },
-      { level: 2, threshold: 15, label: { 'zh-Hant': '15 場', 'zh-Hans': '15 场', en: '15 games', ja: '15戦' } },
-      { level: 3, threshold: 25, label: { 'zh-Hant': '25 場', 'zh-Hans': '25 场', en: '25 games', ja: '25戦' } },
-      { level: 4, threshold: 40, label: { 'zh-Hant': '40 場', 'zh-Hans': '40 场', en: '40 games', ja: '40戦' } },
-      { level: 5, threshold: 60, label: { 'zh-Hant': '60 場', 'zh-Hans': '60 场', en: '60 games', ja: '60戦' } },
-    ],
+    tiers: tierDefs.games(),
   },
   {
     id: 'nemesis_slayer',
@@ -421,11 +328,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins after losing 3 in a row to the same opponent.',
       ja: '同一相手に3連敗後に勝った回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 次', 'zh-Hans': '3 次', en: '3 times', ja: '3回' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 次', 'zh-Hans': '5 次', en: '5 times', ja: '5回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'table_tactician',
@@ -440,13 +343,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Different sessions played.',
       ja: '参加した異なるセッション数。',
     },
-    tiers: [
-      { level: 1, threshold: 2, label: { 'zh-Hant': '2 場', 'zh-Hans': '2 场', en: '2 sessions', ja: '2回' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 場', 'zh-Hans': '3 场', en: '3 sessions', ja: '3回' } },
-      { level: 3, threshold: 4, label: { 'zh-Hant': '4 場', 'zh-Hans': '4 场', en: '4 sessions', ja: '4回' } },
-      { level: 4, threshold: 5, label: { 'zh-Hant': '5 場', 'zh-Hans': '5 场', en: '5 sessions', ja: '5回' } },
-      { level: 5, threshold: 6, label: { 'zh-Hant': '6 場', 'zh-Hans': '6 场', en: '6 sessions', ja: '6回' } },
-    ],
+    tiers: tierDefs.games(),
   },
   {
     id: 'trio_triumph',
@@ -461,11 +358,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Sessions where 3+ decks each got a win.',
       ja: '3種以上のデッキで各1勝以上したセッション回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 3, label: { 'zh-Hant': '3 次', 'zh-Hans': '3 次', en: '3 times', ja: '3回' } },
-      { level: 3, threshold: 5, label: { 'zh-Hant': '5 次', 'zh-Hans': '5 次', en: '5 times', ja: '5回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'rivalry_sweep',
@@ -480,11 +373,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Sessions with 3+ win streak vs one opponent.',
       ja: '同一相手に3連勝以上したセッション回数。',
     },
-    tiers: [
-      { level: 1, threshold: 1, label: { 'zh-Hant': '1 次', 'zh-Hans': '1 次', en: 'Once', ja: '1回' } },
-      { level: 2, threshold: 2, label: { 'zh-Hant': '2 次', 'zh-Hans': '2 次', en: 'Twice', ja: '2回' } },
-      { level: 3, threshold: 4, label: { 'zh-Hant': '4 次', 'zh-Hans': '4 次', en: '4 times', ja: '4回' } },
-    ],
+    tiers: tierDefs.times(),
   },
   {
     id: 'set_dominance',
@@ -499,13 +388,7 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
       en: 'Wins with leaders from one card set.',
       ja: '同一セットの累計勝利。',
     },
-    tiers: [
-      { level: 1, threshold: 5, label: { 'zh-Hant': '5 勝', 'zh-Hans': '5 胜', en: '5 wins', ja: '5勝' } },
-      { level: 2, threshold: 12, label: { 'zh-Hant': '12 勝', 'zh-Hans': '12 胜', en: '12 wins', ja: '12勝' } },
-      { level: 3, threshold: 20, label: { 'zh-Hant': '20 勝', 'zh-Hans': '20 胜', en: '20 wins', ja: '20勝' } },
-      { level: 4, threshold: 30, label: { 'zh-Hant': '30 勝', 'zh-Hans': '30 胜', en: '30 wins', ja: '30勝' } },
-      { level: 5, threshold: 45, label: { 'zh-Hant': '45 勝', 'zh-Hans': '45 胜', en: '45 wins', ja: '45勝' } },
-    ],
+    tiers: tierDefs.wins(),
   },
 ]
 
