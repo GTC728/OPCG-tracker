@@ -20,7 +20,7 @@ import {
 import { getHighestUnlockedMetal } from '@/lib/achievementTierStyles'
 import { playInteractionSound, uiPopIn, uiPressable } from '@/lib/motion'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
-import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
+import { uiGlassCard, uiHorizontalRail, uiHorizontalRailItem, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 export type { AchievementPeerRate }
@@ -53,11 +53,17 @@ function AchievementCard({
       className={[
         uiGlassCard,
         uiPopIn,
-        'flex h-full min-w-[9.5rem] flex-col p-3 text-left',
+        'flex h-full flex-col overflow-hidden p-3 text-left',
         unlocked ? '' : 'opacity-55',
         onClick ? 'cursor-pointer' : '',
       ].join(' ')}
-      style={metal ? { boxShadow: `0 0 0 1px ${metal.border}, 0 4px 14px ${metal.glow}` } : undefined}
+      style={
+        metal
+          ? compact
+            ? { boxShadow: `inset 0 0 0 1px ${metal.border}` }
+            : { boxShadow: `0 0 0 1px ${metal.border}, 0 4px 14px ${metal.glow}` }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-2">
         <AchievementIcon
@@ -99,7 +105,11 @@ function AchievementCard({
 
   if (!onClick) return body
   return (
-    <button type="button" className={['block h-full shrink-0', uiPressable].join(' ')} onClick={onClick}>
+    <button
+      type="button"
+      className={['block h-full', compact ? uiHorizontalRailItem : 'min-w-[9.5rem] shrink-0', uiPressable].join(' ')}
+      onClick={onClick}
+    >
       {body}
     </button>
   )
@@ -423,36 +433,43 @@ function AchievementGrid({
 export function AchievementsPreviewRail({
   achievements,
   onOpenAll,
+  variant = 'default',
 }: {
   achievements: AchievementProgress[]
   onOpenAll?: () => void
+  variant?: 'default' | 'profile'
 }) {
   const { language, t } = useI18n()
   const [detail, setDetail] = useState<AchievementProgress | null>(null)
   const preview = getAchievementPreviewItems(achievements, 8)
   const summary = computeAchievementSummary(achievements)
+  const title =
+    variant === 'profile'
+      ? t('achievements.title')
+      : preview.mode === 'recent'
+        ? t('achievements.recentTitle')
+        : t('achievements.highlightsTitle')
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h2 className={uiSectionTitle}>
-          {preview.mode === 'recent'
-            ? t('achievements.recentTitle')
-            : t('achievements.highlightsTitle')}
-        </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className={uiSectionTitle}>{title}</h2>
         <button
           type="button"
-          className={['text-xs font-semibold text-brand-400', uiPressable].join(' ')}
+          className={['shrink-0 text-right text-[11px] font-semibold leading-tight', uiLink, uiPressable].join(' ')}
           onClick={() => {
             playInteractionSound('tap')
             onOpenAll?.()
           }}
         >
-          {summary.familiesUnlocked}/{summary.totalFamilies} · {t('achievements.tierProgress')} {summary.tierRate}% · {t('achievements.viewAll')}
+          <span className="block">
+            {summary.familiesUnlocked}/{summary.totalFamilies} · {summary.tierRate}%
+          </span>
+          <span className="block text-[10px] font-medium text-text-secondary">{t('achievements.viewAll')}</span>
         </button>
       </div>
       {preview.items.length ? (
-        <div className="-mx-[var(--ui-page-px)] flex gap-2 overflow-x-auto px-[var(--ui-page-px)] pb-1 scrollbar-none">
+        <div className={uiHorizontalRail}>
           {preview.items.map((item) => (
             <AchievementCard
               key={item.definition.id}

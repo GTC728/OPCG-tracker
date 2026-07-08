@@ -1,13 +1,13 @@
 import { type ReactNode } from 'react'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
-import { uiBottomNav, uiHeaderBar } from '@/lib/uiSurface'
+import { uiBottomNav, uiHeaderBar, uiLink } from '@/lib/uiSurface'
 import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
 import type { TabId } from '@/types'
 
 function NavIcon({ name }: { name: TabId }) {
-  const className = 'ui-nav-icon h-4 w-4'
+  const className = 'ui-nav-icon h-5 w-5'
   switch (name) {
     case 'record':
       return (
@@ -61,16 +61,20 @@ interface BottomNavProps {
 function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const { t } = useI18n()
   return (
-    <nav className={uiBottomNav}>
+    <nav className={uiBottomNav} aria-label={t('nav.label')}>
       <div className="grid grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
+          const label = t(tab.labelKey)
           return (
             <button
               key={tab.id}
               type="button"
+              aria-label={label}
+              aria-current={active ? 'page' : undefined}
+              title={label}
               className={[
-                'flex min-h-10 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-medium leading-none transition-colors',
+                'flex min-h-11 flex-col items-center justify-center px-1 py-2 transition-colors',
                 uiPressable,
                 active ? 'ui-nav-active text-brand-400' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')}
@@ -80,7 +84,6 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
               }}
             >
               <NavIcon name={tab.id} />
-              <span>{t(tab.labelKey)}</span>
             </button>
           )
         })}
@@ -111,7 +114,7 @@ export function AppShell({
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <div className="flex items-baseline justify-between gap-2">
             <h1 className="text-base font-bold tracking-tight">{title}</h1>
-            <span className="shrink-0 text-[10px] font-semibold tracking-wide text-brand-400">OPCG</span>
+            <span className={['shrink-0 text-[10px] font-semibold tracking-wide', uiLink].join(' ')}>OPCG</span>
           </div>
           {subtitle ? (
             <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-text-secondary">{subtitle}</p>

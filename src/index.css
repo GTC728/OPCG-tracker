@@ -126,7 +126,12 @@ textarea:focus-visible {
 }
 
 :root {
-  --app-bottom-nav-height: 2.75rem;
+  --color-link: var(--color-brand-400);
+  --color-link-soft: var(--color-brand-300);
+  --color-warning-fg: #fef3c7;
+  --color-warning-bg: color-mix(in srgb, #f59e0b 12%, transparent);
+  --color-warning-border: color-mix(in srgb, #f59e0b 28%, transparent);
+  --app-bottom-nav-height: 2.5rem;
 }
 
 .app-main-bottom-pad {
@@ -218,6 +223,30 @@ textarea:focus-visible {
 [data-theme='light'] .ui-segment {
   background: color-mix(in srgb, var(--color-surface-elevated) 96%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 80%, transparent);
+}
+
+/* Theme-aware accent: brand-400 is too light on white backgrounds */
+[data-theme='light'] .text-brand-400 {
+  color: var(--color-link);
+}
+
+[data-theme='light'] .text-brand-300 {
+  color: var(--color-link-soft);
+}
+
+[data-theme='light'] .text-yellow-100 {
+  color: var(--color-warning-fg);
+}
+
+.ui-callout-warning {
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-fg);
+}
+
+.ui-callout-warning a,
+.ui-callout-warning button {
+  color: var(--color-link);
 }
 
 .ui-segment-btn {
