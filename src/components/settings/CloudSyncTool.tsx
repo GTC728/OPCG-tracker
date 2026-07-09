@@ -12,6 +12,7 @@ import {
   type GroupCloudState,
   uploadCloudSnapshot,
 } from '@/lib/cloudSync'
+import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import { BackupVersionList } from '@/components/settings/BackupVersionList'
