@@ -31,9 +31,9 @@ import {
   getOrCreateLifetime,
   removeCompletedMatchFromLifetime,
 } from '@/lib/profileLifetime'
-import { groupStorageKey, stripProvisionalUnlocks } from '@/lib/appStateLayers'
-import { captureGroupScopedSnapshot, stripGroupScopedEntities } from '@/lib/groupScope'
-import { saveGroupScopedState } from '@/lib/indexedDb'
+import { groupStorageKey, stripProvisionalUnlocks, emptyGroupSnapshot } from '@/lib/appStateLayers'
+import { captureGroupScopedSnapshot, stripGroupScopedEntities, applyGroupScopedSnapshot } from '@/lib/groupScope'
+import { loadGroupScopedState, loadOfflineGroupState, saveGroupScopedState, saveOfflineGroupState } from '@/lib/indexedDb'
 import { clearSyncQueue } from '@/lib/syncQueue'
 import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
@@ -44,7 +44,7 @@ import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
-import { finalizeProfileLink, bookmarkCurrentGroupProfile } from '@/lib/profileGroupLink'
+import { finalizeProfileLink, bookmarkCurrentGroupProfile, tryAutoRelinkGroupProfile } from '@/lib/profileGroupLink'
 import {
   createPersonalProfile as applyCreatePersonalProfile,
   hasPersonalProfile,
@@ -106,6 +106,10 @@ interface AppStore extends AppState {
   promoteImportBatchToHistorical: (batchId: string) => number
   restoreImportSnapshot: (snapshotId: string) => void
   setGroupSyncPaused: (paused: boolean) => Promise<void>
+  switchWorkspace: (
+    target: 'local' | string,
+    options?: { leaveMembership?: boolean; preserveCollabForInit?: boolean },
+  ) => Promise<void>
   leaveGroupCollab: () => Promise<void>
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
@@ -1097,10 +1101,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     let syncPausedForImport = false
 
     if (options.historicalRestore) {
-      const current = getAppState()
-      if (current.settings.historicalImportUsedAt) {
-        throw new Error('此個人檔案已使用過歷史還原（終身一次）')
-      }
       const check = validateHistoricalImportRows(rows)
       if (!check.ok) throw new Error(check.error)
     }
@@ -1287,15 +1287,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     )
 
     if (options.historicalRestore && createdMatches.length) {
-      const stamp = nowIso()
-      next = {
-        ...next,
-        settings: {
-          ...next.settings,
-          historicalImportUsedAt: stamp,
-          historicalImportBatchId: importBatch.id,
-        },
-      }
       const linkedId = next.settings.linkedPlayerId
       const profileId = next.settings.profileIdentityId
       if (linkedId && profileId && !isTestGroupCode(next.settings.lastGroupCode)) {
@@ -1329,9 +1320,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   promoteImportBatchToHistorical: (batchId) => {
     const current = getAppState()
-    if (current.settings.historicalImportUsedAt) {
-      throw new Error('此個人檔案已使用過歷史還原（終身一次）')
-    }
     const batch = current.importBatches.find((item) => item.id === batchId)
     if (!batch || batch.revertedAt || batch.historicalRestore) {
       throw new Error('此匯入批次無法升級為歷史還原')
@@ -1350,7 +1338,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     pauseGroupCollabNotify()
     try {
-      const stamp = nowIso()
       let next: AppState = {
         ...current,
         matches: current.matches.map((match) =>
@@ -1361,11 +1348,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
         importBatches: current.importBatches.map((item) =>
           item.id === batchId ? { ...item, historicalRestore: true } : item,
         ),
-        settings: {
-          ...current.settings,
-          historicalImportUsedAt: stamp,
-          historicalImportBatchId: batchId,
-        },
       }
       const linkedId = next.settings.linkedPlayerId
       const profileId = next.settings.profileIdentityId
@@ -1434,16 +1416,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
         'import_revert',
         `撤銷匯入 ${batch.filename}：${matchIds.size} 場`,
       )
-    if (batch.id === current.settings.historicalImportBatchId) {
-      next = {
-        ...next,
-        settings: {
-          ...next.settings,
-          historicalImportUsedAt: null,
-          historicalImportBatchId: null,
-        },
-      }
-    }
       const playerIds = new Set<string>()
       for (const match of revertedMatches) {
         playerIds.add(match.player1Id)
@@ -1478,45 +1450,125 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   leaveGroupCollab: async () => {
+    await get().switchWorkspace('local', { leaveMembership: true })
+  },
+
+  switchWorkspace: async (target, options = {}) => {
     const current = getAppState()
-    const groupCode = current.settings.lastGroupCode
+    const currentCode = current.settings.lastGroupCode
+    const targetCode = target === 'local' ? null : target.trim()
+    if (targetCode === currentCode) return
+
     stopGroupCollabRealtime()
     pauseGroupCollabNotify()
     try {
-      if (groupCode) {
-        await flushGroupCollabSyncNowAsync(groupCode)
-        await saveGroupScopedState(groupStorageKey(groupCode), captureGroupScopedSnapshot(current))
+      const outgoingSnapshot = captureGroupScopedSnapshot(current)
+      if (currentCode) {
+        await flushGroupCollabSyncNowAsync(currentCode)
+        await saveGroupScopedState(groupStorageKey(currentCode), outgoingSnapshot)
+      } else if (
+        current.players.length ||
+        current.sessions.length ||
+        current.matches.length ||
+        current.activeMatches.length
+      ) {
+        await saveOfflineGroupState(outgoingSnapshot)
       }
+
       await clearSyncQueue()
-      invalidateDerivedCache()
-      const bookmarked = bookmarkCurrentGroupProfile(current)
-      let stripped = stripGroupScopedEntities(bookmarked)
-      if (isTestGroupCode(groupCode)) {
-        stripped = stripProvisionalUnlocks(stripped)
+
+      let working = currentCode ? bookmarkCurrentGroupProfile(current) : current
+      if (isTestGroupCode(currentCode)) {
+        working = stripProvisionalUnlocks(working)
       }
-      const next = appendAuditEntry(
-        {
-          ...stripped,
-          settings: {
-            ...stripped.settings,
-            lastGroupCode: null,
-            groupCollabEnabled: false,
-            groupCollabBootstrapped: false,
-            groupDataBoundCode: null,
-            groupMemberRole: null,
-          },
-        },
-        'sync',
-        groupCode ? `已離開群組 ${groupCode}` : '已離開群組',
-      )
-      if (groupCode) {
+
+      if (options.leaveMembership && currentCode) {
         try {
           const { leaveGroupMembership } = await import('@/lib/cloudSync')
-          await leaveGroupMembership(groupCode)
+          await leaveGroupMembership(currentCode)
         } catch {
-          // offline — local leave still applies
+          // offline
         }
       }
+
+      let groupMemberRole: import('@/lib/groupPermissions').GroupMemberRole | null = null
+      if (targetCode) {
+        try {
+          const { fetchGroupMemberRole } = await import('@/lib/cloudSync')
+          groupMemberRole = await fetchGroupMemberRole(targetCode)
+        } catch {
+          // offline
+        }
+      }
+
+      let next: AppState
+
+      if (options.preserveCollabForInit && targetCode) {
+        next = {
+          ...working,
+          settings: {
+            ...working.settings,
+            lastGroupCode: targetCode,
+            groupCollabEnabled: true,
+            groupCollabBootstrapped: false,
+            groupDataBoundCode: null,
+            groupMemberRole,
+            lastGroupSyncAt: null,
+            lastGroupSyncError: null,
+            groupSyncPaused: false,
+            groupSyncPausedAt: null,
+          },
+        }
+      } else {
+        const incomingGroup = targetCode
+          ? ((await loadGroupScopedState(groupStorageKey(targetCode))) ?? emptyGroupSnapshot())
+          : ((await loadOfflineGroupState()) ?? emptyGroupSnapshot())
+
+        const stripped = stripGroupScopedEntities(working)
+        next = applyGroupScopedSnapshot(stripped, incomingGroup)
+        next = {
+          ...next,
+          settings: {
+            ...next.settings,
+            lastGroupCode: targetCode,
+            groupCollabEnabled: Boolean(targetCode),
+            groupCollabBootstrapped: false,
+            groupDataBoundCode: null,
+            groupMemberRole: targetCode ? groupMemberRole : null,
+            lastGroupSyncAt: null,
+            lastGroupSyncError: null,
+            groupSyncPaused: false,
+            groupSyncPausedAt: null,
+          },
+        }
+      }
+
+      next = tryAutoRelinkGroupProfile(next)
+
+      const linkedId = next.settings.linkedPlayerId
+      const profileId = next.settings.profileIdentityId
+      if (linkedId && profileId && !isTestGroupCode(targetCode)) {
+        next = {
+          ...next,
+          profileLifetime: rebuildLifetimeFromMatches(
+            profileId,
+            linkedId,
+            next.players,
+            next.matches,
+          ),
+        }
+        next = reconcileAchievementUnlocks(next, linkedId).state
+      }
+
+      invalidateDerivedCache()
+      const auditMessage = targetCode
+        ? currentCode
+          ? `切換工作區 → ${targetCode}`
+          : `加入工作區 ${targetCode}`
+        : currentCode
+          ? `已離開群組 ${currentCode}`
+          : '切換至本機工作區'
+      next = appendAuditEntry(next, 'sync', auditMessage)
       syncMaterializedFromState(next)
       const persisted = persist(next, true)
       set({ ...persisted })

@@ -10,7 +10,7 @@ function formatSyncTime(iso: string): string {
   return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
-export function SyncStatusBanner() {
+export function SyncStatusBanner({ onOpenDetails }: { onOpenDetails?: () => void }) {
   const { t } = useI18n()
   const inGroup = useAppStore((state) => Boolean(state.settings.lastGroupCode))
   const lastSyncAt = useAppStore((state) => state.settings.lastGroupSyncAt)
@@ -38,43 +38,70 @@ export function SyncStatusBanner() {
 
   if (!inGroup) return null
 
+  const clickable = Boolean(onOpenDetails)
+  const wrapperClass = clickable ? 'cursor-pointer active:opacity-90' : ''
+
   if (!online) {
     return (
-      <div className={[uiCalloutWarning, 'border-b px-4 py-2 text-center text-xs'].join(' ')} role="status">
+      <button
+        type="button"
+        disabled={!clickable}
+        className={[uiCalloutWarning, 'border-b px-4 py-2 text-center text-xs w-full', wrapperClass].join(' ')}
+        role="status"
+        onClick={onOpenDetails}
+      >
         {t('sync.offline')}
         {pendingCount > 0 ? ` · ${t('sync.pendingCount').replace('{n}', String(pendingCount))}` : null}
-      </div>
+      </button>
     )
   }
 
   if (lastSyncError) {
     return (
-      <div className={[uiCalloutWarning, 'border-b px-4 py-2 text-center text-xs'].join(' ')} role="status">
+      <button
+        type="button"
+        disabled={!clickable}
+        className={[uiCalloutWarning, 'border-b px-4 py-2 text-center text-xs w-full', wrapperClass].join(' ')}
+        role="status"
+        onClick={onOpenDetails}
+      >
         {lastSyncError}
         {pendingCount > 0 ? ` · ${t('sync.pendingCount').replace('{n}', String(pendingCount))}` : null}
-      </div>
+      </button>
     )
   }
 
   if (pendingCount > 0) {
     return (
-      <div
-        className="border-b border-brand-500/30 bg-brand-500/10 px-4 py-2 text-center text-xs text-[var(--color-link)]"
+      <button
+        type="button"
+        disabled={!clickable}
+        className={[
+          'border-b border-brand-500/30 bg-brand-500/10 px-4 py-2 text-center text-xs text-[var(--color-link)] w-full',
+          wrapperClass,
+        ].join(' ')}
         role="status"
+        onClick={onOpenDetails}
       >
         {t('sync.pendingCount').replace('{n}', String(pendingCount))}
-      </div>
+      </button>
     )
   }
 
   if (lastSyncAt) {
     return (
-      <div
-        className="border-b border-success/20 bg-success/5 px-4 py-1.5 text-center text-[10px] text-text-secondary"
+      <button
+        type="button"
+        disabled={!clickable}
+        className={[
+          'border-b border-success/20 bg-success/5 px-4 py-1.5 text-center text-[10px] text-text-secondary w-full',
+          wrapperClass,
+        ].join(' ')}
         role="status"
+        onClick={onOpenDetails}
       >
         {t('systemStatus.bannerSynced').replace('{time}', formatSyncTime(lastSyncAt))}
-      </div>
+      </button>
     )
   }
 

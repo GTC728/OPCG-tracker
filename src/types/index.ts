@@ -319,9 +319,6 @@ export interface AppSettings {
   groupMemberRole: GroupMemberRole | null
   lastCloudBackupAt: string | null
   autoBackupOnLogin: boolean
-  /** Set after the one-time historical CSV restore (≤100, ≥30 day span). */
-  historicalImportUsedAt: string | null
-  historicalImportBatchId: string | null
 }
 
 export interface AppState {

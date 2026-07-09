@@ -328,8 +328,6 @@ const migrations: Record<number, Migration> = {
       schemaVersion: 16,
       settings: {
         ...settings,
-        historicalImportUsedAt: settings.historicalImportUsedAt ?? null,
-        historicalImportBatchId: settings.historicalImportBatchId ?? null,
       },
     } as AppState
     const linkedId = merged.settings.linkedPlayerId
@@ -349,6 +347,23 @@ const migrations: Record<number, Migration> = {
       merged = reconcileAchievementUnlocks(merged, linkedId).state
     }
     return merged
+  },
+  17: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    const { historicalImportUsedAt: _a, historicalImportBatchId: _b, ...restSettings } =
+      settings as AppState['settings'] & {
+        historicalImportUsedAt?: string | null
+        historicalImportBatchId?: string | null
+      }
+    return {
+      ...state,
+      schemaVersion: 17,
+      settings: restSettings,
+    } as AppState
   },
 }
 

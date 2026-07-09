@@ -11,7 +11,7 @@ import {
 } from '@/lib/importSafety'
 import {
   HISTORICAL_IMPORT_CONFIRM_TEXT,
-  hasUsedHistoricalImport,
+  HISTORICAL_IMPORT_RULES,
   validateHistoricalImportRows,
 } from '@/lib/historicalImport'
 import { useI18n } from '@/lib/i18n'
@@ -224,7 +224,6 @@ function ImportTool() {
   const [createNewSession, setCreateNewSession] = useState(true)
   const [historicalRestore, setHistoricalRestore] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const historicalImportUsedAt = useAppStore((state) => state.settings.historicalImportUsedAt)
   const inGroup = useAppStore((state) => Boolean(state.settings.lastGroupCode))
   const groupSyncPaused = useAppStore((state) => state.settings.groupSyncPaused)
 
@@ -270,9 +269,7 @@ function ImportTool() {
     mapping.deck2Query &&
     mapping.winnerName &&
     typedConfirmOk &&
-    (!historicalRestore ||
-      (!hasUsedHistoricalImport(historicalImportUsedAt) &&
-        historicalValidation?.ok === true))
+    (!historicalRestore || historicalValidation?.ok === true)
 
   return (
     <section className="rounded-2xl bg-surface-elevated p-4">
@@ -405,28 +402,28 @@ function ImportTool() {
             {!createNewSession ? (
               <p className="mt-1 text-amber-200">{t('data.importTargetCurrent')}</p>
             ) : null}
-            {!hasUsedHistoricalImport(historicalImportUsedAt) ? (
-              <label className="mt-3 flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={historicalRestore}
-                  onChange={(event) => {
-                    setHistoricalRestore(event.target.checked)
-                    setConfirmText('')
-                  }}
-                />
-                <span>
-                  <span className="font-medium text-text-primary">歷史戰績還原（終身一次）</span>
-                  <span className="mt-1 block text-text-secondary">
-                    ≤100 場、日期跨度 ≥30 天。計入<strong className="text-text-primary">累積型</strong>
-                    成就（老將、對手數等），不計技巧/時間型成就。
-                  </span>
+            <label className="mt-3 flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={historicalRestore}
+                onChange={(event) => {
+                  setHistoricalRestore(event.target.checked)
+                  setConfirmText('')
+                }}
+              />
+              <span>
+                <span className="font-medium text-text-primary">歷史戰績還原</span>
+                <span className="mt-1 block text-text-secondary">
+                  匯入 App 建立前的舊戰績，並依下列規則計入部分成就。
                 </span>
-              </label>
-            ) : (
-              <p className="mt-3 text-xs text-text-secondary">已使用過歷史還原配額。</p>
-            )}
+                <ul className="mt-2 list-inside list-disc space-y-0.5 text-text-secondary">
+                  {HISTORICAL_IMPORT_RULES.map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ul>
+              </span>
+            </label>
             {historicalRestore && historicalValidation && !historicalValidation.ok ? (
               <p className="mt-2 rounded-lg bg-amber-500/15 p-2 text-amber-100">
                 {historicalValidation.error}

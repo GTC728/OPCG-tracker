@@ -62,8 +62,8 @@
 
 | ID | 項目 | 狀態 | 目標 | 備註 |
 |----|------|------|------|------|
-| G-01 | **多群組切換** | 規劃中 | V4.5 | 同帳號「平日店」+「比賽群」；`lastGroupCode` → 群組列表 |
-| G-02 | **離線優先 indicator 強化** | 部分已有 | V4.4 | 現有 `SyncStatusBanner` + outbox；加：最後同步時間、裝置、queue 明細、手動重試 |
+| G-01 | **多群組切換** | 部分已有 | V4.12 | `switchWorkspace` + 本機/快取群組列表；Settings 工作區 hub |
+| G-02 | **離線優先 indicator 強化** | 部分已有 | V4.12 | Banner 可點 → 同步 sheet；System 仍保留 audit |
 | G-03 | **衝突合併 UI** | 規劃中 | V4.5 | 與 9E 一併；入群 / pull 時本地 vs 雲端 diff |
 | G-04 | **Profile claim 跨裝置 Supabase 同步** | 部分已有 | V4.5 | 現有本地 claim；需雲端持久化 |
 | G-05 | **遊戲大廳 / 群組 registry** | 規劃中 | V4.12+ | `groups` 表、display name 可重複、invite slug；取代「code 被占即回不去」 |

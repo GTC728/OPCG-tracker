@@ -9,11 +9,34 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.12.0 - 2026-07-10
+
+### New
+
+- **工作區架構**：Personal vs Workspace scope-first 設定頁；Header 工作區 chip（本機 / 群組）。
+- **`switchWorkspace()`**：統一 join / leave / 多群組切換 orchestration（沿用 V4.10 layered storage）。
+- **WorkspaceHub**：切換本機與已快取群組、場次/玩家/同步/加入群組入口。
+- **帳號與備份分離**：`AccountBackupPanel`（個人）與 `GroupMembershipPanel`（工作區）取代混在一起的 Cloud 頁。
+
+### Changed
+
+- 同步狀態 Banner 可點擊，開啟 `GroupSyncSection` 精簡 sheet。
+- 場次管理、玩家管理移至 **設定 → 工作區**（不再與個人設定混列）。
+- `SystemStatusPanel` 共用 `GroupSyncSection`，避免重複同步 UI。
+
+See `docs/WORKSPACE.md`.
+
+## V4.11.2 - 2026-07-10
+
+### Changed
+
+- **歷史戰績還原**：移除「終身一次」限制，改為可多次使用的匯入機制；每次仍須 ≤100 場、日期跨度 ≥30 天。匯入畫面與升級確認會列出完整規則。
+
 ## V4.11.1 - 2026-07-10
 
 ### New
 
-- **歷史戰績還原**：`source: historical` — 終身一次、≤100 場、日期跨度 ≥30 天；計入累積型（grind）成就，技巧/時間型仍只算 live 對局。
+- **歷史戰績還原**：`source: historical` — ≤100 場、日期跨度 ≥30 天；計入累積型（grind）成就，技巧/時間型仍只算 live 對局。
 - **升級既有匯入**：匯入紀錄可「升級歷史還原」（適用你已匯入的 39 場等舊資料）。
 
 ### Fixed

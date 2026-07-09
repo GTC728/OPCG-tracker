@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
+import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
-import { CloudSyncTool } from '@/components/settings/CloudSyncTool'
-import { ProfileSettings } from '@/components/settings/ProfileSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
+import { GroupMembershipPanel } from '@/components/settings/GroupMembershipPanel'
+import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
+import { ProfileSettings } from '@/components/settings/ProfileSettings'
 import { SystemStatusPanel } from '@/components/settings/SystemStatusPanel'
 import { SessionManager } from '@/components/session/SessionManager'
+import { WorkspaceHub } from '@/components/workspace/WorkspaceHub'
+import { Button } from '@/components/ui/Button'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import { AppCredit } from '@/components/layout/AppCredit'
 import {
@@ -14,11 +17,25 @@ import {
   countVisibleActiveMatches,
   countVisibleMatches,
 } from '@/lib/entityVisibility'
+import { groupRoleLabel } from '@/lib/groupPermissions'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type SettingsSection = 'home' | 'session' | 'language' | 'players' | 'leaders' | 'data' | 'cloud' | 'profile' | 'appearance' | 'system'
+type SettingsSection =
+  | 'home'
+  | 'workspace'
+  | 'workspace-session'
+  | 'workspace-players'
+  | 'workspace-sync'
+  | 'workspace-join'
+  | 'account'
+  | 'profile'
+  | 'appearance'
+  | 'language'
+  | 'leaders'
+  | 'data'
+  | 'system'
 
 function SettingsRow({
   title,
@@ -61,13 +78,21 @@ export function SettingsPage() {
   const { t, language, setLanguage } = useI18n()
   const [section, setSection] = useState<SettingsSection>('home')
   const appState = useAppStore()
+  const lastGroupCode = useAppStore((state) => state.settings.lastGroupCode)
+  const groupMemberRole = useAppStore((state) => state.settings.groupMemberRole)
   const playerCount = countListedPlayers(appState)
   const deckCount = appState.decks.filter((deck) => !deck.archived).length
   const matchCount = countVisibleMatches(appState)
-  const sessions = appState.sessions
   const currentSessionId = appState.currentSessionId
   const activeMatches = countVisibleActiveMatches(appState, currentSessionId ?? undefined)
-  const currentSession = sessions.find((session) => session.id === currentSessionId)
+
+  const workspaceMeta = lastGroupCode
+    ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
+    : t('workspace.local')
+
+  const navigateWorkspace = (target: 'session' | 'players' | 'sync' | 'join') => {
+    setSection(`workspace-${target}` as SettingsSection)
+  }
 
   return (
     <div className="space-y-3">
@@ -96,10 +121,30 @@ export function SettingsPage() {
           </section>
 
           <section className="space-y-1.5">
+            <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+              {t('workspace.sectionTitle')}
+            </p>
+            <SettingsRow
+              title={t('workspace.sectionTitle')}
+              description={t('workspace.sectionDesc')}
+              meta={workspaceMeta}
+              onClick={() => setSection('workspace')}
+            />
+          </section>
+
+          <section className="space-y-1.5">
+            <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+              {t('workspace.personalSection')}
+            </p>
             <SettingsRow
               title={t('settings.profile')}
               description={t('settings.profileDesc')}
               onClick={() => setSection('profile')}
+            />
+            <SettingsRow
+              title={t('workspace.accountTitle')}
+              description={t('workspace.accountDesc')}
+              onClick={() => setSection('account')}
             />
             <SettingsRow
               title={t('settings.appearance')}
@@ -113,28 +158,6 @@ export function SettingsPage() {
               onClick={() => setSection('language')}
             />
             <SettingsRow
-              title={t('settings.players')}
-              description={t('settings.playersDesc')}
-              meta={`${playerCount}`}
-              onClick={() => setSection('players')}
-            />
-            <SettingsRow
-              title={t('settings.session')}
-              description={t('settings.sessionDesc')}
-              meta={currentSession?.name ?? t('settings.noActiveSession')}
-              onClick={() => setSection('session')}
-            />
-            <SettingsRow
-              title={t('settings.cloud')}
-              description={t('settings.cloudDesc')}
-              onClick={() => setSection('cloud')}
-            />
-            <SettingsRow
-              title={t('settings.system')}
-              description={t('settings.systemDesc')}
-              onClick={() => setSection('system')}
-            />
-            <SettingsRow
               title={t('settings.leaders')}
               description={t('settings.leadersDesc')}
               meta={`${deckCount}`}
@@ -145,7 +168,13 @@ export function SettingsPage() {
               description={t('settings.dataToolsDesc')}
               onClick={() => setSection('data')}
             />
+            <SettingsRow
+              title={t('settings.system')}
+              description={t('settings.systemDesc')}
+              onClick={() => setSection('system')}
+            />
           </section>
+
           <section className="rounded-xl bg-surface-elevated p-3 text-sm text-text-secondary">
             <h2 className="text-sm font-semibold text-text-primary">{t('settings.about')}</h2>
             <div className="mt-2 flex items-center justify-between gap-3">
@@ -159,45 +188,45 @@ export function SettingsPage() {
         </>
       ) : null}
 
-      {section === 'session' ? (
+      {section === 'workspace' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <SessionManager onBackup={() => setSection('cloud')} />
+          <WorkspaceHub onNavigate={navigateWorkspace} />
         </>
       ) : null}
 
-      {section === 'players' ? (
+      {section === 'workspace-session' ? (
         <>
-          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <SessionManager onBackup={() => setSection('account')} />
+        </>
+      ) : null}
+
+      {section === 'workspace-players' ? (
+        <>
+          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
           <DataManagers mode="players" />
         </>
       ) : null}
 
-      {section === 'leaders' ? (
+      {section === 'workspace-sync' ? (
         <>
-          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <DataManagers mode="leaders" />
+          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <GroupSyncSection />
         </>
       ) : null}
 
-      {section === 'data' ? (
+      {section === 'workspace-join' ? (
         <>
-          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <DataTools />
+          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <GroupMembershipPanel />
         </>
       ) : null}
 
-      {section === 'cloud' ? (
+      {section === 'account' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <CloudSyncTool />
-        </>
-      ) : null}
-
-      {section === 'system' ? (
-        <>
-          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <SystemStatusPanel />
+          <AccountBackupPanel />
         </>
       ) : null}
 
@@ -233,6 +262,27 @@ export function SettingsPage() {
               ))}
             </select>
           </section>
+        </>
+      ) : null}
+
+      {section === 'leaders' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <DataManagers mode="leaders" />
+        </>
+      ) : null}
+
+      {section === 'data' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <DataTools />
+        </>
+      ) : null}
+
+      {section === 'system' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <SystemStatusPanel />
         </>
       ) : null}
     </div>

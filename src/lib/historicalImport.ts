@@ -4,6 +4,16 @@ export const HISTORICAL_IMPORT_MAX_ROWS = 100
 export const HISTORICAL_IMPORT_MIN_SPAN_DAYS = 30
 export const HISTORICAL_IMPORT_CONFIRM_TEXT = '歷史還原'
 
+/** Short bullet list for import UI */
+export const HISTORICAL_IMPORT_RULES = [
+  `單次最多 ${HISTORICAL_IMPORT_MAX_ROWS} 場`,
+  `日期跨度 ≥ ${HISTORICAL_IMPORT_MIN_SPAN_DAYS} 天（最早～最晚對局）`,
+  '可多次匯入，每次須符合上述條件',
+  '計入累積型成就（老將、對手數等）',
+  '不計技巧/時間/連勝/趣味型成就',
+  '一般 CSV 匯入（未勾選）仍不計任何成就',
+] as const
+
 export function computeDateSpanDays(timestampsMs: number[]): number | null {
   const valid = timestampsMs.filter((value) => !Number.isNaN(value))
   if (valid.length < 2) return null
@@ -79,10 +89,4 @@ export function validateHistoricalImportMatches(
     }
   }
   return { ok: true, spanDays }
-}
-
-export function hasUsedHistoricalImport(
-  historicalImportUsedAt: string | null | undefined,
-): boolean {
-  return Boolean(historicalImportUsedAt)
 }

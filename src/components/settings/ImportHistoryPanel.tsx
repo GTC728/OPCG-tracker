@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { listImportSnapshots } from '@/lib/importSnapshots'
-import { validateHistoricalImportMatches, hasUsedHistoricalImport } from '@/lib/historicalImport'
+import { validateHistoricalImportMatches, HISTORICAL_IMPORT_RULES } from '@/lib/historicalImport'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -15,7 +15,6 @@ export function ImportHistoryPanel() {
   const promoteImportBatchToHistorical = useAppStore((state) => state.promoteImportBatchToHistorical)
   const importRows = useAppStore((state) => state.importRows)
   const matches = useAppStore((state) => state.matches)
-  const historicalImportUsedAt = useAppStore((state) => state.settings.historicalImportUsedAt)
   const restoreImportSnapshot = useAppStore((state) => state.restoreImportSnapshot)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -49,7 +48,6 @@ export function ImportHistoryPanel() {
               !batch.revertedAt &&
               !batch.historicalRestore &&
               batch.successCount > 0 &&
-              !hasUsedHistoricalImport(historicalImportUsedAt) &&
               validateHistoricalImportMatches(batchMatches).ok
 
             return (
@@ -71,7 +69,7 @@ export function ImportHistoryPanel() {
                     disabled={busyId === batch.id}
                     onClick={() => {
                       const ok = window.confirm(
-                        `將 ${batch.successCount} 場升級為歷史還原？終身僅限一次，計入累積型成就。`,
+                        `將 ${batch.successCount} 場升級為歷史還原？\n\n${HISTORICAL_IMPORT_RULES.map((r) => `· ${r}`).join('\n')}`,
                       )
                       if (!ok) return
                       setBusyId(batch.id)

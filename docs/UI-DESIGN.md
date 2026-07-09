@@ -129,9 +129,16 @@ Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead o
 ## Sync Status Banner (V3.10+)
 
 - Shown below sticky header when user is in a group (`lastGroupCode`).
+- **Tap** opens sync controls sheet (`GroupSyncSection`) — V4.12+.
 - **Offline:** `bg-warning/10`, neutral copy — local changes still saved.
 - **Pending sync:** `bg-brand-500/10`, shows queue count from IndexedDB outbox.
 - Do not use red for offline (environmental state, not error).
+
+## Workspace Chip (V4.12+)
+
+- Shown in `AppShell` header next to brand credit — always visible (`本機` or group code).
+- Tap opens `WorkspaceHub` bottom sheet (switch workspace, quick links).
+- Settings uses **scope-first** layout: **工作區** vs **個人** sections — see `docs/WORKSPACE.md`.
 
 ---
 

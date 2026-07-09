@@ -98,3 +98,9 @@ export async function loadLegacyMonolithState(): Promise<unknown | null> {
 export async function clearLegacyMonolithState(): Promise<void> {
   await opcgDb.legacy.delete(LEGACY_STORAGE_KEY)
 }
+
+/** Cached group workspace keys (excludes offline/local). */
+export async function listKnownGroupKeys(): Promise<string[]> {
+  const keys = await opcgDb.groupStates.toCollection().primaryKeys()
+  return keys.filter((key) => key !== OFFLINE_GROUP_KEY)
+}
