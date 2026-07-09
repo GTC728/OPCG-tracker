@@ -1,6 +1,6 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
-import type { AppState } from '@/types'
+import type { AppState, GroupMemberRole } from '@/types'
 
 export interface CloudSnapshotRow {
   id: string
@@ -151,15 +151,75 @@ export async function resolveGroupKey(groupCode: string): Promise<string> {
   return createGroupKey(groupCode)
 }
 
-async function ensureGroupMembership(groupCode: string): Promise<string> {
+async function ensureGroupMembership(
+  groupCode: string,
+): Promise<{ groupKey: string; role: GroupMemberRole }> {
   const supabase = await requireClient()
   const user = await requireUser()
   const groupKey = await createGroupKey(groupCode)
-  const { error } = await supabase.from('group_members').insert({
+
+  const { count, error: countError } = await supabase
+    .from('group_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_key', groupKey)
+  if (countError && countError.code !== '42703') throw countError
+
+  const role: GroupMemberRole = (count ?? 0) === 0 ? 'owner' : 'member'
+  const insertPayload: Record<string, unknown> = {
     group_key: groupKey,
     user_id: user.id,
-  })
+  }
+  if (!countError) {
+    insertPayload.role = role
+  }
+
+  const { error } = await supabase.from('group_members').insert(insertPayload)
   if (error && error.code !== '23505') throw error
+
+  const resolvedRole = await fetchGroupMemberRole(groupCode)
+  return { groupKey, role: resolvedRole ?? role }
+}
+
+export async function fetchGroupMemberRole(groupCode: string): Promise<GroupMemberRole | null> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+  const groupKey = await createGroupKey(groupCode)
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('role')
+    .eq('group_key', groupKey)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    if (error.code === '42703' || error.code === 'PGRST116') return 'member'
+    throw error
+  }
+  const raw = data?.role
+  if (raw === 'owner' || raw === 'member' || raw === 'reader') return raw
+  return 'member'
+}
+
+export async function leaveGroupMembership(groupCode: string): Promise<void> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_key', groupKey)
+    .eq('user_id', user.id)
+  if (error) throw error
+}
+
+export async function joinGroupWithRole(
+  groupCode: string,
+): Promise<{ groupKey: string; role: GroupMemberRole }> {
+  return ensureGroupMembership(groupCode)
+}
+
+async function ensureGroupMembershipLegacy(groupCode: string): Promise<string> {
+  const { groupKey } = await ensureGroupMembership(groupCode)
   return groupKey
 }
 
@@ -179,7 +239,7 @@ export async function uploadCloudSnapshot(state: AppState, deviceLabel: string):
 
 export async function loadGroupCloudState(groupCode: string): Promise<GroupCloudState | null> {
   const supabase = await requireClient()
-  const groupKey = await ensureGroupMembership(groupCode)
+  const groupKey = await ensureGroupMembershipLegacy(groupCode)
   const { data, error } = await supabase
     .from('group_app_states')
     .select('*')
@@ -198,7 +258,7 @@ export async function uploadGroupCloudState(
   const supabase = await requireClient()
   const user = await requireUser()
 
-  const groupKey = await ensureGroupMembership(groupCode)
+  const groupKey = await ensureGroupMembershipLegacy(groupCode)
   const { error } = await supabase.from('group_app_states').upsert({
     group_key: groupKey,
     state,
@@ -272,7 +332,7 @@ export async function listGroupCloudSnapshots(
   limit = 20,
 ): Promise<GroupCloudSnapshotMeta[]> {
   const supabase = await requireClient()
-  const groupKey = await ensureGroupMembership(groupCode)
+  const groupKey = await ensureGroupMembershipLegacy(groupCode)
 
   const { data, error } = await supabase
     .from('group_app_state_snapshots')
@@ -293,7 +353,7 @@ export async function loadGroupCloudSnapshotById(
   id: string,
 ): Promise<GroupCloudSnapshotRow | null> {
   const supabase = await requireClient()
-  const groupKey = await ensureGroupMembership(groupCode)
+  const groupKey = await ensureGroupMembershipLegacy(groupCode)
 
   const { data, error } = await supabase
     .from('group_app_state_snapshots')

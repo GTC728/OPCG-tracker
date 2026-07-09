@@ -23,6 +23,8 @@ import {
   resumeGroupCollabNotify,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
+import { isMatchEligibleForPlayer } from '@/lib/achievementEligibility'
+import { canDeleteMatches } from '@/lib/groupPermissions'
 import { isTestGroupCode } from '@/lib/groupTest'
 import {
   applyCompletedMatchToLifetime,
@@ -158,6 +160,7 @@ function applyLifetimeForCompletedMatch(state: AppState, match: Match): AppState
   if (!linkedId || isTestGroupCode(state.settings.lastGroupCode)) return state
   if (match.player1Id !== linkedId && match.player2Id !== linkedId) return state
   const withProfile = ensureProfileIdentityId(state)
+  if (!isMatchEligibleForPlayer(linkedId, match.id, withProfile.matches)) return withProfile
   const lifetime = getOrCreateLifetime(withProfile)
   if (!lifetime) return withProfile
   return {
@@ -1025,6 +1028,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   deleteMatch: (matchId) => {
     const current = getAppState()
+    if (!canDeleteMatches(current.settings.groupMemberRole, Boolean(current.settings.lastGroupCode))) {
+      throw new Error('只有群組管理員可以刪除對局')
+    }
     const match = current.matches.find((item) => item.id === matchId)
     if (!match) throw new Error('找不到對局')
     if (match.deletedAt !== null) return
@@ -1373,11 +1379,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
             groupCollabEnabled: false,
             groupCollabBootstrapped: false,
             groupDataBoundCode: null,
+            groupMemberRole: null,
           },
         },
         'sync',
         groupCode ? `已離開群組 ${groupCode}` : '已離開群組',
       )
+      if (groupCode) {
+        try {
+          const { leaveGroupMembership } = await import('@/lib/cloudSync')
+          await leaveGroupMembership(groupCode)
+        } catch {
+          // offline — local leave still applies
+        }
+      }
       syncMaterializedFromState(next)
       const persisted = persist(next, true)
       set({ ...persisted })

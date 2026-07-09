@@ -11,6 +11,7 @@ import {
   type GroupCloudSnapshotMeta,
 } from '@/lib/cloudSync'
 import { formatDateTime } from '@/lib/utils'
+import { prepareRestoredAppState } from '@/lib/restoreState'
 import { useAppStore } from '@/stores/appStore'
 
 function SnapshotRow({
@@ -132,12 +133,12 @@ export function BackupVersionList({
             if (mode === 'personal') {
               const snapshot = await loadCloudSnapshotById(selectedId)
               if (!snapshot) throw new Error(t('cloud.versionMissing'))
-              replaceState(snapshot.state)
+              replaceState(prepareRestoredAppState(snapshot.state))
             } else {
               if (!groupCode) throw new Error(t('cloud.groupEmpty'))
               const snapshot = await loadGroupCloudSnapshotById(groupCode, selectedId)
               if (!snapshot) throw new Error(t('cloud.versionMissing'))
-              replaceState(snapshot.state)
+              replaceState(prepareRestoredAppState(snapshot.state))
             }
             toast.success(t('cloud.restoreVersionDone'))
             onRestored?.()

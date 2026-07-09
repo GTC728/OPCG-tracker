@@ -10,6 +10,7 @@ import { useI18n } from '@/lib/i18n'
 import { formatPercent } from '@/lib/stats'
 import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
+import { isReadOnlyMember } from '@/lib/groupPermissions'
 import { useAppStore } from '@/stores/appStore'
 
 export function RecordPage() {
@@ -22,6 +23,9 @@ export function RecordPage() {
   const decks = useAppStore((s) => s.decks)
   const matches = useAppStore((s) => s.matches)
   const activeMatches = useAppStore((s) => s.activeMatches)
+  const groupMemberRole = useAppStore((s) => s.settings.groupMemberRole)
+  const inGroup = useAppStore((s) => s.settings.lastGroupCode)
+  const readOnly = inGroup && isReadOnlyMember(groupMemberRole)
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const createNewSession = useAppStore((s) => s.createNewSession)
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
@@ -173,7 +177,14 @@ export function RecordPage() {
         ) : null}
       </section>
 
-      <MatchRecorder />
+      {readOnly ? (
+        <section className={[uiCard, 'p-4 text-sm text-text-secondary'].join(' ')}>
+          <p className="font-semibold text-text-primary">觀眾模式</p>
+          <p className="mt-1">你在此群組為觀眾，可查看對局與統計，無法錄製或刪除對局。</p>
+        </section>
+      ) : (
+        <MatchRecorder />
+      )}
 
       <SessionManager
         compact

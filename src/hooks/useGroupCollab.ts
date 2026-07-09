@@ -29,10 +29,18 @@ export function useGroupCollab() {
         if (needsRebind) {
           await initializeGroupCollab(groupCode!)
           if (!cancelled) {
+            let groupMemberRole = useAppStore.getState().settings.groupMemberRole
+            try {
+              const { fetchGroupMemberRole } = await import('@/lib/cloudSync')
+              groupMemberRole = await fetchGroupMemberRole(groupCode!)
+            } catch {
+              // offline
+            }
             updateSettings({
               groupCollabBootstrapped: true,
               groupCollabEnabled: true,
               groupDataBoundCode: groupCode,
+              groupMemberRole,
             })
           }
         } else {

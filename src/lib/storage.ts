@@ -1,6 +1,6 @@
 import { getLocaleAliasesForLeader } from '@/data/leaderLocaleAliases'
 import { createDefaultAppState, SCHEMA_VERSION, STORAGE_KEY } from '@/lib/constants'
-import { migrateLegacyUnlocks } from '@/lib/achievements'
+import { migrateLegacyUnlocks, reconcileAchievementUnlocks } from '@/lib/achievements'
 import {
   emptyGroupSnapshot,
   groupStorageKey,
@@ -280,6 +280,40 @@ const migrations: Record<number, Migration> = {
     const merged = { ...state, settings, schemaVersion: 14 } as AppState
     if (settings.linkedPlayerId) {
       return finalizeProfileLink(merged)
+    }
+    return merged
+  },
+  15: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    let merged = {
+      ...state,
+      schemaVersion: 15,
+      settings: {
+        ...settings,
+        groupMemberRole: settings.groupMemberRole ?? null,
+        lastCloudBackupAt: settings.lastCloudBackupAt ?? null,
+        autoBackupOnLogin: settings.autoBackupOnLogin ?? true,
+      },
+    } as AppState
+    const linkedId = merged.settings.linkedPlayerId
+    const profileId = merged.settings.profileIdentityId
+    if (profileId && linkedId && !isTestGroupCode(merged.settings.lastGroupCode)) {
+      merged = {
+        ...merged,
+        profileLifetime: rebuildLifetimeFromMatches(
+          profileId,
+          linkedId,
+          merged.players,
+          merged.matches,
+        ),
+      }
+    }
+    if (linkedId) {
+      merged = reconcileAchievementUnlocks(merged, linkedId).state
     }
     return merged
   },

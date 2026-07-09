@@ -66,15 +66,19 @@
 | G-02 | **離線優先 indicator 強化** | 部分已有 | V4.4 | 現有 `SyncStatusBanner` + outbox；加：最後同步時間、裝置、queue 明細、手動重試 |
 | G-03 | **衝突合併 UI** | 規劃中 | V4.5 | 與 9E 一併；入群 / pull 時本地 vs 雲端 diff |
 | G-04 | **Profile claim 跨裝置 Supabase 同步** | 部分已有 | V4.5 | 現有本地 claim；需雲端持久化 |
+| G-05 | **遊戲大廳 / 群組 registry** | 規劃中 | V4.12+ | `groups` 表、display name 可重複、invite slug；取代「code 被占即回不去」 |
+| G-06 | **RLS 依 role 寫入 sync_*** | 部分已有 | V4.12 | V4.11 client 端 gate；需 Supabase policy + reader 只讀 |
 
-**已有：** Realtime collab、offline queue、強制群組同步（V3.5–3.10）。
+**V4.11 已完成：** 成就 eligible 規則、雲端備份優先、owner/member/reader 角色基礎 — 見 [`docs/ACHIEVEMENT-TRUST.md`](ACHIEVEMENT-TRUST.md)。
 
-### 匯入 & 分享
+### 成就 & 信任
 
 | ID | 項目 | 狀態 | 目標 | 備註 |
 |----|------|------|------|------|
-| D-01 | **Import 智慧去重** | 規劃中 | V4.4 | Excel 匯入 fingerprint 偵測重複；preview 跳過/合併 |
-| D-02 | **Read-only 公開分享連結** | 部分已有 | V5.3 | **已有** Profile/Session **PNG**（`ShareExportSheet`）；**待做** 未登入可開的 URL |
+| A-01 | **Eligible 成就規則** | 完成 | V4.11 | 5min 時長/間隔、session 20 場、import 不計 |
+| A-02 | **Server achievement ledger** | 部分已有 | V4.12 | SQL 已備；client sync 待做 |
+| A-03 | **Verified 雙確認** | 規劃中 | V5+ | 需社群普及；`trustTier` 欄位已預留 |
+| A-04 | **備份自動化** | 部分已有 | V4.11 | 登入 auto-backup；待做：週期背景備份 |
 
 **已有：** Excel import + mapping preview、cloud backup。
 

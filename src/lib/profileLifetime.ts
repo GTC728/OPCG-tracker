@@ -1,4 +1,5 @@
-import { getLongestWinStreak, playerMatches, sortByFinished } from '@/lib/achievements'
+import { playerEligibleMatches } from '@/lib/achievementEligibility'
+import { getLongestWinStreak, sortByFinished } from '@/lib/achievements'
 import type { AppState, Match, Player, ProfileLifetimeStats } from '@/types'
 
 const OUTCOME_CAP = 400
@@ -190,7 +191,7 @@ export function mergeLifetimeAchievementMetrics(
 ): Record<string, number> {
   if (!lifetime || playerId !== linkedPlayerId) return metrics
 
-  const relevant = playerMatches(playerId, matches).filter((m) => m.deletedAt === null)
+  const relevant = playerEligibleMatches(playerId, matches)
   const sorted = sortByFinished(relevant)
   const groupStreak = getLongestWinStreak(sorted, playerId)
 
@@ -214,9 +215,8 @@ export function rebuildLifetimeFromMatches(
   matches: Match[],
 ): ProfileLifetimeStats {
   let lifetime = createEmptyLifetime(profileIdentityId)
-  const completed = sortByFinished(
-    playerMatches(playerId, matches).filter((match) => match.deletedAt === null),
-  )
+  const eligible = playerEligibleMatches(playerId, matches)
+  const completed = sortByFinished(eligible)
   for (const match of completed) {
     lifetime = applyCompletedMatchToLifetime(lifetime, match, playerId, players, completed)
   }

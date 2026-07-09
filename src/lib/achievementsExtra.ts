@@ -121,6 +121,36 @@ export const EXTRA_ACHIEVEMENT_DEFINITIONS: ExtraDefinition[] = [
     tiers: tierDefs.people(),
   },
   {
+    id: 'loyal_rival',
+    category: 'social',
+    kind: 'grind',
+    ease: 52,
+    icon: 'swords',
+    title: { 'zh-Hant': '老對手', 'zh-Hans': '老对手', en: 'Loyal Rival', ja: '宿敵' },
+    description: {
+      'zh-Hant': '與同一對手累計對戰場次（計入成就的有效對局）。',
+      'zh-Hans': '与同一对手累计对战场次（计入成就的有效对局）。',
+      en: 'Total eligible matches vs one opponent.',
+      ja: '同一相手との有効対戦累計。',
+    },
+    tiers: tierDefs.games(),
+  },
+  {
+    id: 'wide_net',
+    category: 'social',
+    kind: 'grind',
+    ease: 68,
+    icon: 'compass',
+    title: { 'zh-Hant': '廣結牌緣', 'zh-Hans': '广结牌缘', en: 'Wide Net', ja: '広い輪' },
+    description: {
+      'zh-Hant': '與不同對手對戰過的人數（不论胜负，有效對局）。',
+      'zh-Hans': '与不同对手对战过的人数（不论胜负，有效对局）。',
+      en: 'Unique opponents faced in eligible matches.',
+      ja: '有効対戦した異なる相手の人数。',
+    },
+    tiers: tierDefs.people(),
+  },
+  {
     id: 'nemesis_bond',
     category: 'social',
     kind: 'grind',
@@ -455,6 +485,8 @@ export function evaluateExtraAchievementMetrics(
   let secondWins = 0
   let secondTotal = 0
 
+  const opponentGames = new Map<string, number>()
+  const opponentsFaced = new Set<string>()
   const h2h = new Map<string, { wins: number; losses: number }>()
   const sessionByOpponent = new Map<string, Map<string, Match[]>>()
 
@@ -481,6 +513,9 @@ export function evaluateExtraAchievementMetrics(
     }
 
     if (match.source === 'import') importCount += 1
+
+    opponentsFaced.add(opponentId)
+    opponentGames.set(opponentId, (opponentGames.get(opponentId) ?? 0) + 1)
 
     tables.add(match.sessionId)
 
@@ -607,6 +642,8 @@ export function evaluateExtraAchievementMetrics(
     color_devotee: maxCountInMap(colorWins),
     deck_rotator: maxDeckInSession,
     ice_breaker: opponentsBeaten.size,
+    wide_net: opponentsFaced.size,
+    loyal_rival: maxCountInMap(opponentGames),
     circle_session: maxOppInSession,
     nemesis_bond: maxCountInMap(opponentLosses),
     balanced_rival: balancedRival,

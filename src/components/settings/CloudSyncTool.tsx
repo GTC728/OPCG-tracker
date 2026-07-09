@@ -5,14 +5,17 @@ import { useI18n } from '@/lib/i18n'
 import {
   getCloudSession,
   isCloudConfigured,
+  joinGroupWithRole,
   loadGroupCloudState,
   loadLatestCloudSnapshot,
   signInWithEmail,
   signOutCloud,
   type GroupCloudState,
-  uploadCloudSnapshot,
 } from '@/lib/cloudSync'
 import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
+import { backupAgeDays, needsBackupReminder, runAutoCloudBackup, shouldAutoBackupOnLogin } from '@/lib/autoBackup'
+import { groupRoleLabel } from '@/lib/groupPermissions'
+import { prepareRestoredAppState } from '@/lib/restoreState'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import { BackupVersionList } from '@/components/settings/BackupVersionList'
@@ -66,6 +69,15 @@ export function CloudSyncTool() {
         const withProfile = ensurePersonalProfileFromLogin(current, user.email)
         if (withProfile !== current) {
           replaceState(withProfile)
+        }
+        if (shouldAutoBackupOnLogin(getAppState())) {
+          try {
+            const backed = await runAutoCloudBackup(getAppState(), deviceLabel)
+            replaceState(backed)
+            toast.info('已自動備份個人資料到雲端')
+          } catch {
+            // non-blocking
+          }
         }
         const latest = await loadLatestCloudSnapshot()
         setLatestBackup(latest?.created_at ?? null)
@@ -121,7 +133,24 @@ export function CloudSyncTool() {
           <p className="text-sm text-text-secondary">{userEmail}</p>
           {latestBackup ? (
             <p className="text-sm text-text-secondary">最新備份：{formatDateTime(latestBackup)}</p>
+          ) : (
+            <p className="rounded-xl bg-warning/10 p-3 text-sm text-amber-100">
+              尚未雲端備份。請定期備份，避免資料遺失後只能靠 CSV 匯入（CSV 不計成就）。
+            </p>
+          )}
+          {needsBackupReminder(getAppState()) && latestBackup ? (
+            <p className="rounded-xl bg-warning/10 p-2 text-xs text-amber-100">
+              已 {backupAgeDays(getAppState()) ?? '?'} 天未備份，建議立即備份。
+            </p>
           ) : null}
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <input
+              type="checkbox"
+              checked={settings.autoBackupOnLogin !== false}
+              onChange={(event) => updateSettings({ autoBackupOnLogin: event.target.checked })}
+            />
+            登入後自動備份（24 小時內不重複）
+          </label>
           <div className="rounded-2xl bg-surface p-3">
             <p className="text-sm font-semibold">{t('cloud.groupShare')}</p>
             <p className="mt-1 text-xs text-text-secondary">
@@ -131,6 +160,9 @@ export function CloudSyncTool() {
               <div className="mt-3 space-y-3">
                 <p className="text-sm text-text-secondary">
                   {t('cloud.groupLabel')}：{connectedGroup}
+                  {settings.groupMemberRole
+                    ? ` · ${groupRoleLabel(settings.groupMemberRole)}`
+                    : ''}
                   {groupState ? ` · ${t('cloud.updatedAt')}${formatDateTime(groupState.updated_at)}` : ''}
                 </p>
                 <p className="rounded-xl bg-brand-500/10 p-3 text-xs text-brand-100">{t('cloud.collabActiveNote')}</p>
@@ -179,6 +211,7 @@ export function CloudSyncTool() {
                     setMessage(null)
                     try {
                       const code = groupCode.trim()
+                      const { role } = await joinGroupWithRole(code)
                       const latest = await loadGroupCloudState(code)
                       setConnectedGroup(code)
                       setGroupState(latest)
@@ -187,6 +220,7 @@ export function CloudSyncTool() {
                         groupCollabEnabled: true,
                         groupCollabBootstrapped: false,
                         groupDataBoundCode: null,
+                        groupMemberRole: role,
                       })
                       const nextMessage = latest ? t('cloud.joinedGroup') : t('cloud.joinedNewGroup')
                       setMessage(nextMessage)
@@ -225,7 +259,8 @@ export function CloudSyncTool() {
                 setBusy(true)
                 setMessage(null)
                 try {
-                  await uploadCloudSnapshot(getAppState(), deviceLabel)
+                  const backed = await runAutoCloudBackup(getAppState(), deviceLabel)
+                  replaceState(backed)
                   setMessage('已備份到雲端')
                   toast.success('已備份到雲端')
                   setVersionRefreshKey((value) => value + 1)
@@ -253,7 +288,7 @@ export function CloudSyncTool() {
                 try {
                   const latest = await loadLatestCloudSnapshot()
                   if (!latest) throw new Error('沒有雲端備份')
-                  replaceState(latest.state)
+                  replaceState(prepareRestoredAppState(latest.state))
                   setMessage('已從雲端還原')
                   toast.success('已從雲端還原')
                   await refreshCloudStatus()

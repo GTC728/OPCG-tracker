@@ -1,5 +1,7 @@
 export type ResultType = 'normal' | 'draw' | 'forfeit'
-export type MatchSource = 'manual' | 'import' | 'manual_edit'
+export type MatchSource = 'manual' | 'import' | 'manual_edit' | 'restore'
+export type MatchTrustTier = 'self' | 'group' | 'verified'
+export type GroupMemberRole = 'owner' | 'member' | 'reader'
 export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
 
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -155,6 +157,8 @@ export interface Match {
   source: MatchSource
   deletedAt: string | null
   notes: string | null
+  /** Reserved for verified dual-confirm flow (v4.12+). */
+  trustTier?: MatchTrustTier
 }
 
 export interface MatchRevision {
@@ -307,6 +311,10 @@ export interface AppSettings {
   profileDisplayName: string | null
   /** Per-group player UUID bookmarks (personal layer) */
   groupProfileLinks: Record<string, GroupProfileBookmark>
+  /** Cached from Supabase group_members.role */
+  groupMemberRole: GroupMemberRole | null
+  lastCloudBackupAt: string | null
+  autoBackupOnLogin: boolean
 }
 
 export interface AppState {

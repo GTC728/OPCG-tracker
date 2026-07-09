@@ -12,6 +12,7 @@ import {
 import { useI18n } from '@/lib/i18n'
 import { importAppStateJson } from '@/lib/storage'
 import { getCompletedMatches } from '@/lib/stats'
+import { prepareRestoredAppState } from '@/lib/restoreState'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import type { AppState, ImportMatchInput } from '@/types'
 
@@ -332,7 +333,7 @@ function ImportTool() {
             fullWidth
             variant="danger"
             onClick={() => {
-              replaceState(pendingRestore)
+              replaceState(prepareRestoredAppState(pendingRestore))
               setPendingRestore(null)
               const nextMessage = '已還原 OPCG Tracker Excel 資料'
               setMessage(nextMessage)

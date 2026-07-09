@@ -1,3 +1,4 @@
+import { MIN_ACHIEVEMENT_GAP_MS, MIN_ACHIEVEMENT_MATCH_MS } from '@/lib/achievementEligibility'
 import { createDefaultAppState } from '@/lib/constants'
 import { isTestGroupCode } from '@/lib/groupTest'
 import {
@@ -46,7 +47,10 @@ export function makeMatch(
   deckId?: string,
 ): Match {
   const deck = deckId ?? 'deck-op01-001'
-  const stamp = `2026-01-${String((index % 28) + 1).padStart(2, '0')}T12:00:00.000Z`
+  const baseMs =
+    Date.UTC(2026, 0, 1, 10, 0, 0) + index * (MIN_ACHIEVEMENT_MATCH_MS + MIN_ACHIEVEMENT_GAP_MS + 1000)
+  const startedAt = new Date(baseMs).toISOString()
+  const finishedAt = new Date(baseMs + MIN_ACHIEVEMENT_MATCH_MS + 1000).toISOString()
   return {
     id,
     sessionId: SESSION_ID,
@@ -59,8 +63,8 @@ export function makeMatch(
     winnerDeckId: deck,
     firstPlayerId: winnerId,
     resultType: 'normal',
-    startedAt: stamp,
-    finishedAt: stamp,
+    startedAt,
+    finishedAt,
     source: 'manual',
     deletedAt: null,
     notes: null,

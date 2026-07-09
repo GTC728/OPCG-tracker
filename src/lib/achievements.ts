@@ -9,6 +9,7 @@ import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '
 import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
+import { playerEligibleMatches } from '@/lib/achievementEligibility'
 import { mergeLifetimeAchievementMetrics } from '@/lib/profileLifetime'
 import { unlockProfileId, unlocksForProfile } from '@/lib/profileIdentity'
 import type { ProfileLifetimeStats } from '@/types'
@@ -839,13 +840,13 @@ export function evaluateAchievementMetrics(
   extras?: BacklogExtras,
   lifetime: ProfileLifetimeStats | null = null,
 ): Record<string, number> {
-  const relevant = playerMatches(playerId, matches)
+  const relevant = playerEligibleMatches(playerId, matches)
   const sorted = sortByFinished(relevant)
   const wins = relevant.filter((match) => match.winnerPlayerId === playerId).length
-  const deckWins = deckWinsForPlayer(playerId, matches)
-  const firstStats = firstPlayerWinRate(playerId, matches)
-  const extra = evaluateExtraAchievementMetrics(playerId, players, decks, matches)
-  const batch = evaluateBacklogBatchMetrics(playerId, players, decks, matches, linkedPlayerId)
+  const deckWins = deckWinsForPlayer(playerId, relevant)
+  const firstStats = firstPlayerWinRate(playerId, relevant)
+  const extra = evaluateExtraAchievementMetrics(playerId, players, decks, relevant)
+  const batch = evaluateBacklogBatchMetrics(playerId, players, decks, relevant, linkedPlayerId)
   const defaultExtras = backlogExtrasFromState(createDefaultAppState())
   const backlogExtras = extras ?? {
     ...defaultExtras,
@@ -855,7 +856,7 @@ export function evaluateAchievementMetrics(
     playerId,
     players,
     decks,
-    matches,
+    relevant,
     backlogExtras,
   )
 

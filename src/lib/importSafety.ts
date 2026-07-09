@@ -67,7 +67,7 @@ export function detectTestImportWarning(filename: string, rows: ImportMatchInput
     return '偵測到疑似測試資料（檔名或玩家名稱）。建議匯入到「新匯入場次」，並先暫停群組同步。'
   }
   if (summary.rowCount >= LARGE_IMPORT_THRESHOLD) {
-    return `將匯入 ${summary.rowCount} 場對局。大量匯入會影響統計與成就，且加入群組後會自動同步。`
+    return `將匯入 ${summary.rowCount} 場對局。CSV 匯入不計永久成就；若需還原歷史請用「雲端備份」或「完整 Excel 還原」。`
   }
   return null
 }

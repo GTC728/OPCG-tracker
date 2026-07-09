@@ -9,6 +9,25 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.11.0 - 2026-07-09
+
+### New
+
+- **Achievement eligibility engine**: 5-minute match duration, 5-minute gap between consecutive matches, 20 eligible matches per player per session; CSV import never counts toward permanent achievements.
+- **Cloud backup-first**: auto-backup on login (24h throttle), backup age reminders; full cloud/Excel restore backfills achievements via `restore` source.
+- **Opponent achievements**: 廣結牌緣 (unique opponents faced), 老對手 (repeat rival grinds).
+- **Group roles (foundation)**: owner / member / reader; readers are view-only on Record; only owners can delete matches in groups.
+- **Supabase schema** (`docs/supabase-v4.11.sql`): member roles, groups registry stub, profile achievement ledger.
+
+### Changed
+
+- Leaving a group now removes your Supabase membership (re-joinable); first joiner becomes owner when role column exists.
+- Stats still include all matches; only achievements and lifetime use eligible subset.
+
+### Security
+
+- Non-owner members can no longer delete synced matches in group mode.
+
 ## V4.10.2 - 2026-07-09
 
 ### Changed
