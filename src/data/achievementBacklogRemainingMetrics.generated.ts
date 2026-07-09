@@ -25,7 +25,7 @@ export const REMAINING_METRIC_BINDINGS: Record<string, string> = {
   "op_era": "uniqueSetCodes",
   "friendship_games": "repeatOpponentGames",
   "new_face_welcomer": "newOpponentWins",
-  "group_anchor": "groupUniquePlayers",
+  "group_anchor": "total",
   "palindrome_score": "palindromeSessions",
   "lucky_seven": "luckySevenWins",
   "completionist_90": "maxTierFamilies",

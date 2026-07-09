@@ -116,7 +116,10 @@ export function releaseProfileClaim(state: AppState, playerId: string): AppState
     settings: {
       ...state.settings,
       linkedPlayerId: state.settings.linkedPlayerId === playerId ? null : state.settings.linkedPlayerId,
-      profileSetupCompleted: state.settings.linkedPlayerId === playerId ? false : state.settings.profileSetupCompleted,
+      profileSetupCompleted:
+        state.settings.linkedPlayerId === playerId
+          ? Boolean(state.settings.profileIdentityId)
+          : state.settings.profileSetupCompleted,
     },
   }
 }
@@ -126,7 +129,11 @@ export function unlinkProfile(state: AppState): AppState {
   if (!linkedId) {
     return {
       ...state,
-      settings: { ...state.settings, linkedPlayerId: null, profileSetupCompleted: false },
+      settings: {
+        ...state.settings,
+        linkedPlayerId: null,
+        profileSetupCompleted: Boolean(state.settings.profileIdentityId),
+      },
     }
   }
   return releaseProfileClaim(state, linkedId)

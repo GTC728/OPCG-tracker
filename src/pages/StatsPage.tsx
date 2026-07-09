@@ -1067,10 +1067,10 @@ export function StatsPage() {
   const allMatches = useAppStore((state) => state.matches)
 
   useEffect(() => {
-    if (!settings.profileSetupCompleted && !linkedPlayer) {
+    if (!settings.profileIdentityId && !linkedPlayer) {
       setProfileSheetOpen(true)
     }
-  }, [settings.profileSetupCompleted, linkedPlayer])
+  }, [settings.profileIdentityId, linkedPlayer])
 
   const statsScope = useMemo((): StatsScope => {
     if (scope === 'session' && currentSessionId) {

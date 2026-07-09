@@ -5,6 +5,7 @@ import {
   hasGroupScopedData,
   stripGroupScopedEntities,
 } from '@/lib/groupScope'
+import { finalizeGroupProfileSession } from '@/lib/profileGroupLink'
 import {
   enqueueSyncOp,
   listSyncQueue,
@@ -674,12 +675,14 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
     const hasRemote = await remoteGroupHasData(groupCode)
     if (hasRemote) {
       await pullGroupCollabState(groupCode)
+      updateAppState((state) => finalizeGroupProfileSession(state))
       return
     }
 
     if (hadLocalData) {
       updateAppState((state) => applyGroupScopedSnapshot(state, incomingSnapshot))
       await bootstrapGroupCollab(groupCode, getAppState())
+      updateAppState((state) => finalizeGroupProfileSession(state))
     }
   } finally {
     resumeGroupCollabNotify()
@@ -956,6 +959,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       ),
     }
   })
+  updateAppState((state) => finalizeGroupProfileSession(state))
 }
 
 function applyRemoteActiveRow(row: SyncActiveRow): void {

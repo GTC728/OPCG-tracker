@@ -268,6 +268,12 @@ export interface ProfileLifetimeStats {
   updatedAt: string
 }
 
+export interface GroupProfileBookmark {
+  playerId: string
+  playerName: string
+  linkedAt: string
+}
+
 export interface AppSettings {
   lastBackupReminder: string | null
   backupReminderIntervalDays: number
@@ -297,6 +303,10 @@ export interface AppSettings {
   groupSyncPausedAt: string | null
   /** Which group's data is currently loaded locally; null when not in a group. */
   groupDataBoundCode: string | null
+  /** Stable display name for auto-relinking across groups */
+  profileDisplayName: string | null
+  /** Per-group player UUID bookmarks (personal layer) */
+  groupProfileLinks: Record<string, GroupProfileBookmark>
 }
 
 export interface AppState {

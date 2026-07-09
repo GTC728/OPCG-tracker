@@ -29,11 +29,11 @@ export function evaluateRemainingBacklogMetrics(
       out[entry.id] = statRecord[binding] ?? 0
       continue
     }
-    out[entry.id] = stats.total
+    out[entry.id] = 0
   }
 
-  // Settings-aware overrides
-  if (extras.settings.lastGroupCode) {
+  // Settings-aware overrides — group/sync badges only for the linked profile owner
+  if (extras.linkedPlayerId === playerId && extras.settings.lastGroupCode) {
     out.group_code_join = Math.max(out.group_code_join ?? 0, 1)
     out.sync_pioneer = Math.max(out.sync_pioneer ?? 0, extras.settings.groupCollabBootstrapped ? 1 : 0)
     out.cloud_guardian = Math.max(out.cloud_guardian ?? 0, extras.settings.lastGroupSyncAt ? 1 : 0)
@@ -45,6 +45,8 @@ export function evaluateRemainingBacklogMetrics(
     out.claim_creator = 1
     out.profile_complete = 1
   }
+  // Personal participation in the group — not roster headcount
+  out.group_anchor = stats.total
   if (stats.wins >= 1 && stats.notesMatches >= 1) {
     out.noted_perfection = Math.max(out.noted_perfection ?? 0, stats.notesMatches)
   }

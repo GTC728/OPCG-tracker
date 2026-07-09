@@ -1,12 +1,14 @@
 {
   "name": "opcg-tracker",
   "private": true,
-  "version": "4.10.0",
+    "version": "4.10.1",
   "homepage": "https://opcg-tracker-v2.pages.dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.10"
   }
 }

@@ -231,6 +231,45 @@ const migrations: Record<number, Migration> = {
       },
     }
   },
+  13: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    const links = settings.groupProfileLinks ?? {}
+    if (
+      settings.linkedPlayerId &&
+      settings.lastGroupCode &&
+      !links[groupStorageKey(settings.lastGroupCode)]
+    ) {
+      const player = (Array.isArray(state.players) ? state.players : []).find(
+        (item) => item.id === settings.linkedPlayerId,
+      )
+      if (player) {
+        links[groupStorageKey(settings.lastGroupCode)] = {
+          playerId: player.id,
+          playerName: player.name,
+          linkedAt: new Date().toISOString(),
+        }
+      }
+    }
+    return {
+      ...state,
+      schemaVersion: 13,
+      settings: {
+        ...settings,
+        profileDisplayName:
+          settings.profileDisplayName ??
+          (settings.linkedPlayerId
+            ? (Array.isArray(state.players) ? state.players : []).find(
+                (item) => item.id === settings.linkedPlayerId,
+              )?.name ?? null
+            : null),
+        groupProfileLinks: links,
+      },
+    }
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

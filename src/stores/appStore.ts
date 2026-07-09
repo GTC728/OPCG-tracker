@@ -40,6 +40,7 @@ import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
+import { finalizeProfileLink, bookmarkCurrentGroupProfile } from '@/lib/profileGroupLink'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
 import { loadAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
@@ -1350,7 +1351,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
       await clearSyncQueue()
       invalidateDerivedCache()
-      let stripped = stripGroupScopedEntities(current)
+      const bookmarked = bookmarkCurrentGroupProfile(current)
+      let stripped = stripGroupScopedEntities(bookmarked)
       if (isTestGroupCode(groupCode)) {
         stripped = stripProvisionalUnlocks(stripped)
       }
@@ -1482,7 +1484,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ],
     }
     const claimed = applyProfileClaim(withPlayer, player.id)
-    const persisted = persist(claimed)
+    const finalized = finalizeProfileLink(claimed)
+    const persisted = persist(finalized)
     set({ ...persisted })
     return player
   },
@@ -1493,7 +1496,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!player) throw new ProfileClaimError('player_not_found', '找不到玩家。')
     assertNameConfirmation(player, nameConfirmation)
     const claimed = applyProfileClaim(current, playerId, { forceReclaim })
-    const persisted = persist(claimed)
+    const finalized = finalizeProfileLink(claimed)
+    const persisted = persist(finalized)
     set({ ...persisted })
   },
 

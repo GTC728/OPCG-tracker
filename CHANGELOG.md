@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.10.1 - 2026-07-09
+
+### Changed
+
+- **Personal profile persists across groups**: `profileDisplayName` + `groupProfileLinks` auto-relink you to the same player name when rejoining a group; leaving saves a bookmark instead of forgetting who you are.
+- **Link profile reconciles achievements**: connecting your profile rebuilds lifetime stats and syncs unlocks immediately (not only after the next match).
+- **Achievement fairness**: `group_anchor` counts your own matches, not group roster size; group/sync badges apply only to the linked profile owner.
+
+### Fixed
+
+- Switching groups no longer forces manual re-link every time (when the same player name exists).
+- Achievement wall no longer shows most players as having completed group-wide achievements in large rosters.
+- First-time profile setup prompt only appears when you have no `profileIdentityId` yet.
+
 ## V4.10.0 - 2026-07-09
 
 ### Changed
