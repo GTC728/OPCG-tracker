@@ -19,6 +19,7 @@ import {
   savePersonalState,
 } from '@/lib/indexedDb'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
+import { finalizeProfileLink } from '@/lib/profileGroupLink'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import {
   buildDefaultVariantsFromDecks,
@@ -269,6 +270,18 @@ const migrations: Record<number, Migration> = {
         groupProfileLinks: links,
       },
     }
+  },
+  14: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    const merged = { ...state, settings, schemaVersion: 14 } as AppState
+    if (settings.linkedPlayerId) {
+      return finalizeProfileLink(merged)
+    }
+    return merged
   },
 }
 

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
+import { getLinkedPlayer } from '@/lib/profileClaim'
+import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
-import { getLinkedPlayer } from '@/lib/profileClaim'
 import { useI18n } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import {
@@ -1067,10 +1068,15 @@ export function StatsPage() {
   const allMatches = useAppStore((state) => state.matches)
 
   useEffect(() => {
-    if (!settings.profileIdentityId && !linkedPlayer) {
+    const snapshot = useAppStore.getState()
+    if (!hasPersonalProfile(snapshot)) {
+      setProfileSheetOpen(true)
+      return
+    }
+    if (snapshot.settings.lastGroupCode && !getLinkedPlayer(snapshot)) {
       setProfileSheetOpen(true)
     }
-  }, [settings.profileIdentityId, linkedPlayer])
+  }, [settings.lastGroupCode, linkedPlayer, settings.profileIdentityId])
 
   const statsScope = useMemo((): StatsScope => {
     if (scope === 'session' && currentSessionId) {

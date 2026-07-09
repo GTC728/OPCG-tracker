@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.10.2 - 2026-07-09
+
+### Changed
+
+- **Personal profile vs group identity**: login creates a persistent personal profile name (e.g. GTC); each group links a separate roster name (e.g. Bobby) via bookmarks without overwriting your personal profile.
+- **Settings UI**: shows personal profile even after leaving a group; group link is a separate step.
+- **Achievement display**: wall shows unlocked tiers from saved records only; fixed false unlocks from mis-bound metrics (onboarding, secrets, group roster size).
+
+### Fixed
+
+- Leaving a group no longer looks like losing your personal profile in Settings.
+- Secret / onboarding achievements no longer unlock for everyone with zero or minimal matches.
+- Removed confusing `???` prefixes from secret achievement titles.
+
 ## V4.10.1 - 2026-07-09
 
 ### Changed

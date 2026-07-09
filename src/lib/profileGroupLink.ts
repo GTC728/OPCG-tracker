@@ -11,6 +11,7 @@ function normalizeName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+/** Save group roster bookmark only — does not change personal profileDisplayName. */
 export function saveGroupProfileBookmark(
   state: AppState,
   playerId: string,
@@ -29,7 +30,6 @@ export function saveGroupProfileBookmark(
     ...state,
     settings: {
       ...state.settings,
-      profileDisplayName: playerName.trim(),
       groupProfileLinks: links,
     },
   }
@@ -44,9 +44,7 @@ function findPlayerForBookmark(state: AppState, bookmark: GroupProfileBookmark):
   )
   if (byId && !isPlayerClaimedByOtherDevice(byId)) return byId
 
-  const displayName = state.settings.profileDisplayName?.trim()
-  if (!displayName) return null
-  const norm = normalizeName(displayName)
+  const norm = normalizeName(bookmark.playerName)
   const byName = state.players.find(
     (player) =>
       player.deletedAt === null &&
@@ -65,19 +63,7 @@ export function tryAutoRelinkGroupProfile(state: AppState): AppState {
   if (!groupCode) return state
 
   const bookmark = state.settings.groupProfileLinks?.[groupStorageKey(groupCode)]
-  if (!bookmark) {
-    const displayName = state.settings.profileDisplayName?.trim()
-    if (!displayName) return state
-    const norm = normalizeName(displayName)
-    const byName = state.players.find(
-      (player) =>
-        player.deletedAt === null &&
-        isSelectablePlayer(player) &&
-        normalizeName(player.name) === norm,
-    )
-    if (!byName || isPlayerClaimedByOtherDevice(byName)) return state
-    return finalizeProfileLink(applyProfileClaim(state, byName.id))
-  }
+  if (!bookmark) return state
 
   const player = findPlayerForBookmark(state, bookmark)
   if (!player) return state
@@ -127,4 +113,10 @@ export function bookmarkCurrentGroupProfile(state: AppState): AppState {
   const player = state.players.find((item) => item.id === linkedId)
   if (!player) return state
   return saveGroupProfileBookmark(state, linkedId, player.name)
+}
+
+export function getGroupProfileBookmark(state: AppState): GroupProfileBookmark | null {
+  const groupCode = state.settings.lastGroupCode
+  if (!groupCode) return null
+  return state.settings.groupProfileLinks?.[groupStorageKey(groupCode)] ?? null
 }

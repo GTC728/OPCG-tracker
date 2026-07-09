@@ -61,6 +61,11 @@ export function CloudSyncTool() {
       const { user } = await getCloudSession()
       setUserEmail(user?.email ?? null)
       if (user) {
+        const current = getAppState()
+        const withProfile = ensurePersonalProfileFromLogin(current, user.email)
+        if (withProfile !== current) {
+          replaceState(withProfile)
+        }
         const latest = await loadLatestCloudSnapshot()
         setLatestBackup(latest?.created_at ?? null)
         if (connectedGroup) {

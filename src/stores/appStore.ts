@@ -41,6 +41,11 @@ import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
 import { finalizeProfileLink, bookmarkCurrentGroupProfile } from '@/lib/profileGroupLink'
+import {
+  createPersonalProfile as applyCreatePersonalProfile,
+  hasPersonalProfile,
+  updatePersonalProfileName as applyUpdatePersonalProfileName,
+} from '@/lib/personalProfile'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
 import { loadAppState } from '@/lib/storage'
 import { createId, nowIso } from '@/lib/utils'
@@ -100,9 +105,12 @@ interface AppStore extends AppState {
   setLanguage: (language: Language) => void
   completeOnboarding: () => void
   updateSettings: (settings: Partial<AppState['settings']>) => void
-  createAndClaimProfile: (input: PlayerInput) => Player
+  createAndClaimProfile: (input: PlayerInput) => Player | null
+  createPersonalProfile: (displayName: string) => void
+  updatePersonalProfileName: (displayName: string) => void
   linkProfileToPlayer: (playerId: string, nameConfirmation: string, forceReclaim?: boolean) => void
   unlinkProfile: () => void
+  unlinkGroupProfile: () => void
   clearPendingAchievementToasts: () => void
   setSessionRoster: (sessionId: string, playerIds: string[]) => void
   setMatchNotes: (matchId: string, notes: string | null) => void
@@ -1456,11 +1464,33 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
+  createPersonalProfile: (displayName) => {
+    const current = getAppState()
+    const next = applyCreatePersonalProfile(current, displayName)
+    const persisted = persist(next)
+    set({ ...persisted })
+  },
+
+  updatePersonalProfileName: (displayName) => {
+    const current = getAppState()
+    const next = applyUpdatePersonalProfileName(current, displayName)
+    const persisted = persist(next)
+    set({ ...persisted })
+  },
+
   createAndClaimProfile: (input) => {
     const current = getAppState()
     const name = input.name.trim()
     if (!name) throw new Error('玩家名稱不能留空')
-    assertUniquePlayerName(current.players, name)
+
+    let working = hasPersonalProfile(current) ? current : applyCreatePersonalProfile(current, name)
+    if (!working.settings.lastGroupCode) {
+      const persisted = persist(working)
+      set({ ...persisted })
+      return null
+    }
+
+    assertUniquePlayerName(working.players, name)
 
     const timestamp = nowIso()
     const player: Player = {
@@ -1476,11 +1506,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
 
     const withPlayer = {
-      ...current,
-      players: [player, ...current.players],
+      ...working,
+      players: [player, ...working.players],
       playerAliases: [
         ...createPlayerAliasRecords(player.id, player.aliases, 'manual'),
-        ...current.playerAliases,
+        ...working.playerAliases,
       ],
     }
     const claimed = applyProfileClaim(withPlayer, player.id)
@@ -1502,6 +1532,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   unlinkProfile: () => {
+    const current = getAppState()
+    const persisted = persist(unlinkProfileState(current))
+    set({ ...persisted })
+  },
+
+  unlinkGroupProfile: () => {
     const current = getAppState()
     const persisted = persist(unlinkProfileState(current))
     set({ ...persisted })

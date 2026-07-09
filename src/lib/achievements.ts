@@ -1223,9 +1223,11 @@ export function getPlayerAchievementProgress(
   )
 
   return ACHIEVEMENT_DEFINITIONS.map((definition) => {
-    const currentLevel = metrics.levels[definition.id] ?? 0
+    const computedLevel = metrics.levels[definition.id] ?? 0
+    const storedLevel = unlockMap.get(definition.id)?.level ?? 0
+    const currentLevel = storedLevel
     const maxLevel = definition.tiers[definition.tiers.length - 1]?.level ?? 1
-    const nextTier = definition.tiers.find((t) => t.level === currentLevel + 1)
+    const nextTier = definition.tiers.find((t) => t.level === Math.max(currentLevel, computedLevel) + 1)
     const currentValue =
       definition.id === 'achievement_hunter'
         ? computeAchievementHunterPercent(metrics.levels)

@@ -3,8 +3,8 @@ import { evaluateRemainingBacklogMetrics } from '@/lib/achievementsBacklogRemain
 import { backlogExtrasFromState } from '@/lib/achievements'
 import { createDefaultAppState } from '@/lib/constants'
 import { groupStorageKey } from '@/lib/appStateLayers'
+import { createPersonalProfile, hasPersonalProfile } from '@/lib/personalProfile'
 import {
-  bookmarkCurrentGroupProfile,
   finalizeProfileLink,
   tryAutoRelinkGroupProfile,
 } from '@/lib/profileGroupLink'
@@ -20,87 +20,78 @@ import {
   veteranLevel,
 } from '@/lib/__tests__/v410Fixtures'
 
-describe('跨群組個人檔自動重連', () => {
-  it('離開群組會保存 bookmark，加入後自動重連同名玩家', () => {
-    let state = baseLinkedState({ lastGroupCode: 'CLUB-A' })
-    state = completeMatchesInState(state, makeWinStreak(12, PLAYER_A, PLAYER_B))
-    expect(veteranLevel(state)).toBe(1)
-
-    state = bookmarkCurrentGroupProfile(state)
+describe('個人檔 GTC 與群組 Bobby 分離', () => {
+  it('書籤只存群組名，不覆寫個人檔名', () => {
+    let state = baseLinkedState({ lastGroupCode: 'CLUB-A', profileDisplayName: 'GTC' })
+    state = completeMatchesInState(state, makeWinStreak(5, PLAYER_A, PLAYER_B))
     state = simulateLeaveGroup(state)
-    expect(state.settings.linkedPlayerId).toBeNull()
+    expect(state.settings.profileDisplayName).toBe('GTC')
     expect(state.settings.groupProfileLinks[groupStorageKey('CLUB-A')]?.playerName).toBe('King仔')
-    expect(veteranLevel(state)).toBe(1)
-
-    const newPlayerId = 'player-king-club-b'
-    state = {
-      ...state,
-      players: [makePlayer(newPlayerId, 'King仔'), makePlayer('x', '路人')],
-      settings: {
-        ...state.settings,
-        lastGroupCode: 'CLUB-B',
-        linkedPlayerId: null,
-      },
-    }
-
-    state = tryAutoRelinkGroupProfile(state)
-    expect(state.settings.linkedPlayerId).toBe(newPlayerId)
-    expect(veteranLevel(state)).toBe(1)
+    expect(hasPersonalProfile(state)).toBe(true)
   })
 
-  it('連結檔案後立即 reconcile，零場次新群組仍保留 lifetime 成就', () => {
-    let state = baseLinkedState({ lastGroupCode: 'CLUB-A' })
-    state = completeMatchesInState(state, makeWinStreak(12, PLAYER_A, PLAYER_B))
-
-    state = simulateLeaveGroup(state)
+  it('有書籤時自動重連群組玩家（名稱可不同）', () => {
+    let state = createPersonalProfile(createDefaultAppState(), 'GTC')
     state = {
-      ...state,
-      players: [makePlayer('new-id', 'King仔')],
-      matches: [],
-      settings: { ...state.settings, lastGroupCode: 'CLUB-B', linkedPlayerId: null },
-    }
-
-    state = finalizeProfileLink({
       ...state,
       settings: {
         ...state.settings,
-        linkedPlayerId: 'new-id',
         profileIdentityId: PROFILE_ID,
-        profileSetupCompleted: true,
+        lastGroupCode: 'CLUB-B',
+        groupProfileLinks: {
+          [groupStorageKey('CLUB-B')]: {
+            playerId: 'bobby-id',
+            playerName: 'Bobby',
+            linkedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
       },
-    })
-
-    expect(state.profileLifetime?.totalMatches).toBe(12)
-    expect(veteranLevel(state)).toBe(1)
+      players: [makePlayer('bobby-id', 'Bobby'), makePlayer('x', 'Other')],
+    }
+    state = tryAutoRelinkGroupProfile(state)
+    expect(state.settings.linkedPlayerId).toBe('bobby-id')
+    expect(state.settings.profileDisplayName).toBe('GTC')
   })
 })
 
-describe('group_anchor 不再用人數灌水', () => {
-  it('大群組零對局玩家不會因 roster 人數解鎖 group_anchor', () => {
+describe('成就誤判修正', () => {
+  it('只完成 onboarding 但不足 10 場不解鎖結業生', () => {
     const state = createDefaultAppState()
-    const players = Array.from({ length: 20 }, (_, index) =>
-      makePlayer(`p-${index}`, `玩家${index}`),
-    )
+    const players = [makePlayer(PLAYER_A, 'A')]
     const extras = backlogExtrasFromState({
       ...state,
-      players,
-      settings: { ...state.settings, lastGroupCode: 'BIG', linkedPlayerId: 'p-0' },
+      settings: { ...state.settings, onboardingCompleted: true, linkedPlayerId: PLAYER_A },
     })
-    const metrics = evaluateRemainingBacklogMetrics('p-0', players, state.decks, [], extras)
-    expect(metrics.group_anchor).toBe(0)
+    const metrics = evaluateRemainingBacklogMetrics(PLAYER_A, players, state.decks, [], extras)
+    expect(metrics.onboarding_graduate).toBe(0)
   })
 
-  it('group_code_join 只給已連結本人', () => {
+  it('零勝場不解鎖 secret_handshake', () => {
     const state = createDefaultAppState()
-    const players = [makePlayer(PLAYER_A, 'A'), makePlayer(PLAYER_B, 'B')]
-    const extras = backlogExtrasFromState({
+    const players = [makePlayer(PLAYER_A, 'A')]
+    const extras = backlogExtrasFromState(state)
+    const metrics = evaluateRemainingBacklogMetrics(PLAYER_A, players, state.decks, [], extras)
+    expect(metrics.secret_handshake).toBe(0)
+  })
+})
+
+describe('跨群組 lifetime 保留', () => {
+  it('finalizeProfileLink 不會用 0 場覆蓋既有 lifetime', () => {
+    let state = baseLinkedState({ lastGroupCode: 'CLUB-A', profileDisplayName: 'GTC' })
+    state = completeMatchesInState(state, makeWinStreak(12, PLAYER_A, PLAYER_B))
+    state = simulateLeaveGroup(state)
+    state = {
       ...state,
-      players,
-      settings: { ...state.settings, lastGroupCode: 'G1', linkedPlayerId: PLAYER_A },
-    })
-    const linked = evaluateRemainingBacklogMetrics(PLAYER_A, players, state.decks, [], extras)
-    const other = evaluateRemainingBacklogMetrics(PLAYER_B, players, state.decks, [], extras)
-    expect(linked.group_code_join).toBe(1)
-    expect(other.group_code_join ?? 0).toBe(0)
+      players: [makePlayer('new-id', 'Bobby')],
+      matches: [],
+      settings: {
+        ...state.settings,
+        lastGroupCode: 'CLUB-B',
+        linkedPlayerId: 'new-id',
+      },
+    }
+    state = finalizeProfileLink(state)
+    expect(state.profileLifetime?.totalMatches).toBe(12)
+    expect(veteranLevel(state)).toBe(1)
   })
 })

@@ -98,6 +98,7 @@ export function baseLinkedState(overrides?: Partial<AppState['settings']>): AppS
       ...base.settings,
       linkedPlayerId: PLAYER_A,
       profileIdentityId: PROFILE_ID,
+      profileDisplayName: 'GTC',
       profileSetupCompleted: true,
       lastGroupCode: 'PROD2026',
       ...overrides,
