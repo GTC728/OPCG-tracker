@@ -50,17 +50,30 @@ using (
   )
 );
 
--- 3) Co-member list (for lobby UI)
+-- 3) Co-member list (for lobby UI) — MUST use SECURITY DEFINER to avoid RLS recursion
+create or replace function public.user_is_group_member(p_group_key text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.group_members
+    where group_key = p_group_key and user_id = auth.uid()
+  );
+$$;
+
 drop policy if exists "Users read co-members" on public.group_members;
 create policy "Users read co-members" on public.group_members
 for select to authenticated
-using (
-  exists (
-    select 1 from public.group_members self
-    where self.group_key = group_members.group_key
-      and self.user_id = auth.uid()
-  )
-);
+using (public.user_is_group_member(group_key));
+
+-- Ensure own-row read still works (required for first join / offline recovery)
+drop policy if exists "Users can read own group memberships" on public.group_members;
+create policy "Users can read own group memberships" on public.group_members
+for select to authenticated
+using (auth.uid() = user_id);
 
 drop policy if exists "Users leave group" on public.group_members;
 create policy "Users leave group" on public.group_members

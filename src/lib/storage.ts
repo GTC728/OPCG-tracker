@@ -317,6 +317,39 @@ const migrations: Record<number, Migration> = {
     }
     return merged
   },
+  16: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? { ...defaults.settings, ...(state.settings as AppState['settings']) }
+        : defaults.settings
+    let merged = {
+      ...state,
+      schemaVersion: 16,
+      settings: {
+        ...settings,
+        historicalImportUsedAt: settings.historicalImportUsedAt ?? null,
+        historicalImportBatchId: settings.historicalImportBatchId ?? null,
+      },
+    } as AppState
+    const linkedId = merged.settings.linkedPlayerId
+    const profileId = merged.settings.profileIdentityId
+    if (profileId && linkedId && !isTestGroupCode(merged.settings.lastGroupCode)) {
+      merged = {
+        ...merged,
+        profileLifetime: rebuildLifetimeFromMatches(
+          profileId,
+          linkedId,
+          merged.players,
+          merged.matches,
+        ),
+      }
+    }
+    if (linkedId) {
+      merged = reconcileAchievementUnlocks(merged, linkedId).state
+    }
+    return merged
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

@@ -1,5 +1,5 @@
 export type ResultType = 'normal' | 'draw' | 'forfeit'
-export type MatchSource = 'manual' | 'import' | 'manual_edit' | 'restore'
+export type MatchSource = 'manual' | 'import' | 'manual_edit' | 'restore' | 'historical'
 export type MatchTrustTier = 'self' | 'group' | 'verified'
 export type GroupMemberRole = 'owner' | 'member' | 'reader'
 export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
@@ -202,6 +202,8 @@ export interface ImportBatch {
   rawFileHash: string
   revertedAt: string | null
   targetSessionId: string | null
+  /** True when imported as one-time pre-app historical restore (V4.11.1+). */
+  historicalRestore?: boolean
 }
 
 export interface ImportSnapshotMeta {
@@ -219,6 +221,8 @@ export interface ImportMatchOptions {
   skipSnapshot?: boolean
   /** When true, temporarily pauses group push during import (restored after). */
   pauseSyncDuringImport?: boolean
+  /** One-time pre-app history — tags matches as source historical (V4.11.1+). */
+  historicalRestore?: boolean
 }
 
 export interface ImportRow {
@@ -315,6 +319,9 @@ export interface AppSettings {
   groupMemberRole: GroupMemberRole | null
   lastCloudBackupAt: string | null
   autoBackupOnLogin: boolean
+  /** Set after the one-time historical CSV restore (≤100, ≥30 day span). */
+  historicalImportUsedAt: string | null
+  historicalImportBatchId: string | null
 }
 
 export interface AppState {

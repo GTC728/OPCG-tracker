@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.11.1 - 2026-07-10
+
+### New
+
+- **歷史戰績還原**：`source: historical` — 終身一次、≤100 場、日期跨度 ≥30 天；計入累積型（grind）成就，技巧/時間型仍只算 live 對局。
+- **升級既有匯入**：匯入紀錄可「升級歷史還原」（適用你已匯入的 39 場等舊資料）。
+
+### Fixed
+
+- Supabase RLS hotfix script (`docs/supabase-v4.11.1-fix-rls.sql`).
+
 ## V4.11.0 - 2026-07-09
 
 ### New

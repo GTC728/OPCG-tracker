@@ -24,6 +24,12 @@
 | 雲端個人備份還原 | ✓（`prepareRestoredAppState` → `restore` source + backfill） |
 | OPCG 完整 Excel 還原 | ✓ |
 | CSV / Excel mapping 匯入 | ✗（仍顯示在統計） |
+| **歷史還原 `historical`** | ✓ 累積型 only（≤100 場、≥30 天、終身 1 次） |
+
+## 歷史還原（V4.11.1）
+
+- 勾選「歷史戰績還原」或於匯入紀錄 **升級歷史還原**
+- `kind === 'grind'` 且非 streak/fun 類成就計入；skill/special/連勝/時間類不計
 
 ## 群組角色（V4.11）
 

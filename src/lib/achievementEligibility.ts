@@ -14,6 +14,7 @@ export const SESSION_ACHIEVEMENT_CAP_PER_PLAYER = 20
 export type EligibilityReason =
   | 'ok'
   | 'import_source'
+  | 'historical_ok'
   | 'forfeit'
   | 'too_short'
   | 'overlap_gap'
@@ -21,7 +22,8 @@ export type EligibilityReason =
 
 const REASON_LABELS: Record<EligibilityReason, string> = {
   ok: '',
-  import_source: '匯入來源不計成就（請用雲端備份還原歷史資料）',
+  import_source: '一般匯入不計成就（可用「歷史戰績還原」或雲端備份）',
+  historical_ok: '',
   forfeit: '投降/早降不計成就',
   too_short: '對局不足 5 分鐘不計成就',
   overlap_gap: '與上一場完成時間間隔不足 5 分鐘',
@@ -32,9 +34,13 @@ export function eligibilityReasonLabel(reason: EligibilityReason): string {
   return REASON_LABELS[reason]
 }
 
-/** Sources that may count toward permanent achievements when plausibility checks pass. */
+/** Live / restore sources — full rules including duration and gap. */
 export function isSourceEligibleForAchievements(source: MatchSource): boolean {
   return source === 'manual' || source === 'manual_edit' || source === 'restore'
+}
+
+export function isHistoricalSource(source: MatchSource): boolean {
+  return source === 'historical'
 }
 
 function sortByFinished(matches: Match[]): Match[] {
@@ -102,6 +108,25 @@ export function computePlayerMatchEligibility(
   }
 
   return result
+}
+
+/** Pre-app historical imports — cumulative achievements only; skip duration/gap/session cap. */
+export function playerHistoricalMatches(playerId: string, matches: Match[]): Match[] {
+  return getCompletedMatches(matches).filter(
+    (match) =>
+      (match.player1Id === playerId || match.player2Id === playerId) &&
+      isHistoricalSource(match.source) &&
+      match.resultType !== 'forfeit',
+  )
+}
+
+/** Full-rule eligible + historical (deduped) for cumulative / lifetime metrics. */
+export function playerCumulativeAchievementMatches(playerId: string, matches: Match[]): Match[] {
+  const map = new Map<string, Match>()
+  for (const match of [...playerEligibleMatches(playerId, matches), ...playerHistoricalMatches(playerId, matches)]) {
+    map.set(match.id, match)
+  }
+  return sortByFinished([...map.values()])
 }
 
 /** Matches that count toward achievements for a player. Stats use the full match list. */

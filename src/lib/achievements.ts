@@ -9,7 +9,8 @@ import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '
 import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
 import { getCompletedMatches } from '@/lib/stats'
 import type { AchievementUnlock, AppState, Deck, Language, Match, Player } from '@/types'
-import { playerEligibleMatches } from '@/lib/achievementEligibility'
+import { playerEligibleMatches, playerCumulativeAchievementMatches } from '@/lib/achievementEligibility'
+import { mergeTieredAchievementMetrics } from '@/lib/achievementHistorical'
 import { mergeLifetimeAchievementMetrics } from '@/lib/profileLifetime'
 import { unlockProfileId, unlocksForProfile } from '@/lib/profileIdentity'
 import type { ProfileLifetimeStats } from '@/types'
@@ -840,58 +841,71 @@ export function evaluateAchievementMetrics(
   extras?: BacklogExtras,
   lifetime: ProfileLifetimeStats | null = null,
 ): Record<string, number> {
-  const relevant = playerEligibleMatches(playerId, matches)
-  const sorted = sortByFinished(relevant)
-  const wins = relevant.filter((match) => match.winnerPlayerId === playerId).length
-  const deckWins = deckWinsForPlayer(playerId, relevant)
-  const firstStats = firstPlayerWinRate(playerId, relevant)
-  const extra = evaluateExtraAchievementMetrics(playerId, players, decks, relevant)
-  const batch = evaluateBacklogBatchMetrics(playerId, players, decks, relevant, linkedPlayerId)
-  const defaultExtras = backlogExtrasFromState(createDefaultAppState())
-  const backlogExtras = extras ?? {
-    ...defaultExtras,
-    linkedPlayerId: linkedPlayerId ?? defaultExtras.linkedPlayerId,
-  }
-  const remaining = evaluateRemainingBacklogMetrics(
-    playerId,
-    players,
-    decks,
-    relevant,
-    backlogExtras,
-  )
+  const skillMatches = playerEligibleMatches(playerId, matches)
+  const cumulativeMatches = playerCumulativeAchievementMatches(playerId, matches)
 
-  return mergeLifetimeAchievementMetrics(
-    {
+  const build = (relevant: Match[]) => {
+    const sorted = sortByFinished(relevant)
+    const wins = relevant.filter((match) => match.winnerPlayerId === playerId).length
+    const deckWins = deckWinsForPlayer(playerId, relevant)
+    const firstStats = firstPlayerWinRate(playerId, relevant)
+    const extra = evaluateExtraAchievementMetrics(playerId, players, decks, relevant)
+    const batch = evaluateBacklogBatchMetrics(playerId, players, decks, relevant, linkedPlayerId)
+    const defaultExtras = backlogExtrasFromState(createDefaultAppState())
+    const backlogExtras = extras ?? {
+      ...defaultExtras,
+      linkedPlayerId: linkedPlayerId ?? defaultExtras.linkedPlayerId,
+    }
+    const remaining = evaluateRemainingBacklogMetrics(
+      playerId,
+      players,
+      decks,
+      relevant,
+      backlogExtras,
+    )
+    return {
       veteran: relevant.length,
       first_win: wins >= 1 ? 1 : 0,
       win_streak: getLongestWinStreak(sorted, playerId),
       deck_specialist: Math.max(0, ...deckWins.values()),
-      meta_explorer: decksUsedByPlayer(playerId, matches).size,
-      set_collector: setsUsedByPlayer(playerId, matches, decks).size,
-      mono_maniac: maxMonoDeckWins(playerId, decks, matches),
-      rival_bond: maxOpponentMatches(playerId, matches),
-      group_star: uniqueOpponents(playerId, matches),
-      session_marathon: maxSessionMatches(playerId, matches),
-      note_poet: countMatchesWithNotes(playerId, matches),
+      meta_explorer: decksUsedByPlayer(playerId, relevant).size,
+      set_collector: setsUsedByPlayer(playerId, relevant, decks).size,
+      mono_maniac: maxMonoDeckWins(playerId, decks, relevant),
+      rival_bond: maxOpponentMatches(playerId, relevant),
+      group_star: uniqueOpponents(playerId, relevant),
+      session_marathon: maxSessionMatches(playerId, relevant),
+      note_poet: countMatchesWithNotes(playerId, relevant),
       comeback: countComebacks(sorted, playerId),
-      perfect_session: countPerfectSessions(playerId, matches),
+      perfect_session: countPerfectSessions(playerId, relevant),
       first_player_king:
         firstStats.total >= 20 && firstStats.wins / firstStats.total >= 0.55 ? 1 : 0,
-      giant_slayer: countGiantSlayerWins(playerId, players, matches),
-      color_spectrum: colorsWonCount(playerId, decks, matches),
-      second_striker: secondPlayerWins(playerId, matches),
-      upset_alarm: countUpsetAlarms(playerId, matches),
-      mirror_master: countMirrorWins(playerId, decks, matches),
-      meta_breaker: countMetaBreakerWins(playerId, decks, matches),
-      revenge_win: countRevengeWins(playerId, matches),
-      underdog: countUnderdogWins(playerId, matches),
-      weekend_warrior: countWeekendWins(playerId, matches),
-      rainbow_session: countRainbowSessions(playerId, decks, matches),
+      giant_slayer: countGiantSlayerWins(playerId, players, relevant),
+      color_spectrum: colorsWonCount(playerId, decks, relevant),
+      second_striker: secondPlayerWins(playerId, relevant),
+      upset_alarm: countUpsetAlarms(playerId, relevant),
+      mirror_master: countMirrorWins(playerId, decks, relevant),
+      meta_breaker: countMetaBreakerWins(playerId, decks, relevant),
+      revenge_win: countRevengeWins(playerId, relevant),
+      underdog: countUnderdogWins(playerId, relevant),
+      weekend_warrior: countWeekendWins(playerId, relevant),
+      rainbow_session: countRainbowSessions(playerId, decks, relevant),
       achievement_hunter: 0,
       ...extra,
       ...batch,
       ...remaining,
-    },
+    }
+  }
+
+  const skillRaw = build(skillMatches)
+  const cumulativeRaw = build(cumulativeMatches)
+  const tiered = mergeTieredAchievementMetrics(
+    ACHIEVEMENT_DEFINITIONS,
+    cumulativeRaw,
+    skillRaw,
+  )
+
+  return mergeLifetimeAchievementMetrics(
+    tiered,
     lifetime,
     playerId,
     linkedPlayerId,

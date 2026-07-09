@@ -38,7 +38,9 @@ import { clearSyncQueue } from '@/lib/syncQueue'
 import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
 import { appendAuditEntry } from '@/lib/auditLog'
+import { validateHistoricalImportRows, validateHistoricalImportMatches } from '@/lib/historicalImport'
 import { reconcileAchievementUnlocks } from '@/lib/achievements'
+import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
@@ -101,6 +103,7 @@ interface AppStore extends AppState {
   permanentlyDeleteDeck: (deckId: string) => void
   importMatches: (rows: ImportMatchInput[], filename: string, rawData: string, options?: ImportMatchOptions) => ImportSummary
   revertImportBatch: (batchId: string) => number
+  promoteImportBatchToHistorical: (batchId: string) => number
   restoreImportSnapshot: (snapshotId: string) => void
   setGroupSyncPaused: (paused: boolean) => Promise<void>
   leaveGroupCollab: () => Promise<void>
@@ -1093,6 +1096,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const wasPaused = getAppState().settings.groupSyncPaused
     let syncPausedForImport = false
 
+    if (options.historicalRestore) {
+      const current = getAppState()
+      if (current.settings.historicalImportUsedAt) {
+        throw new Error('此個人檔案已使用過歷史還原（終身一次）')
+      }
+      const check = validateHistoricalImportRows(rows)
+      if (!check.ok) throw new Error(check.error)
+    }
+
     try {
       if (!options.skipSnapshot) {
         saveImportSnapshot(getAppState(), `匯入前 · ${filename}`)
@@ -1199,7 +1211,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           resultType: 'normal',
           startedAt,
           finishedAt: startedAt,
-          source: 'import',
+          source: options.historicalRestore ? ('historical' as const) : ('import' as const),
           deletedAt: null,
           notes: row.notes?.trim() || null,
         }
@@ -1234,6 +1246,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       rawFileHash: `${rawData.length}:${filename}`,
       revertedAt: null,
       targetSessionId: session.id,
+      historicalRestore: options.historicalRestore ?? false,
     }
     const importRows = rows.map((row, index) => {
       const rowNumber = index + 2
@@ -1259,7 +1272,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
     })
 
-    const next = appendAuditEntry(
+    let next = appendAuditEntry(
       {
         ...state,
         matches: [...createdMatches, ...state.matches],
@@ -1267,9 +1280,40 @@ export const useAppStore = create<AppStore>((set, get) => ({
         importRows: [...importRows, ...state.importRows],
         importRecords: [importRecord, ...state.importRecords],
       },
-      'import',
-      `匯入 ${filename}：成功 ${createdMatches.length} 場${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
+      options.historicalRestore ? 'import' : 'import',
+      options.historicalRestore
+        ? `歷史還原 ${filename}：${createdMatches.length} 場（計入累積成就）`
+        : `匯入 ${filename}：成功 ${createdMatches.length} 場${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
     )
+
+    if (options.historicalRestore && createdMatches.length) {
+      const stamp = nowIso()
+      next = {
+        ...next,
+        settings: {
+          ...next.settings,
+          historicalImportUsedAt: stamp,
+          historicalImportBatchId: importBatch.id,
+        },
+      }
+      const linkedId = next.settings.linkedPlayerId
+      const profileId = next.settings.profileIdentityId
+      if (linkedId && profileId && !isTestGroupCode(next.settings.lastGroupCode)) {
+        next = {
+          ...next,
+          profileLifetime: rebuildLifetimeFromMatches(
+            profileId,
+            linkedId,
+            next.players,
+            next.matches,
+          ),
+        }
+      }
+      if (linkedId) {
+        next = reconcileAchievementUnlocks(next, linkedId).state
+      }
+    }
+
     syncMaterializedFromState(next)
     const persisted = persist(next)
     set({ ...persisted })
@@ -1278,6 +1322,76 @@ export const useAppStore = create<AppStore>((set, get) => ({
       importRecord,
       createdMatches: createdMatches.length,
     }
+    } finally {
+      resumeGroupCollabNotify()
+    }
+  },
+
+  promoteImportBatchToHistorical: (batchId) => {
+    const current = getAppState()
+    if (current.settings.historicalImportUsedAt) {
+      throw new Error('此個人檔案已使用過歷史還原（終身一次）')
+    }
+    const batch = current.importBatches.find((item) => item.id === batchId)
+    if (!batch || batch.revertedAt || batch.historicalRestore) {
+      throw new Error('此匯入批次無法升級為歷史還原')
+    }
+
+    const matchIds = new Set(
+      current.importRows
+        .filter((row) => row.batchId === batchId && row.status === 'imported' && row.matchId)
+        .map((row) => row.matchId as string),
+    )
+    const batchMatches = current.matches.filter(
+      (match) => matchIds.has(match.id) && match.deletedAt === null && match.source === 'import',
+    )
+    const check = validateHistoricalImportMatches(batchMatches)
+    if (!check.ok) throw new Error(check.error)
+
+    pauseGroupCollabNotify()
+    try {
+      const stamp = nowIso()
+      let next: AppState = {
+        ...current,
+        matches: current.matches.map((match) =>
+          matchIds.has(match.id) && match.source === 'import'
+            ? { ...match, source: 'historical' as const }
+            : match,
+        ),
+        importBatches: current.importBatches.map((item) =>
+          item.id === batchId ? { ...item, historicalRestore: true } : item,
+        ),
+        settings: {
+          ...current.settings,
+          historicalImportUsedAt: stamp,
+          historicalImportBatchId: batchId,
+        },
+      }
+      const linkedId = next.settings.linkedPlayerId
+      const profileId = next.settings.profileIdentityId
+      if (linkedId && profileId && !isTestGroupCode(next.settings.lastGroupCode)) {
+        next = {
+          ...next,
+          profileLifetime: rebuildLifetimeFromMatches(
+            profileId,
+            linkedId,
+            next.players,
+            next.matches,
+          ),
+        }
+      }
+      if (linkedId) {
+        next = reconcileAchievementUnlocks(next, linkedId).state
+      }
+      next = appendAuditEntry(
+        next,
+        'import',
+        `升級歷史還原 ${batch.filename}：${batchMatches.length} 場`,
+      )
+      syncMaterializedFromState(next)
+      const persisted = persist(next)
+      set({ ...persisted })
+      return batchMatches.length
     } finally {
       resumeGroupCollabNotify()
     }
@@ -1320,6 +1434,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
         'import_revert',
         `撤銷匯入 ${batch.filename}：${matchIds.size} 場`,
       )
+    if (batch.id === current.settings.historicalImportBatchId) {
+      next = {
+        ...next,
+        settings: {
+          ...next.settings,
+          historicalImportUsedAt: null,
+          historicalImportBatchId: null,
+        },
+      }
+    }
       const playerIds = new Set<string>()
       for (const match of revertedMatches) {
         playerIds.add(match.player1Id)
