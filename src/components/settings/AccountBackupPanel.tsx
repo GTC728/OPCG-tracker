@@ -56,6 +56,7 @@ export function AccountBackupPanel() {
     try {
       const { user } = await getCloudSession()
       setUserEmail(user?.email ?? null)
+      updateSettings({ cloudUserId: user?.id ?? null })
       if (user) {
         const current = getAppState()
         const withProfile = ensurePersonalProfileFromLogin(current, user.email)

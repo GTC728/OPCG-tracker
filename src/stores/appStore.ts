@@ -397,6 +397,7 @@ function findOrCreatePlayer(state: AppState, name: string): { state: AppState; p
     deletedAt: null,
     profileClaimDeviceId: null,
     profileClaimedAt: null,
+    linkedUserId: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -658,6 +659,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       deletedAt: null,
       profileClaimDeviceId: null,
       profileClaimedAt: null,
+      linkedUserId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
@@ -1492,10 +1494,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
 
       let groupMemberRole: import('@/lib/groupPermissions').GroupMemberRole | null = null
+      let groupMemberBannedAt: string | null = null
       if (targetCode) {
         try {
-          const { fetchGroupMemberRole } = await import('@/lib/cloudSync')
-          groupMemberRole = await fetchGroupMemberRole(targetCode)
+          const { fetchCurrentGroupMembership } = await import('@/lib/cloudSync')
+          const membership = await fetchCurrentGroupMembership(targetCode)
+          groupMemberRole = membership?.role ?? null
+          groupMemberBannedAt = membership?.bannedAt ?? null
         } catch {
           // offline
         }
@@ -1513,6 +1518,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
             groupCollabBootstrapped: false,
             groupDataBoundCode: null,
             groupMemberRole,
+            groupMemberBannedAt,
             lastGroupSyncAt: null,
             lastGroupSyncError: null,
             groupSyncPaused: false,
@@ -1535,6 +1541,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
             groupCollabBootstrapped: false,
             groupDataBoundCode: null,
             groupMemberRole: targetCode ? groupMemberRole : null,
+            groupMemberBannedAt: targetCode ? groupMemberBannedAt : null,
             lastGroupSyncAt: null,
             lastGroupSyncError: null,
             groupSyncPaused: false,
@@ -1692,6 +1699,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       deletedAt: null,
       profileClaimDeviceId: null,
       profileClaimedAt: null,
+      linkedUserId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     }

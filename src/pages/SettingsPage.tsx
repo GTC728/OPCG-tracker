@@ -3,6 +3,7 @@ import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
 import { DataTools } from '@/components/settings/DataTools'
+import { GroupMembersPanel } from '@/components/settings/GroupMembersPanel'
 import { GroupMembershipPanel } from '@/components/settings/GroupMembershipPanel'
 import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
 import { ProfileSettings } from '@/components/settings/ProfileSettings'
@@ -27,6 +28,7 @@ type SettingsSection =
   | 'workspace'
   | 'workspace-session'
   | 'workspace-players'
+  | 'workspace-members'
   | 'workspace-sync'
   | 'workspace-join'
   | 'account'
@@ -90,7 +92,7 @@ export function SettingsPage() {
     ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
     : t('workspace.local')
 
-  const navigateWorkspace = (target: 'session' | 'players' | 'sync' | 'join') => {
+  const navigateWorkspace = (target: 'session' | 'players' | 'members' | 'sync' | 'join') => {
     setSection(`workspace-${target}` as SettingsSection)
   }
 
@@ -206,6 +208,13 @@ export function SettingsPage() {
         <>
           <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
           <DataManagers mode="players" />
+        </>
+      ) : null}
+
+      {section === 'workspace-members' ? (
+        <>
+          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <GroupMembersPanel />
         </>
       ) : null}
 

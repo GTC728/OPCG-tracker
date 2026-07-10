@@ -30,9 +30,12 @@ export function useGroupCollab() {
           await initializeGroupCollab(groupCode!)
           if (!cancelled) {
             let groupMemberRole = useAppStore.getState().settings.groupMemberRole
+            let groupMemberBannedAt = useAppStore.getState().settings.groupMemberBannedAt
             try {
-              const { fetchGroupMemberRole } = await import('@/lib/cloudSync')
-              groupMemberRole = await fetchGroupMemberRole(groupCode!)
+              const { fetchCurrentGroupMembership } = await import('@/lib/cloudSync')
+              const membership = await fetchCurrentGroupMembership(groupCode!)
+              groupMemberRole = membership?.role ?? groupMemberRole
+              groupMemberBannedAt = membership?.bannedAt ?? null
             } catch {
               // offline
             }
@@ -41,6 +44,7 @@ export function useGroupCollab() {
               groupCollabEnabled: true,
               groupDataBoundCode: groupCode,
               groupMemberRole,
+              groupMemberBannedAt,
             })
           }
         } else {

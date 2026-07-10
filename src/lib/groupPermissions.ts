@@ -26,6 +26,24 @@ export function canManageGroup(role: GroupMemberRole | null | undefined): boolea
   return role === 'owner'
 }
 
+export function canManageMembers(role: GroupMemberRole | null | undefined, banned?: boolean): boolean {
+  if (banned) return false
+  return role === 'owner'
+}
+
+export function isBannedFromGroup(bannedAt: string | null | undefined): boolean {
+  return Boolean(bannedAt)
+}
+
+/** Effective record permission — banned overrides role. */
+export function canRecordMatchesEffective(
+  role: GroupMemberRole | null | undefined,
+  bannedAt: string | null | undefined,
+): boolean {
+  if (isBannedFromGroup(bannedAt)) return false
+  return canRecordMatches(role)
+}
+
 export function isReadOnlyMember(role: GroupMemberRole | null | undefined): boolean {
   return role === 'reader'
 }

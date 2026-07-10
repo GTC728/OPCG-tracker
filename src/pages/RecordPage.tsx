@@ -10,7 +10,7 @@ import { useI18n } from '@/lib/i18n'
 import { formatPercent } from '@/lib/stats'
 import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
-import { isReadOnlyMember } from '@/lib/groupPermissions'
+import { canRecordMatchesEffective } from '@/lib/groupPermissions'
 import { useAppStore } from '@/stores/appStore'
 
 export function RecordPage() {
@@ -24,8 +24,9 @@ export function RecordPage() {
   const matches = useAppStore((s) => s.matches)
   const activeMatches = useAppStore((s) => s.activeMatches)
   const groupMemberRole = useAppStore((s) => s.settings.groupMemberRole)
+  const groupMemberBannedAt = useAppStore((s) => s.settings.groupMemberBannedAt)
   const inGroup = useAppStore((s) => s.settings.lastGroupCode)
-  const readOnly = inGroup && isReadOnlyMember(groupMemberRole)
+  const readOnly = Boolean(inGroup) && !canRecordMatchesEffective(groupMemberRole, groupMemberBannedAt)
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const createNewSession = useAppStore((s) => s.createNewSession)
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)

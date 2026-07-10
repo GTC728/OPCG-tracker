@@ -30,10 +30,23 @@ switchWorkspace('local' | groupCode, options?)
 
 | Area | Contents |
 |------|----------|
-| **Header chip** | Always shows `本機` or group code + role; opens workspace sheet |
-| **Settings → 工作區** | WorkspaceHub: switch list, session/players/sync/join |
+| **Sync status bar** | Group code + role + sync state; tap → workspace sheet (V4.13+, replaces header chip) |
+| **Settings → 工作區** | WorkspaceHub: switch list, session/players/**members**/sync/join |
 | **Settings → 個人** | Profile, account backup, appearance, language, leaders, import |
-| **Sync banner** | Tap → GroupSyncSection sheet (pause/retry) |
+| **玩家管理** | Tabs: **名單** (roster) + **成員** (auth members admin) |
+
+## Group admin (V4.13+)
+
+Two parallel models — do not conflate:
+
+| Model | Table / store | Purpose |
+|-------|---------------|---------|
+| **Auth members** | `group_members` | Who joined the group (owner/member/reader), ban, kick |
+| **Roster players** | `sync_players` + local claim | Game names at the table |
+
+- `Player.linkedUserId` ↔ `sync_players.linked_user_id` when profile linked while logged in.
+- Owners manage all auth members including unlinked viewers via **群組成員** panel.
+- Run `docs/supabase-v4.13.sql` on Supabase for owner UPDATE/DELETE policies and new columns.
 
 Reuse (do not duplicate):
 

@@ -1,6 +1,6 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
-import type { AppState, GroupMemberRole } from '@/types'
+import type { AppState, GroupMemberRecord, GroupMemberRole } from '@/types'
 
 export interface CloudSnapshotRow {
   id: string
@@ -165,9 +165,17 @@ async function ensureGroupMembership(
   if (countError && countError.code !== '42703') throw countError
 
   const role: GroupMemberRole = (count ?? 0) === 0 ? 'owner' : 'member'
+  const { getAppState } = await import('@/stores/appStore')
+  const state = getAppState()
+  const displayName =
+    state.settings.profileDisplayName?.trim() ||
+    user.email?.split('@')[0] ||
+    'Member'
+
   const insertPayload: Record<string, unknown> = {
     group_key: groupKey,
     user_id: user.id,
+    display_name: displayName,
   }
   if (!countError) {
     insertPayload.role = role
@@ -176,28 +184,125 @@ async function ensureGroupMembership(
   const { error } = await supabase.from('group_members').insert(insertPayload)
   if (error && error.code !== '23505') throw error
 
-  const resolvedRole = await fetchGroupMemberRole(groupCode)
-  return { groupKey, role: resolvedRole ?? role }
+  const membership = await fetchCurrentGroupMembership(groupCode)
+  return { groupKey, role: membership?.role ?? role }
 }
 
-export async function fetchGroupMemberRole(groupCode: string): Promise<GroupMemberRole | null> {
+export async function fetchCurrentGroupMembership(
+  groupCode: string,
+): Promise<{ role: GroupMemberRole; bannedAt: string | null } | null> {
   const supabase = await requireClient()
   const user = await requireUser()
   const groupKey = await createGroupKey(groupCode)
   const { data, error } = await supabase
     .from('group_members')
-    .select('role')
+    .select('role, banned_at')
     .eq('group_key', groupKey)
     .eq('user_id', user.id)
     .maybeSingle()
 
   if (error) {
-    if (error.code === '42703' || error.code === 'PGRST116') return 'member'
+    if (error.code === '42703' || error.code === 'PGRST116') {
+      return { role: 'member', bannedAt: null }
+    }
     throw error
   }
-  const raw = data?.role
-  if (raw === 'owner' || raw === 'member' || raw === 'reader') return raw
-  return 'member'
+  if (!data) return null
+  const raw = data.role
+  const role: GroupMemberRole =
+    raw === 'owner' || raw === 'member' || raw === 'reader' ? raw : 'member'
+  return { role, bannedAt: (data.banned_at as string | null) ?? null }
+}
+
+export async function fetchGroupMemberRole(groupCode: string): Promise<GroupMemberRole | null> {
+  const membership = await fetchCurrentGroupMembership(groupCode)
+  return membership?.role ?? null
+}
+
+export async function listGroupMembers(groupCode: string): Promise<GroupMemberRecord[]> {
+  const supabase = await requireClient()
+  const groupKey = await createGroupKey(groupCode)
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('user_id, role, display_name, joined_at, banned_at')
+    .eq('group_key', groupKey)
+    .order('joined_at', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    userId: row.user_id as string,
+    role: (row.role === 'owner' || row.role === 'member' || row.role === 'reader'
+      ? row.role
+      : 'member') as GroupMemberRole,
+    displayName: (row.display_name as string | null) ?? null,
+    joinedAt: (row.joined_at as string) ?? new Date().toISOString(),
+    bannedAt: (row.banned_at as string | null) ?? null,
+  }))
+}
+
+export async function updateGroupMemberRole(
+  groupCode: string,
+  userId: string,
+  role: GroupMemberRole,
+): Promise<void> {
+  const supabase = await requireClient()
+  const self = await requireUser()
+  if (userId === self.id) throw new Error('無法變更自己的角色')
+  if (role === 'owner') throw new Error('無法透過此介面轉移管理員')
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase
+    .from('group_members')
+    .update({ role })
+    .eq('group_key', groupKey)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function setGroupMemberBan(
+  groupCode: string,
+  userId: string,
+  banned: boolean,
+): Promise<void> {
+  const supabase = await requireClient()
+  const self = await requireUser()
+  if (userId === self.id) throw new Error('無法封禁自己')
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase
+    .from('group_members')
+    .update({ banned_at: banned ? new Date().toISOString() : null })
+    .eq('group_key', groupKey)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function removeGroupMember(groupCode: string, userId: string): Promise<void> {
+  const supabase = await requireClient()
+  const self = await requireUser()
+  if (userId === self.id) throw new Error('無法移除自己')
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_key', groupKey)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function updateOwnMemberDisplayName(
+  groupCode: string,
+  displayName: string,
+): Promise<void> {
+  const supabase = await requireClient()
+  const user = await requireUser()
+  const groupKey = await createGroupKey(groupCode)
+  const trimmed = displayName.trim()
+  if (!trimmed) return
+  const { error } = await supabase
+    .from('group_members')
+    .update({ display_name: trimmed })
+    .eq('group_key', groupKey)
+    .eq('user_id', user.id)
+  if (error && error.code !== '42703') throw error
 }
 
 export async function leaveGroupMembership(groupCode: string): Promise<void> {

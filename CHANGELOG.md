@@ -9,6 +9,23 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.13.0 - 2026-07-10
+
+### New
+
+- **群組成員管理**：管理員可列出所有 `group_members`（含未連結名單的觀眾），變更角色（成員/觀眾）、封禁、移除。
+- **名單 ↔ 帳號連結**：玩家名單顯示背後連結的 Supabase 帳號；`sync_players.linked_user_id` 跨裝置同步。
+- **黑名單**：`group_members.banned_at` — 封禁後無法記錄對局（觀眾權限亦被覆寫）。
+
+### Changed
+
+- **移除 Header 工作區 chip**；群組碼與角色併入頂部同步狀態列，點擊開啟工作區 sheet。
+- **玩家管理**分「名單」與「成員」分頁；設定 → 工作區新增「群組成員」入口。
+
+### Database
+
+- 請在 Supabase 執行 `docs/supabase-v4.13.sql`（需先完成 v4.11）。
+
 ## V4.12.0 - 2026-07-10
 
 ### New

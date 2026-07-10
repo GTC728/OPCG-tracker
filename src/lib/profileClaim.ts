@@ -55,7 +55,11 @@ export function assertNameConfirmation(player: Player, nameConfirmation: string)
   }
 }
 
-export function claimPlayerRecord(player: Player, forceReclaim = false): Player {
+export function claimPlayerRecord(
+  player: Player,
+  forceReclaim = false,
+  linkedUserId?: string | null,
+): Player {
   if (isPlayerClaimedByOtherDevice(player) && !forceReclaim) {
     throw new ProfileClaimError(
       'claimed_by_other',
@@ -69,6 +73,7 @@ export function claimPlayerRecord(player: Player, forceReclaim = false): Player 
     ...player,
     profileClaimDeviceId: deviceId,
     profileClaimedAt: claimedAt,
+    linkedUserId: linkedUserId !== undefined ? linkedUserId : player.linkedUserId,
     updatedAt: claimedAt,
   }
 }
@@ -76,7 +81,7 @@ export function claimPlayerRecord(player: Player, forceReclaim = false): Player 
 export function applyProfileClaim(
   state: AppState,
   playerId: string,
-  options?: { forceReclaim?: boolean },
+  options?: { forceReclaim?: boolean; linkedUserId?: string | null },
 ): AppState {
   const player = state.players.find((item) => item.id === playerId)
   if (!player || player.deletedAt) {
@@ -86,7 +91,8 @@ export function applyProfileClaim(
     throw new ProfileClaimError('player_not_selectable', '此玩家無法連結。')
   }
 
-  const claimed = claimPlayerRecord(player, options?.forceReclaim)
+  const linkedUserId = options?.linkedUserId ?? state.settings.cloudUserId ?? null
+  const claimed = claimPlayerRecord(player, options?.forceReclaim, linkedUserId)
   const profileIdentityId = state.settings.profileIdentityId ?? crypto.randomUUID()
   return {
     ...state,
@@ -109,6 +115,7 @@ export function releaseProfileClaim(state: AppState, playerId: string): AppState
             ...player,
             profileClaimDeviceId: null,
             profileClaimedAt: null,
+            linkedUserId: null,
             updatedAt: nowIso(),
           }
         : player,

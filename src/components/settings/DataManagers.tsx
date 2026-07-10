@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { GroupMembersPanel } from '@/components/settings/GroupMembersPanel'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { FilterPickerRow, OptionPickerSheet, useFilterSheet } from '@/components/ui/FilterPicker'
 import { useToast } from '@/components/ui/Toast'
+import { listGroupMembers } from '@/lib/cloudSync'
 import { useI18n } from '@/lib/i18n'
 import {
   countVisibleMatchesForPlayer,
@@ -356,10 +358,12 @@ function EmptyState({ children }: { children: string }) {
 
 function PlayerCard({
   player,
+  linkedAccountLabel,
   onEdit,
   onDelete,
 }: {
   player: Player
+  linkedAccountLabel?: string | null
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -371,6 +375,11 @@ function PlayerCard({
           <p className="mt-1 text-sm text-text-secondary">
             {player.aliases.length ? `別名：${formatList(player.aliases)}` : '未設定別名'}
           </p>
+          {linkedAccountLabel ? (
+            <p className="mt-1 text-xs text-brand-200/90">帳號：{linkedAccountLabel}</p>
+          ) : player.profileClaimDeviceId ? (
+            <p className="mt-1 text-xs text-text-secondary">已連結裝置（未登入帳號）</p>
+          ) : null}
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -422,6 +431,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
+  const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const decks = useAppStore((state) => state.decks)
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
@@ -432,6 +442,24 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const [editor, setEditor] = useState<EditorState>(null)
   const [purgePlayer, setPurgePlayer] = useState<Player | null>(null)
   const [purgeDeck, setPurgeDeck] = useState<Deck | null>(null)
+  const [playerTab, setPlayerTab] = useState<'roster' | 'members'>('roster')
+  const [memberNames, setMemberNames] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    if (!groupCode) {
+      setMemberNames(new Map())
+      return
+    }
+    void listGroupMembers(groupCode)
+      .then((rows) => {
+        const map = new Map<string, string>()
+        for (const row of rows) {
+          map.set(row.userId, row.displayName?.trim() || `${row.userId.slice(0, 8)}…`)
+        }
+        setMemberNames(map)
+      })
+      .catch(() => setMemberNames(new Map()))
+  }, [groupCode])
 
   const sortedPlayers = [...players]
     .filter((player) => !isDeletedPlayer(player))
@@ -440,25 +468,63 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
     left.displayName.localeCompare(right.displayName, 'zh-Hant'),
   )
 
+  const linkedAccountByUserId = memberNames
+
   return (
     <>
       {mode !== 'leaders' ? (
       <section className="rounded-2xl bg-surface-elevated p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">玩家管理</h2>
-            <p className="mt-1 text-sm text-text-secondary">新增、編輯、別名與刪除玩家。</p>
+            <h2 className="text-lg font-semibold">{t('members.rosterTitle')}</h2>
+            <p className="mt-1 text-sm text-text-secondary">{t('members.rosterDesc')}</p>
           </div>
-          <Button className="shrink-0 text-sm" onClick={() => setEditor({ kind: 'player' })}>
-            新增
-          </Button>
+          {playerTab === 'roster' ? (
+            <Button className="shrink-0 text-sm" onClick={() => setEditor({ kind: 'player' })}>
+              新增
+            </Button>
+          ) : null}
         </div>
+
+        {groupCode ? (
+          <div className="mt-3 flex gap-2 rounded-xl bg-surface p-1">
+            <button
+              type="button"
+              className={[
+                'flex-1 rounded-lg py-2 text-sm font-medium transition',
+                playerTab === 'roster' ? 'bg-brand-500/20 text-brand-100' : 'text-text-secondary',
+              ].join(' ')}
+              onClick={() => setPlayerTab('roster')}
+            >
+              {t('members.tabRoster')}
+            </button>
+            <button
+              type="button"
+              className={[
+                'flex-1 rounded-lg py-2 text-sm font-medium transition',
+                playerTab === 'members' ? 'bg-brand-500/20 text-brand-100' : 'text-text-secondary',
+              ].join(' ')}
+              onClick={() => setPlayerTab('members')}
+            >
+              {t('members.tabAuth')}
+            </button>
+          </div>
+        ) : null}
+
+        {playerTab === 'members' && groupCode ? (
+          <div className="mt-4">
+            <GroupMembersPanel />
+          </div>
+        ) : (
         <div className="mt-4 space-y-3">
           {sortedPlayers.length ? (
             sortedPlayers.map((player) => (
               <PlayerCard
                 key={player.id}
                 player={player}
+                linkedAccountLabel={
+                  player.linkedUserId ? linkedAccountByUserId.get(player.linkedUserId) : null
+                }
                 onEdit={() => setEditor({ kind: 'player', item: player })}
                 onDelete={() => setPurgePlayer(player)}
               />
@@ -467,6 +533,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
             <EmptyState>尚未建立玩家。先新增常用玩家，Step 4 新對局會用到。</EmptyState>
           )}
         </div>
+        )}
       </section>
       ) : null}
 

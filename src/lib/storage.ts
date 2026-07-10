@@ -365,6 +365,31 @@ const migrations: Record<number, Migration> = {
       settings: restSettings,
     } as AppState
   },
+  18: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? {
+            ...defaults.settings,
+            ...(state.settings as AppState['settings']),
+            groupMemberBannedAt:
+              (state.settings as AppState['settings']).groupMemberBannedAt ?? null,
+            cloudUserId: (state.settings as AppState['settings']).cloudUserId ?? null,
+          }
+        : defaults.settings
+    const players = (Array.isArray(state.players) ? state.players : defaults.players).map(
+      (player) => ({
+        ...player,
+        linkedUserId: player.linkedUserId ?? null,
+      }),
+    )
+    return {
+      ...state,
+      schemaVersion: 18,
+      settings,
+      players,
+    } as AppState
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {
@@ -431,6 +456,7 @@ function normalizeState(raw: Partial<AppState>): AppState {
       deletedAt: player.deletedAt ?? null,
       profileClaimDeviceId: player.profileClaimDeviceId ?? null,
       profileClaimedAt: player.profileClaimedAt ?? null,
+      linkedUserId: player.linkedUserId ?? null,
     })),
     playerAliases: Array.isArray(raw.playerAliases)
       ? raw.playerAliases

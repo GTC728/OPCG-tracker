@@ -2,6 +2,14 @@ export type ResultType = 'normal' | 'draw' | 'forfeit'
 export type MatchSource = 'manual' | 'import' | 'manual_edit' | 'restore' | 'historical'
 export type MatchTrustTier = 'self' | 'group' | 'verified'
 export type GroupMemberRole = 'owner' | 'member' | 'reader'
+
+export interface GroupMemberRecord {
+  userId: string
+  role: GroupMemberRole
+  displayName: string | null
+  joinedAt: string
+  bannedAt: string | null
+}
 export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
 
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -17,6 +25,8 @@ export interface Player {
   deletedAt: string | null
   profileClaimDeviceId: string | null
   profileClaimedAt: string | null
+  /** Supabase auth user id when profile linked while logged in (synced). */
+  linkedUserId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -317,6 +327,10 @@ export interface AppSettings {
   groupProfileLinks: Record<string, GroupProfileBookmark>
   /** Cached from Supabase group_members.role */
   groupMemberRole: GroupMemberRole | null
+  /** Cached from Supabase group_members.banned_at */
+  groupMemberBannedAt: string | null
+  /** Cached Supabase auth user id when logged in */
+  cloudUserId: string | null
   lastCloudBackupAt: string | null
   autoBackupOnLogin: boolean
 }

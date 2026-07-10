@@ -335,6 +335,54 @@ async function requireUserId(): Promise<string> {
   return user.id
 }
 
+function toPlayerRow(groupKey: string, player: Player, userId: string) {
+  return {
+    id: player.id,
+    group_key: groupKey,
+    name: player.name,
+    archived: player.archived,
+    deleted_at: player.deletedAt,
+    linked_user_id: player.linkedUserId,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  }
+}
+
+type RemotePlayerRow = {
+  id: string
+  name: string
+  archived: boolean
+  deleted_at: string | null
+  linked_user_id?: string | null
+  updated_at: string
+}
+
+function mergeRemotePlayer(existing: Player | undefined, remote: RemotePlayerRow): Player {
+  if (existing) {
+    return {
+      ...existing,
+      name: remote.name,
+      archived: remote.archived,
+      deletedAt: remote.deleted_at ?? null,
+      linkedUserId: remote.linked_user_id ?? existing.linkedUserId ?? null,
+      updatedAt: remote.updated_at,
+    }
+  }
+  const now = new Date().toISOString()
+  return {
+    id: remote.id,
+    name: remote.name,
+    aliases: [],
+    archived: remote.archived,
+    deletedAt: remote.deleted_at ?? null,
+    profileClaimDeviceId: null,
+    profileClaimedAt: null,
+    linkedUserId: remote.linked_user_id ?? null,
+    createdAt: now,
+    updatedAt: remote.updated_at,
+  }
+}
+
 export async function deleteRemoteActiveMatch(groupCode: string, matchId: string): Promise<void> {
   const supabase = await getSupabaseClient()
   if (!supabase) return
@@ -422,15 +470,7 @@ export async function pushSyncedPlayers(groupCode: string, players: Player[]): P
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
   const { error } = await supabase.from('sync_players').upsert(
-    players.map((player) => ({
-      id: player.id,
-      group_key: groupKey,
-      name: player.name,
-      archived: player.archived,
-      deleted_at: player.deletedAt,
-      updated_at: new Date().toISOString(),
-      updated_by: userId,
-    })),
+    players.map((player) => toPlayerRow(groupKey, player, userId)),
   )
   if (error) throw error
 }
@@ -730,15 +770,7 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
     if (error) throw error
   }
 
-  const playerRows = state.players.map((player: Player) => ({
-    id: player.id,
-    group_key: groupKey,
-    name: player.name,
-    archived: player.archived,
-    deleted_at: player.deletedAt,
-    updated_at: new Date().toISOString(),
-    updated_by: userId,
-  }))
+  const playerRows = state.players.map((player: Player) => toPlayerRow(groupKey, player, userId))
   if (playerRows.length) {
     const { error } = await supabase.from('sync_players').upsert(playerRows)
     if (error) throw error
@@ -802,15 +834,7 @@ export async function pushFullGroupState(groupCode: string, state: AppState): Pr
     if (error) throw error
   }
 
-  const playerRows = state.players.map((player: Player) => ({
-    id: player.id,
-    group_key: groupKey,
-    name: player.name,
-    archived: player.archived,
-    deleted_at: player.deletedAt,
-    updated_at: new Date().toISOString(),
-    updated_by: userId,
-  }))
+  const playerRows = state.players.map((player: Player) => toPlayerRow(groupKey, player, userId))
   if (playerRows.length) {
     const { error } = await supabase.from('sync_players').upsert(playerRows)
     if (error) throw error
@@ -846,13 +870,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
   updateAppState((current) => {
     const remoteActive = activeRes.data as SyncActiveRow[]
     const remoteMatches = matchRes
-    const remotePlayers = playerRes.data as {
-      id: string
-      name: string
-      archived: boolean
-      deleted_at: string | null
-      updated_at: string
-    }[]
+    const remotePlayers = playerRes.data as RemotePlayerRow[]
     const remoteSessions = sessionRes.data as {
       id: string
       name: string
@@ -896,28 +914,7 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
     for (const remote of remotePlayers) {
       const existing = playersById.get(remote.id)
       if (!shouldApplyRemotePlayer(existing, remote)) continue
-      if (existing) {
-        playersById.set(remote.id, {
-          ...existing,
-          name: remote.name,
-          archived: remote.archived,
-          deletedAt: remote.deleted_at ?? null,
-          updatedAt: remote.updated_at,
-        })
-      } else {
-        const now = new Date().toISOString()
-        playersById.set(remote.id, {
-          id: remote.id,
-          name: remote.name,
-          aliases: [],
-          archived: remote.archived,
-          deletedAt: remote.deleted_at ?? null,
-          profileClaimDeviceId: null,
-          profileClaimedAt: null,
-          createdAt: now,
-          updatedAt: remote.updated_at,
-        })
-      }
+      playersById.set(remote.id, mergeRemotePlayer(existing, remote))
     }
 
     const sessionsById = new Map(current.sessions.map((session) => [session.id, session]))
@@ -980,13 +977,7 @@ function removeRemoteActiveMatch(matchId: string): void {
   }))
 }
 
-function applyRemotePlayerRow(row: {
-  id: string
-  name: string
-  archived: boolean
-  deleted_at?: string | null
-  updated_at: string
-}): void {
+function applyRemotePlayerRow(row: RemotePlayerRow): void {
   updateAppState((current) => {
     const existing = current.players.find((player) => player.id === row.id)
     if (!shouldApplyRemotePlayer(existing, row)) return current
@@ -994,31 +985,11 @@ function applyRemotePlayerRow(row: {
       return {
         ...current,
         players: current.players.map((player) =>
-          player.id === row.id
-            ? {
-                ...player,
-                name: row.name,
-                archived: row.archived,
-                deletedAt: row.deleted_at ?? null,
-                updatedAt: row.updated_at,
-              }
-            : player,
+          player.id === row.id ? mergeRemotePlayer(player, row) : player,
         ),
       }
     }
-    const now = new Date().toISOString()
-    const player: Player = {
-      id: row.id,
-      name: row.name,
-      aliases: [],
-      archived: row.archived,
-      deletedAt: row.deleted_at ?? null,
-      profileClaimDeviceId: null,
-      profileClaimedAt: null,
-      createdAt: now,
-      updatedAt: row.updated_at,
-    }
-    return { ...current, players: [player, ...current.players] }
+    return { ...current, players: [mergeRemotePlayer(undefined, row), ...current.players] }
   })
 }
 
@@ -1137,13 +1108,7 @@ export async function startGroupCollabRealtime(groupCode: string): Promise<void>
         if (payload.eventType === 'DELETE') return
         if (payload.new) {
           applyRemotePlayerRow(
-            payload.new as {
-              id: string
-              name: string
-              archived: boolean
-              deleted_at?: string | null
-              updated_at: string
-            },
+            payload.new as RemotePlayerRow,
           )
         }
       },
