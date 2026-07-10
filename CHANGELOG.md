@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.13.1 - 2026-07-10
+
+### Fixed
+
+- **PWA stale cache on mobile Edge**: service worker uses network-first for HTML/JS; versioned cache busting; auto-reload when a new build is detected.
+
 ## V4.13.0 - 2026-07-10
 
 ### New

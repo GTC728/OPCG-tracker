@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { registerServiceWorker } from '@/lib/registerServiceWorker'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -9,10 +10,4 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch((error) => {
-      console.error('Failed to register OPCG Tracker service worker', error)
-    })
-  })
-}
+registerServiceWorker()
