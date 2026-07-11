@@ -1674,6 +1674,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const next = applyUpdatePersonalProfileName(current, displayName)
     const persisted = persist(next)
     set({ ...persisted })
+    const groupCode = next.settings.lastGroupCode
+    const trimmed = displayName.trim()
+    if (groupCode && trimmed) {
+      void import('@/lib/cloudSync').then(({ updateOwnMemberDisplayName }) =>
+        updateOwnMemberDisplayName(groupCode, trimmed).catch(() => undefined),
+      )
+    }
   },
 
   createAndClaimProfile: (input) => {

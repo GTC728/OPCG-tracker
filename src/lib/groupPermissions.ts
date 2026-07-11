@@ -53,8 +53,8 @@ export function groupRoleLabel(role: GroupMemberRole): string {
     case 'owner':
       return '管理員'
     case 'member':
-      return '成員'
+      return '記錄者'
     case 'reader':
-      return '觀眾'
+      return '觀看者'
   }
 }

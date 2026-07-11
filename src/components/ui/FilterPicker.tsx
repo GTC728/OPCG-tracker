@@ -76,6 +76,7 @@ export function OptionPickerSheet({
   options,
   value,
   allLabel,
+  showAllOption = true,
   onChange,
   onClose,
 }: {
@@ -84,22 +85,25 @@ export function OptionPickerSheet({
   options: Array<{ value: string; label: string }>
   value: string
   allLabel: string
+  showAllOption?: boolean
   onChange: (value: string) => void
   onClose: () => void
 }) {
   return (
     <BottomSheet open={open} title={title} onClose={onClose}>
       <div className="max-h-[min(60dvh,20rem)] space-y-1 overflow-y-auto">
-        <button
-          type="button"
-          className={selectPickerOptionClass(!value)}
-          onClick={() => {
-            onChange('')
-            onClose()
-          }}
-        >
-          {allLabel}
-        </button>
+        {showAllOption ? (
+          <button
+            type="button"
+            className={selectPickerOptionClass(!value)}
+            onClick={() => {
+              onChange('')
+              onClose()
+            }}
+          >
+            {allLabel}
+          </button>
+        ) : null}
         {options.map((option) => (
           <button
             key={option.value}
