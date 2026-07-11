@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { ImportHistoryPanel } from '@/components/settings/ImportHistoryPanel'
@@ -10,9 +10,11 @@ import {
   summarizeImportRows,
 } from '@/lib/importSafety'
 import {
+  HISTORICAL_IMPORT_MAX_ROWS,
   HISTORICAL_IMPORT_RULES,
   validateHistoricalImportRows,
 } from '@/lib/historicalImport'
+import { fetchHistoricalBypassPrivilege } from '@/lib/serverIntegrity'
 import { useI18n } from '@/lib/i18n'
 import { importAppStateJson } from '@/lib/storage'
 import { getCompletedMatches } from '@/lib/stats'
@@ -222,6 +224,8 @@ function ImportTool() {
   const [message, setMessage] = useState<string | null>(null)
   const [createNewSession, setCreateNewSession] = useState(true)
   const [historicalRestore, setHistoricalRestore] = useState(false)
+  const [historicalBypass, setHistoricalBypass] = useState(false)
+  const [importBusy, setImportBusy] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const inGroup = useAppStore((state) => Boolean(state.settings.lastGroupCode))
   const groupSyncPaused = useAppStore((state) => state.settings.groupSyncPaused)
@@ -251,6 +255,25 @@ function ImportTool() {
     () => (historicalRestore && mappedRows.length ? validateHistoricalImportRows(mappedRows) : null),
     [historicalRestore, mappedRows],
   )
+
+  useEffect(() => {
+    if (!historicalRestore) {
+      setHistoricalBypass(false)
+      return
+    }
+    let cancelled = false
+    void fetchHistoricalBypassPrivilege().then((value) => {
+      if (!cancelled) setHistoricalBypass(value)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [historicalRestore])
+
+  const historicalImportAllowed =
+    !historicalRestore ||
+    historicalValidation?.ok === true ||
+    (historicalBypass && mappedRows.length > 0 && mappedRows.length <= HISTORICAL_IMPORT_MAX_ROWS)
   const typedConfirmRequired = mappedRows.length
     ? historicalRestore
       ? false
@@ -267,7 +290,7 @@ function ImportTool() {
     mapping.deck2Query &&
     mapping.winnerName &&
     typedConfirmOk &&
-    (!historicalRestore || historicalValidation?.ok === true)
+    historicalImportAllowed
 
   return (
     <section className="rounded-2xl bg-surface-elevated p-4">
@@ -432,6 +455,11 @@ function ImportTool() {
                 日期跨度約 {Math.floor(historicalValidation.spanDays)} 天，符合歷史還原條件。
               </p>
             ) : null}
+            {historicalRestore && historicalValidation && !historicalValidation.ok && historicalBypass ? (
+              <p className="mt-2 text-xs text-brand-100">
+                已啟用伺服器特權：可略過日期跨度限制（仍須 ≤100 場）。
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-4 rounded-2xl bg-surface p-3 text-xs text-text-secondary">
@@ -459,10 +487,11 @@ function ImportTool() {
           <Button
             className="mt-4"
             fullWidth
-            disabled={!canImport}
-            onClick={() => {
+            disabled={!canImport || importBusy}
+            onClick={async () => {
+              setImportBusy(true)
               try {
-                const result = importMatches(mappedRows, filename || 'import.csv', raw, {
+                const result = await importMatches(mappedRows, filename || 'import.csv', raw, {
                   createNewSession,
                   historicalRestore,
                 })
@@ -476,10 +505,16 @@ function ImportTool() {
               } catch (caught) {
                 const nextMessage = caught instanceof Error ? caught.message : '匯入失敗'
                 toast.error(nextMessage)
+              } finally {
+                setImportBusy(false)
               }
             }}
           >
-            {historicalRestore ? '確認歷史還原' : t('data.confirmImport')}
+            {importBusy
+              ? '處理中…'
+              : historicalRestore
+                ? '確認歷史還原'
+                : t('data.confirmImport')}
           </Button>
         </>
       ) : null}

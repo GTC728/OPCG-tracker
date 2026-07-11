@@ -214,6 +214,8 @@ export interface ImportBatch {
   targetSessionId: string | null
   /** True when imported as one-time pre-app historical restore (V4.11.1+). */
   historicalRestore?: boolean
+  /** Server grant for syncing historical matches to group (V4.15+). */
+  integrityGrantId?: string | null
 }
 
 export interface ImportSnapshotMeta {
@@ -233,6 +235,8 @@ export interface ImportMatchOptions {
   pauseSyncDuringImport?: boolean
   /** One-time pre-app history — tags matches as source historical (V4.11.1+). */
   historicalRestore?: boolean
+  /** Pre-fetched server grant id (V4.15+). */
+  integrityGrantId?: string | null
 }
 
 export interface ImportRow {

@@ -39,6 +39,12 @@ import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
 import { appendAuditEntry } from '@/lib/auditLog'
 import { validateHistoricalImportRows, validateHistoricalImportMatches } from '@/lib/historicalImport'
+import {
+  fetchHistoricalBypassPrivilege,
+  requestHistoricalImportGrant,
+  requestHistoricalImportGrantForMatches,
+} from '@/lib/serverIntegrity'
+import { getCloudSession, isCloudConfigured } from '@/lib/cloudSync'
 import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { getPlayerName } from '@/lib/entities'
@@ -101,9 +107,14 @@ interface AppStore extends AppState {
   deleteMatch: (matchId: string) => void
   deletePlayer: (playerId: string) => void
   permanentlyDeleteDeck: (deckId: string) => void
-  importMatches: (rows: ImportMatchInput[], filename: string, rawData: string, options?: ImportMatchOptions) => ImportSummary
+  importMatches: (
+    rows: ImportMatchInput[],
+    filename: string,
+    rawData: string,
+    options?: ImportMatchOptions,
+  ) => Promise<ImportSummary>
   revertImportBatch: (batchId: string) => number
-  promoteImportBatchToHistorical: (batchId: string) => number
+  promoteImportBatchToHistorical: (batchId: string) => Promise<number>
   restoreImportSnapshot: (snapshotId: string) => void
   setGroupSyncPaused: (paused: boolean) => Promise<void>
   switchWorkspace: (
@@ -1097,14 +1108,30 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
-  importMatches: (rows, filename, rawData, options = {}) => {
+  importMatches: async (rows, filename, rawData, options = {}) => {
     pauseGroupCollabNotify()
     const wasPaused = getAppState().settings.groupSyncPaused
     let syncPausedForImport = false
 
     if (options.historicalRestore) {
       const check = validateHistoricalImportRows(rows)
-      if (!check.ok) throw new Error(check.error)
+      if (!check.ok) {
+        const bypass = await fetchHistoricalBypassPrivilege()
+        if (!bypass) throw new Error(check.error)
+      }
+    }
+
+    let integrityGrantId = options.integrityGrantId ?? null
+    if (options.historicalRestore && !integrityGrantId && isCloudConfigured()) {
+      const { user } = await getCloudSession()
+      if (user) {
+        const grant = await requestHistoricalImportGrant(
+          rows,
+          getAppState().settings.lastGroupCode,
+        )
+        if (!grant.ok) throw new Error(grant.error)
+        integrityGrantId = grant.grantId
+      }
     }
 
     try {
@@ -1249,6 +1276,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       revertedAt: null,
       targetSessionId: session.id,
       historicalRestore: options.historicalRestore ?? false,
+      integrityGrantId,
     }
     const importRows = rows.map((row, index) => {
       const rowNumber = index + 2
@@ -1320,7 +1348,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
   },
 
-  promoteImportBatchToHistorical: (batchId) => {
+  promoteImportBatchToHistorical: async (batchId) => {
     const current = getAppState()
     const batch = current.importBatches.find((item) => item.id === batchId)
     if (!batch || batch.revertedAt || batch.historicalRestore) {
@@ -1336,7 +1364,23 @@ export const useAppStore = create<AppStore>((set, get) => ({
       (match) => matchIds.has(match.id) && match.deletedAt === null && match.source === 'import',
     )
     const check = validateHistoricalImportMatches(batchMatches)
-    if (!check.ok) throw new Error(check.error)
+    if (!check.ok) {
+      const bypass = await fetchHistoricalBypassPrivilege()
+      if (!bypass) throw new Error(check.error)
+    }
+
+    let integrityGrantId = batch.integrityGrantId ?? null
+    if (!integrityGrantId && isCloudConfigured()) {
+      const { user } = await getCloudSession()
+      if (user) {
+        const grant = await requestHistoricalImportGrantForMatches(
+          batchMatches,
+          current.settings.lastGroupCode,
+        )
+        if (!grant.ok) throw new Error(grant.error)
+        integrityGrantId = grant.grantId
+      }
+    }
 
     pauseGroupCollabNotify()
     try {
@@ -1348,7 +1392,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
             : match,
         ),
         importBatches: current.importBatches.map((item) =>
-          item.id === batchId ? { ...item, historicalRestore: true } : item,
+          item.id === batchId
+            ? { ...item, historicalRestore: true, integrityGrantId }
+            : item,
         ),
       }
       const linkedId = next.settings.linkedPlayerId

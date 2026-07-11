@@ -6,6 +6,7 @@ import {
   stripGroupScopedEntities,
 } from '@/lib/groupScope'
 import { finalizeGroupProfileSession } from '@/lib/profileGroupLink'
+import { resolveIntegrityGrantIdForMatch, ensureHistoricalGrantsForState } from '@/lib/serverIntegrity'
 import {
   enqueueSyncOp,
   listSyncQueue,
@@ -50,6 +51,7 @@ type SyncMatchRow = {
   finished_at: string
   notes: string | null
   source: string
+  integrity_grant_id?: string | null
   updated_at: string
   updated_by: string
   deleted_at: string | null
@@ -268,7 +270,12 @@ function toActiveRow(groupKey: string, match: ActiveMatch, userId: string): Sync
   }
 }
 
-function toMatchRow(groupKey: string, match: Match, userId: string): SyncMatchRow {
+function toMatchRow(
+  groupKey: string,
+  match: Match,
+  userId: string,
+  integrityGrantId?: string | null,
+): SyncMatchRow {
   return {
     id: match.id,
     group_key: groupKey,
@@ -286,10 +293,19 @@ function toMatchRow(groupKey: string, match: Match, userId: string): SyncMatchRo
     finished_at: match.finishedAt,
     notes: match.notes,
     source: match.source,
+    integrity_grant_id: integrityGrantId ?? null,
     updated_at: new Date().toISOString(),
     updated_by: userId,
     deleted_at: match.deletedAt,
   }
+}
+
+function matchRowFromState(groupKey: string, match: Match, userId: string): SyncMatchRow {
+  const grantId =
+    match.source === 'historical'
+      ? resolveIntegrityGrantIdForMatch(getAppState(), match.id)
+      : null
+  return toMatchRow(groupKey, match, userId, grantId)
 }
 
 function rowToActiveMatch(row: SyncActiveRow): ActiveMatch {
@@ -421,6 +437,19 @@ export async function deleteRemotePlayer(groupCode: string, playerId: string): P
 export async function flushGroupCollabSync(_groupCode: string, _state: AppState): Promise<void> {
   if (!isGroupCollabActive(_state) || !isOnline()) return
 
+  let state = _state
+  try {
+    const withGrants = await ensureHistoricalGrantsForState(state)
+    if (withGrants !== state) {
+      updateAppState(() => withGrants)
+      state = withGrants
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Historical grant failed'
+    useAppStore.getState().updateSettings({ lastGroupSyncError: message })
+    throw error
+  }
+
   const pending = await listSyncQueue()
   if (!pending.length) {
     useAppStore.getState().updateSettings({
@@ -502,7 +531,7 @@ export async function pushSyncedMatch(groupCode: string, match: Match): Promise<
   if (!supabase) return
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
-  const { error } = await supabase.from('sync_matches').upsert(toMatchRow(groupKey, match, userId))
+  const { error } = await supabase.from('sync_matches').upsert(matchRowFromState(groupKey, match, userId))
   if (error) throw error
 }
 
@@ -522,7 +551,7 @@ export async function pushSyncedMatches(groupCode: string, matches: Match[]): Pr
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
   const { error } = await supabase.from('sync_matches').upsert(
-    matches.map((match) => toMatchRow(groupKey, match, userId)),
+    matches.map((match) => matchRowFromState(groupKey, match, userId)),
   )
   if (error) throw error
 }
@@ -754,6 +783,14 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
   const userId = await requireUserId()
   const groupKey = await resolveGroupKey(groupCode)
 
+  let workingState = state
+  const withGrants = await ensureHistoricalGrantsForState(workingState)
+  if (withGrants !== workingState) {
+    updateAppState(() => withGrants)
+    workingState = withGrants
+  }
+  state = workingState
+
   const sessionRows = state.sessions.map((session: Session) => ({
     id: session.id,
     group_key: groupKey,
@@ -776,7 +813,7 @@ export async function bootstrapGroupCollab(groupCode: string, state: AppState): 
     if (error) throw error
   }
 
-  const matchRows = state.matches.map((match) => toMatchRow(groupKey, match, userId))
+  const matchRows = state.matches.map((match) => matchRowFromState(groupKey, match, userId))
   for (let offset = 0; offset < matchRows.length; offset += MATCH_SYNC_PAGE) {
     const chunk = matchRows.slice(offset, offset + MATCH_SYNC_PAGE)
     if (!chunk.length) continue
@@ -840,7 +877,7 @@ export async function pushFullGroupState(groupCode: string, state: AppState): Pr
     if (error) throw error
   }
 
-  const matchRows = state.matches.map((match) => toMatchRow(groupKey, match, userId))
+  const matchRows = state.matches.map((match) => matchRowFromState(groupKey, match, userId))
   for (let offset = 0; offset < matchRows.length; offset += MATCH_SYNC_PAGE) {
     const chunk = matchRows.slice(offset, offset + MATCH_SYNC_PAGE)
     if (!chunk.length) continue
