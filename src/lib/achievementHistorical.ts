@@ -1,10 +1,7 @@
 import type { AchievementDefinition } from '@/lib/achievements'
 
-/** Grind / cumulative achievements accept historical pre-app imports; skill/time do not. */
-export function achievementAllowsHistorical(def: AchievementDefinition): boolean {
-  if (def.kind !== 'grind') return false
-  if (def.category === 'streak') return false
-  if (def.category === 'fun') return false
+/** Historical pre-app imports count toward all achievement families. */
+export function achievementAllowsHistorical(_def: AchievementDefinition): boolean {
   return true
 }
 
@@ -13,11 +10,12 @@ export function mergeTieredAchievementMetrics(
   cumulativeMetrics: Record<string, number>,
   skillMetrics: Record<string, number>,
 ): Record<string, number> {
-  const merged: Record<string, number> = { ...skillMetrics }
+  const merged: Record<string, number> = {}
   for (const def of definitions) {
-    if (achievementAllowsHistorical(def)) {
-      merged[def.id] = cumulativeMetrics[def.id] ?? skillMetrics[def.id] ?? 0
-    }
+    merged[def.id] = Math.max(
+      cumulativeMetrics[def.id] ?? 0,
+      skillMetrics[def.id] ?? 0,
+    )
   }
   return merged
 }

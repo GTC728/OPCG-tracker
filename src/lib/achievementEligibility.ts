@@ -110,7 +110,7 @@ export function computePlayerMatchEligibility(
   return result
 }
 
-/** Pre-app historical imports — cumulative achievements only; skip duration/gap/session cap. */
+/** Pre-app historical imports — all achievements; skip duration/gap/session cap. */
 export function playerHistoricalMatches(playerId: string, matches: Match[]): Match[] {
   return getCompletedMatches(matches).filter(
     (match) =>

@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.14.2 - 2026-07-11
+
+### Changed
+
+- **歷史還原成就**：所有類型成就（含連勝、技巧、趣味等）皆計入，不再僅限累積型。
+- **歷史還原確認**：移除需輸入「歷史還原」文字的步驟，符合條件即可直接匯入。
+
 ## V4.14.1 - 2026-07-11
 
 ### Fixed

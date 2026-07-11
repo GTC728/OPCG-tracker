@@ -1284,7 +1284,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
       options.historicalRestore ? 'import' : 'import',
       options.historicalRestore
-        ? `歷史還原 ${filename}：${createdMatches.length} 場（計入累積成就）`
+        ? `歷史還原 ${filename}：${createdMatches.length} 場（計入成就）`
         : `匯入 ${filename}：成功 ${createdMatches.length} 場${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
     )
 

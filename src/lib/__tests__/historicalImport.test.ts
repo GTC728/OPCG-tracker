@@ -46,8 +46,9 @@ describe('historicalImport', () => {
 })
 
 describe('achievementHistorical', () => {
-  it('grind milestone allows historical; skill streak does not', () => {
+  it('allows all achievement families for historical imports', () => {
     expect(achievementAllowsHistorical(getAchievementDefinition('veteran')!)).toBe(true)
-    expect(achievementAllowsHistorical(getAchievementDefinition('win_streak')!)).toBe(false)
+    expect(achievementAllowsHistorical(getAchievementDefinition('win_streak')!)).toBe(true)
+    expect(achievementAllowsHistorical(getAchievementDefinition('comeback')!)).toBe(true)
   })
 })
