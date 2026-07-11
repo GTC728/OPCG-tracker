@@ -10,7 +10,6 @@ import {
   summarizeImportRows,
 } from '@/lib/importSafety'
 import {
-  HISTORICAL_IMPORT_CONFIRM_TEXT,
   HISTORICAL_IMPORT_RULES,
   validateHistoricalImportRows,
 } from '@/lib/historicalImport'
@@ -254,12 +253,11 @@ function ImportTool() {
   )
   const typedConfirmRequired = mappedRows.length
     ? historicalRestore
-      ? true
+      ? false
       : needsTypedConfirm(mappedRows.length)
     : false
-  const typedConfirmOk = historicalRestore
-    ? confirmText.trim() === HISTORICAL_IMPORT_CONFIRM_TEXT
-    : !typedConfirmRequired || confirmText.trim() === t('data.importConfirmPlaceholder')
+  const typedConfirmOk =
+    !typedConfirmRequired || confirmText.trim() === t('data.importConfirmPlaceholder')
 
   const canImport =
     mappedRows.length > 0 &&
@@ -415,7 +413,7 @@ function ImportTool() {
               <span>
                 <span className="font-medium text-text-primary">歷史戰績還原</span>
                 <span className="mt-1 block text-text-secondary">
-                  匯入 App 建立前的舊戰績，並依下列規則計入部分成就。
+                  匯入 App 建立前的舊戰績，並依下列規則計入成就。
                 </span>
                 <ul className="mt-2 list-inside list-disc space-y-0.5 text-text-secondary">
                   {HISTORICAL_IMPORT_RULES.map((rule) => (
@@ -448,17 +446,11 @@ function ImportTool() {
 
           {typedConfirmRequired ? (
             <label className="mt-4 block">
-              <span className="text-sm text-text-secondary">
-                {historicalRestore
-                  ? `請輸入「${HISTORICAL_IMPORT_CONFIRM_TEXT}」以確認`
-                  : t('data.importConfirmType')}
-              </span>
+              <span className="text-sm text-text-secondary">{t('data.importConfirmType')}</span>
               <input
                 className="mt-2 min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 text-text-primary"
                 value={confirmText}
-                placeholder={
-                  historicalRestore ? HISTORICAL_IMPORT_CONFIRM_TEXT : t('data.importConfirmPlaceholder')
-                }
+                placeholder={t('data.importConfirmPlaceholder')}
                 onChange={(event) => setConfirmText(event.target.value)}
               />
             </label>
@@ -477,7 +469,7 @@ function ImportTool() {
                 setConfirmText('')
                 setHistoricalRestore(false)
                 const nextMessage = historicalRestore
-                  ? `歷史還原完成：${result.createdMatches} 場（累積成就已重算）`
+                  ? `歷史還原完成：${result.createdMatches} 場（成就已重算）`
                   : `匯入完成：成功 ${result.importRecord.successCount}，錯誤 ${result.importRecord.errorCount}`
                 setMessage(nextMessage)
                 toast.success(nextMessage)

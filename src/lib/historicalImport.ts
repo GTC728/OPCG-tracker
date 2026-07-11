@@ -2,15 +2,13 @@ import type { ImportMatchInput, Match } from '@/types'
 
 export const HISTORICAL_IMPORT_MAX_ROWS = 100
 export const HISTORICAL_IMPORT_MIN_SPAN_DAYS = 30
-export const HISTORICAL_IMPORT_CONFIRM_TEXT = '歷史還原'
 
 /** Short bullet list for import UI */
 export const HISTORICAL_IMPORT_RULES = [
   `單次最多 ${HISTORICAL_IMPORT_MAX_ROWS} 場`,
   `日期跨度 ≥ ${HISTORICAL_IMPORT_MIN_SPAN_DAYS} 天（最早～最晚對局）`,
   '可多次匯入，每次須符合上述條件',
-  '計入累積型成就（老將、對手數等）',
-  '不計技巧/時間/連勝/趣味型成就',
+  '計入所有類型成就（含連勝、技巧、趣味等）',
   '一般 CSV 匯入（未勾選）仍不計任何成就',
 ] as const
 
