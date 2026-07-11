@@ -82,11 +82,6 @@ export function WorkspaceHub({ compact = false, onNavigate, onClose }: Workspace
           <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('players')}>
             {t('settings.players')}
           </Button>
-          {settings.lastGroupCode ? (
-            <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('members')}>
-              {t('members.title')}
-            </Button>
-          ) : null}
           <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('sync')}>
             {t('workspace.syncStatus')}
           </Button>

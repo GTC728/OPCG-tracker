@@ -1,7 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { AppBrandCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
-import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { WorkspaceHub } from '@/components/workspace/WorkspaceHub'
 import { uiBottomNav, uiHeaderBar } from '@/lib/uiSurface'
@@ -114,7 +113,6 @@ export function AppShell({
   return (
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
-        <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <div className="flex items-center justify-between gap-2">
             <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">{title}</h1>

@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.14.0 - 2026-07-11
+
+### Changed
+
+- **玩家管理整合群組成員**：名單卡片顯示角色標籤與帳號名稱；未連結名單的帳號集中於同一頁管理。
+- **角色標籤**：記錄者 / 觀看者 / 管理員（取代易混淆的「成員」）。
+- **移除頂部同步欄**：同步狀態改在工作區 hub 與設定中查看。
+
+### Fixed
+
+- **成員名稱亂碼**：優先顯示帳號名稱或對應玩家名，並自動同步個人檔案名稱至 Supabase。
+- **角色選擇重複「成員」**：修正 OptionPicker 多出一個無效選項。
+- **角色變更無回饋**：操作期間顯示「更新中…」提示。
+
 ## V4.13.0 - 2026-07-10
 
 ### New

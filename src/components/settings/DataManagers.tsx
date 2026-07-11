@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { GroupMembersPanel } from '@/components/settings/GroupMembersPanel'
+import { MemberActionBar } from '@/components/settings/GroupMemberRow'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { FilterPickerRow, OptionPickerSheet, useFilterSheet } from '@/components/ui/FilterPicker'
 import { useToast } from '@/components/ui/Toast'
-import { listGroupMembers } from '@/lib/cloudSync'
+import { groupRoleLabel } from '@/lib/groupPermissions'
+import { resolveMemberDisplayName } from '@/lib/memberDisplay'
 import { useI18n } from '@/lib/i18n'
 import {
   countVisibleMatchesForPlayer,
   getMergeEligiblePlayers,
   isDeletedPlayer,
 } from '@/lib/entityVisibility'
+import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
 import { useAppStore } from '@/stores/appStore'
-import type { Deck, Player, PlayerInput } from '@/types'
+import type { Deck, GroupMemberRecord, Player, PlayerInput } from '@/types'
 
 type EditorState =
   | { kind: 'player'; item?: Player }
@@ -358,38 +361,79 @@ function EmptyState({ children }: { children: string }) {
 
 function PlayerCard({
   player,
+  member,
   linkedAccountLabel,
+  canManageMember,
+  memberBusy,
+  onMemberRoleChange,
+  onMemberBanToggle,
+  onMemberRemove,
   onEdit,
   onDelete,
 }: {
   player: Player
+  member?: GroupMemberRecord | null
   linkedAccountLabel?: string | null
+  canManageMember?: boolean
+  memberBusy?: boolean
+  onMemberRoleChange?: (userId: string, role: import('@/lib/groupPermissions').GroupMemberRole) => Promise<void>
+  onMemberBanToggle?: (member: GroupMemberRecord) => Promise<void>
+  onMemberRemove?: (member: GroupMemberRecord) => Promise<void>
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
+  const showMemberActions =
+    Boolean(member) &&
+    canManageMember &&
+    member?.role !== 'owner' &&
+    Boolean(onMemberRoleChange && onMemberBanToggle && onMemberRemove)
+
   return (
-    <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
+    <article className="rounded-xl bg-surface p-3 ring-1 ring-surface-muted">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">{player.name}</h3>
-          <p className="mt-1 text-sm text-text-secondary">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="text-sm font-semibold">{player.name}</h3>
+            {member ? (
+              <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-secondary">
+                {groupRoleLabel(member.role)}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-xs text-text-secondary">
             {player.aliases.length ? `別名：${formatList(player.aliases)}` : '未設定別名'}
           </p>
           {linkedAccountLabel ? (
-            <p className="mt-1 text-xs text-brand-200/90">帳號：{linkedAccountLabel}</p>
+            <p className="mt-1 text-[11px] text-text-secondary">
+              {t('members.accountLabel').replace('{name}', linkedAccountLabel)}
+            </p>
           ) : player.profileClaimDeviceId ? (
-            <p className="mt-1 text-xs text-text-secondary">已連結裝置（未登入帳號）</p>
+            <p className="mt-1 text-[11px] text-text-secondary">{t('members.deviceLinked')}</p>
+          ) : member ? (
+            <p className="mt-1 text-[11px] text-text-secondary">{t('members.noAccountName')}</p>
           ) : null}
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEdit}>
+      <div className="mt-2.5 flex gap-1.5">
+        <Button variant="secondary" className="min-h-8 flex-1 px-2 py-1 text-xs" onClick={onEdit}>
           編輯
         </Button>
-        <Button variant="danger" className="min-h-10 py-2 text-sm" onClick={onDelete}>
+        <Button variant="danger" className="min-h-8 flex-1 px-2 py-1 text-xs" onClick={onDelete}>
           刪除
         </Button>
       </div>
+      {showMemberActions && member ? (
+        <div className="mt-2 border-t border-surface-muted pt-2">
+          <MemberActionBar
+            member={member}
+            busy={Boolean(memberBusy)}
+            onRoleChange={onMemberRoleChange!}
+            onBanToggle={onMemberBanToggle!}
+            onRemove={onMemberRemove!}
+          />
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -432,6 +476,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const toast = useToast()
   const players = useAppStore((state) => state.players)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
+  const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const decks = useAppStore((state) => state.decks)
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
@@ -442,24 +487,23 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const [editor, setEditor] = useState<EditorState>(null)
   const [purgePlayer, setPurgePlayer] = useState<Player | null>(null)
   const [purgeDeck, setPurgeDeck] = useState<Deck | null>(null)
-  const [playerTab, setPlayerTab] = useState<'roster' | 'members'>('roster')
-  const [memberNames, setMemberNames] = useState<Map<string, string>>(new Map())
+  const [members, setMembers] = useState<GroupMemberRecord[]>([])
+  const {
+    canManage,
+    busyUserId,
+    handleRoleChange,
+    handleBanToggle,
+    handleRemove,
+    reloadMembers,
+  } = useGroupMemberAdmin(setMembers)
 
   useEffect(() => {
     if (!groupCode) {
-      setMemberNames(new Map())
+      setMembers([])
       return
     }
-    void listGroupMembers(groupCode)
-      .then((rows) => {
-        const map = new Map<string, string>()
-        for (const row of rows) {
-          map.set(row.userId, row.displayName?.trim() || `${row.userId.slice(0, 8)}…`)
-        }
-        setMemberNames(map)
-      })
-      .catch(() => setMemberNames(new Map()))
-  }, [groupCode])
+    void reloadMembers().catch(() => setMembers([]))
+  }, [groupCode, reloadMembers])
 
   const sortedPlayers = [...players]
     .filter((player) => !isDeletedPlayer(player))
@@ -468,7 +512,27 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
     left.displayName.localeCompare(right.displayName, 'zh-Hant'),
   )
 
-  const linkedAccountByUserId = memberNames
+  const memberByUserId = useMemo(() => {
+    const map = new Map<string, GroupMemberRecord>()
+    for (const member of members) {
+      map.set(member.userId, member)
+    }
+    return map
+  }, [members])
+
+  const linkedAccountByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const member of members) {
+      const linkedPlayer = players.find(
+        (player) => player.linkedUserId === member.userId && !isDeletedPlayer(player),
+      )
+      map.set(
+        member.userId,
+        resolveMemberDisplayName(member, linkedPlayer?.name),
+      )
+    }
+    return map
+  }, [members, players])
 
   return (
     <>
@@ -479,61 +543,44 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
             <h2 className="text-lg font-semibold">{t('members.rosterTitle')}</h2>
             <p className="mt-1 text-sm text-text-secondary">{t('members.rosterDesc')}</p>
           </div>
-          {playerTab === 'roster' ? (
-            <Button className="shrink-0 text-sm" onClick={() => setEditor({ kind: 'player' })}>
-              新增
-            </Button>
-          ) : null}
+          <Button className="shrink-0 text-xs" onClick={() => setEditor({ kind: 'player' })}>
+            新增
+          </Button>
         </div>
 
-        {groupCode ? (
-          <div className="mt-3 flex gap-2 rounded-xl bg-surface p-1">
-            <button
-              type="button"
-              className={[
-                'flex-1 rounded-lg py-2 text-sm font-medium transition',
-                playerTab === 'roster' ? 'bg-brand-500/20 text-brand-100' : 'text-text-secondary',
-              ].join(' ')}
-              onClick={() => setPlayerTab('roster')}
-            >
-              {t('members.tabRoster')}
-            </button>
-            <button
-              type="button"
-              className={[
-                'flex-1 rounded-lg py-2 text-sm font-medium transition',
-                playerTab === 'members' ? 'bg-brand-500/20 text-brand-100' : 'text-text-secondary',
-              ].join(' ')}
-              onClick={() => setPlayerTab('members')}
-            >
-              {t('members.tabAuth')}
-            </button>
-          </div>
-        ) : null}
-
-        {playerTab === 'members' && groupCode ? (
-          <div className="mt-4">
-            <GroupMembersPanel />
-          </div>
-        ) : (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-2">
           {sortedPlayers.length ? (
-            sortedPlayers.map((player) => (
+            sortedPlayers.map((player) => {
+              const member = player.linkedUserId ? memberByUserId.get(player.linkedUserId) : null
+              const isSelf = member?.userId === cloudUserId
+              return (
               <PlayerCard
                 key={player.id}
                 player={player}
+                member={member}
                 linkedAccountLabel={
                   player.linkedUserId ? linkedAccountByUserId.get(player.linkedUserId) : null
                 }
+                canManageMember={canManage && !isSelf}
+                memberBusy={member ? busyUserId === member.userId : false}
+                onMemberRoleChange={handleRoleChange}
+                onMemberBanToggle={handleBanToggle}
+                onMemberRemove={(target) => handleRemove(target, player.name)}
                 onEdit={() => setEditor({ kind: 'player', item: player })}
                 onDelete={() => setPurgePlayer(player)}
               />
-            ))
+            )})
           ) : (
             <EmptyState>尚未建立玩家。先新增常用玩家，Step 4 新對局會用到。</EmptyState>
           )}
         </div>
-        )}
+
+        {groupCode ? (
+          <div className="mt-5 border-t border-surface-muted pt-4">
+            <h3 className="text-sm font-semibold">{t('members.unlinkedTitle')}</h3>
+            <GroupMembersPanel unlinkedOnly embedded />
+          </div>
+        ) : null}
       </section>
       ) : null}
 
