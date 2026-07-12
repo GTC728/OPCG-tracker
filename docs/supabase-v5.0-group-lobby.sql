@@ -724,3 +724,5 @@ as $$
   where gm.user_id = auth.uid()
   order by gm.joined_at desc;
 $$;
+
+grant execute on function public.list_my_group_memberships() to authenticated;
