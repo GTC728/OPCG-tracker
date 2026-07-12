@@ -689,6 +689,8 @@ end;
 $$;
 
 -- ── 16) Extend list_my_group_memberships ────────────────────────────────────
+-- Return type changed from v4.18 (added public_id, visibility, join_policy).
+drop function if exists public.list_my_group_memberships();
 
 create or replace function public.list_my_group_memberships()
 returns table (
