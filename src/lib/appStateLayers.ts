@@ -61,6 +61,7 @@ export function mergePersonalAndGroup(
     importBatches: [],
     importRows: [],
     importRecords: [],
+    syncConflicts: [],
   }
   return applyGroupScopedSnapshot(shell, group)
 }
@@ -97,6 +98,7 @@ export function emptyGroupSnapshot(): GroupScopedSnapshot {
     achievementUnlocks: [],
     auditLog: [],
     profileLifetime: null,
+    syncConflicts: [],
     settings: {} as AppState['settings'],
   })
   return captureGroupScopedSnapshot(base)

@@ -10,12 +10,14 @@ import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { WeeklyWinRateChart } from '@/components/stats/PlayerTrendCharts'
+import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
 import {
   buildDeckStats,
   buildFirstSecondStats,
   buildMatchupStats,
   buildPlayerDeckStats,
   buildWeeklyWinRateStats,
+  buildWeeklyDeckMetaStats,
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
@@ -1118,6 +1120,11 @@ export function StatsPage() {
     return buildWeeklyWinRateStats(linkedPlayer.id, scopedMatches)
   }, [linkedPlayer, scopedMatches])
 
+  const weeklyDeckMetaStats = useMemo(
+    () => buildWeeklyDeckMetaStats(decks, scopedMatches, language),
+    [decks, scopedMatches, language],
+  )
+
   const openProfile = (target: ProfileNavTarget) => {
     setProfileStack((prev) => {
       if (prev.length === 0) listScrollY.current = window.scrollY
@@ -1270,6 +1277,7 @@ export function StatsPage() {
             />
           ) : null}
           <MetaSummarySection summary={metaSummary} />
+          <MetaTransferChart stats={weeklyDeckMetaStats} title={t('stats.metaTransfer')} compact />
           <FirstSecondSection stats={firstSecondStats} />
           <RecentFormSection recentForm={globalRecentForm} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

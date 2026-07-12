@@ -113,7 +113,7 @@ export function AppShell({
 
   return (
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
-      <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface">
+      <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface [@media(min-width:768px)_and_(orientation:landscape)]:max-w-5xl">
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <div className="flex items-center justify-between gap-2">
             <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">{title}</h1>

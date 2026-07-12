@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { ASSIGNMENT_SIDE_PANEL_WIDTH } from '@/lib/layout'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
 import { useLiveMatchDuration } from '@/lib/matchTimer'
@@ -463,6 +464,8 @@ export function TableBoard({
   const { t } = useI18n()
   const toast = useToast()
   const isMobile = useMediaQuery('(max-width: 767px)')
+  const isLandscapeTablet = useMediaQuery('(min-width: 768px) and (orientation: landscape)')
+  const isSideBySide = isLandscapeTablet
   const appState = useAppStore()
   const activeMatches = useAppStore((state) => state.activeMatches)
   const assignTableSide = useAppStore((state) => state.assignTableSide)
@@ -539,96 +542,101 @@ export function TableBoard({
     toast.error(t('table.removeOnlyLast'))
   }
 
-  return (
-    <div className="flex flex-col gap-2">
-      {!isMobile ? (
-        <AssignmentDock
-          sessionId={sessionId}
-          players={players}
-          decks={decks}
-          matches={matches}
-          pendingAssignment={pendingAssignment}
-          pendingTableTarget={pendingTableTarget}
-          onSelectAssignment={handleSelectAssignment}
-          onClearAssignment={clearAssignmentState}
-          onClearTableTarget={() => setPendingTableTarget(null)}
-        />
-      ) : null}
+  const assignmentDock = (
+    <AssignmentDock
+      sessionId={sessionId}
+      players={players}
+      decks={decks}
+      matches={matches}
+      pendingAssignment={pendingAssignment}
+      pendingTableTarget={pendingTableTarget}
+      onSelectAssignment={handleSelectAssignment}
+      onClearAssignment={clearAssignmentState}
+      onClearTableTarget={() => setPendingTableTarget(null)}
+      variant={isMobile ? 'drawer' : 'inline'}
+      expanded={isMobile ? drawerExpanded : undefined}
+      onExpandedChange={isMobile ? setDrawerExpanded : undefined}
+    />
+  )
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">{t('table.title')}</h2>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount <= 1} onClick={() => changeTableCount(-1)}>
-              −
-            </Button>
-            <span className="min-w-6 text-center text-sm font-semibold">{tableCount}</span>
-            <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount >= MAX_TABLE_COUNT} onClick={() => changeTableCount(1)}>
-              +
-            </Button>
-          </div>
+  const tablesSection = (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">{t('table.title')}</h2>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount <= 1} onClick={() => changeTableCount(-1)}>
+            −
+          </Button>
+          <span className="min-w-6 text-center text-sm font-semibold">{tableCount}</span>
+          <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount >= MAX_TABLE_COUNT} onClick={() => changeTableCount(1)}>
+            +
+          </Button>
         </div>
-
-        <div className="space-y-2">
-          {Array.from({ length: tableCount }, (_, index) => {
-            const slot = index + 1
-            const match = getActiveMatchForTableSlot(sessionMatches, sessionId, slot)
-            return (
-              <TableSlotPanel
-                key={slot}
-                slot={slot}
-                match={match}
-                players={players}
-                decks={decks}
-                matches={matches}
-                pendingAssignment={pendingAssignment}
-                pendingTableTarget={pendingTableTarget}
-                onAssign={(side, payload) => applyAssignment(slot, side, payload)}
-                onTapField={(side, field) => handleTapField(slot, side, field)}
-                onDismiss={() => handleDismissTable(slot, match)}
-                onComplete={(winnerPlayerId) => match && onComplete(match.id, winnerPlayerId)}
-                onSetFirstPlayer={(firstPlayerId) => match && onSetFirstPlayer(match.id, firstPlayerId)}
-              />
-            )
-          })}
-        </div>
-
-        {overflowMatches.length ? (
-          <section className="space-y-1.5">
-            <h3 className="text-xs font-semibold text-text-secondary">{t('table.unassigned')}</h3>
-            {overflowMatches.map((match) => (
-              <CompactCompleteTable
-                key={match.id}
-                slot={match.matchNumber}
-                match={match}
-                players={players}
-                decks={decks}
-                matches={matches}
-                onClear={() => clearActiveMatch(match.id)}
-                onComplete={(winnerPlayerId) => onComplete(match.id, winnerPlayerId)}
-                onSetFirstPlayer={(firstPlayerId) => onSetFirstPlayer(match.id, firstPlayerId)}
-              />
-            ))}
-          </section>
-        ) : null}
       </div>
 
-      {isMobile ? (
-        <AssignmentDock
-          variant="drawer"
-          sessionId={sessionId}
-          players={players}
-          decks={decks}
-          matches={matches}
-          pendingAssignment={pendingAssignment}
-          pendingTableTarget={pendingTableTarget}
-          onSelectAssignment={handleSelectAssignment}
-          onClearAssignment={clearAssignmentState}
-          onClearTableTarget={() => setPendingTableTarget(null)}
-          expanded={drawerExpanded}
-          onExpandedChange={setDrawerExpanded}
-        />
+      <div className={isSideBySide ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
+        {Array.from({ length: tableCount }, (_, index) => {
+          const slot = index + 1
+          const match = getActiveMatchForTableSlot(sessionMatches, sessionId, slot)
+          return (
+            <TableSlotPanel
+              key={slot}
+              slot={slot}
+              match={match}
+              players={players}
+              decks={decks}
+              matches={matches}
+              pendingAssignment={pendingAssignment}
+              pendingTableTarget={pendingTableTarget}
+              onAssign={(side, payload) => applyAssignment(slot, side, payload)}
+              onTapField={(side, field) => handleTapField(slot, side, field)}
+              onDismiss={() => handleDismissTable(slot, match)}
+              onComplete={(winnerPlayerId) => match && onComplete(match.id, winnerPlayerId)}
+              onSetFirstPlayer={(firstPlayerId) => match && onSetFirstPlayer(match.id, firstPlayerId)}
+            />
+          )
+        })}
+      </div>
+
+      {overflowMatches.length ? (
+        <section className="space-y-1.5">
+          <h3 className="text-xs font-semibold text-text-secondary">{t('table.unassigned')}</h3>
+          {overflowMatches.map((match) => (
+            <CompactCompleteTable
+              key={match.id}
+              slot={match.matchNumber}
+              match={match}
+              players={players}
+              decks={decks}
+              matches={matches}
+              onClear={() => clearActiveMatch(match.id)}
+              onComplete={(winnerPlayerId) => onComplete(match.id, winnerPlayerId)}
+              onSetFirstPlayer={(firstPlayerId) => onSetFirstPlayer(match.id, firstPlayerId)}
+            />
+          ))}
+        </section>
       ) : null}
+    </div>
+  )
+
+  return (
+    <div
+      className={isSideBySide ? 'grid gap-3' : 'flex flex-col gap-2'}
+      style={
+        isSideBySide
+          ? { gridTemplateColumns: `minmax(0, 1fr) ${ASSIGNMENT_SIDE_PANEL_WIDTH}` }
+          : undefined
+      }
+    >
+      {!isMobile && !isSideBySide ? assignmentDock : null}
+
+      {tablesSection}
+
+      {isSideBySide ? (
+        <div className="sticky top-2 self-start">{assignmentDock}</div>
+      ) : null}
+
+      {isMobile ? assignmentDock : null}
     </div>
   )
 }

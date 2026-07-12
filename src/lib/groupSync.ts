@@ -1,4 +1,18 @@
 import { appendAuditEntry, remoteAuditActor } from '@/lib/auditLog'
+import {
+  activeEntitiesDiffer,
+  buildActiveConflict,
+  buildMatchConflict,
+  buildPlayerConflict,
+  buildSessionConflict,
+  detectJoinConflicts,
+  isConflictEntity,
+  matchEntitiesDiffer,
+  mergeUniqueConflicts,
+  playerEntitiesDiffer,
+  sessionEntitiesDiffer,
+  type RemoteGroupEntities,
+} from '@/lib/conflictResolver'
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
 import {
   applyGroupScopedSnapshot,
@@ -15,7 +29,7 @@ import {
   removeSyncQueueItem,
   type SyncQueueOp,
 } from '@/lib/syncQueue'
-import type { ActiveMatch, AppState, Match, Player, Session } from '@/types'
+import type { ActiveMatch, AppState, Match, Player, Session, SyncConflict } from '@/types'
 import { getAppState, updateAppState, useAppStore } from '@/stores/appStore'
 
 type SyncActiveRow = {
@@ -89,6 +103,225 @@ function touchLocalPlayers(ids: Iterable<string>): void {
 function touchLocalMatches(ids: Iterable<string>): void {
   const now = Date.now()
   for (const id of ids) localMatchTouch.set(id, now)
+}
+
+export function reinforceLocalEntityTouch(
+  entityKind: SyncConflict['entityKind'],
+  entityId: string,
+): void {
+  const now = Date.now() + 1
+  switch (entityKind) {
+    case 'match':
+      localMatchTouch.set(entityId, now)
+      break
+    case 'active_match':
+      localActiveTouch.set(entityId, now)
+      break
+    case 'player':
+      localPlayerTouch.set(entityId, now)
+      break
+    case 'session':
+      localSessionTouch.set(entityId, now)
+      break
+  }
+}
+
+export function clearLocalEntityTouch(
+  entityKind: SyncConflict['entityKind'],
+  entityId: string,
+): void {
+  switch (entityKind) {
+    case 'match':
+      localMatchTouch.delete(entityId)
+      break
+    case 'active_match':
+      localActiveTouch.delete(entityId)
+      break
+    case 'player':
+      localPlayerTouch.delete(entityId)
+      break
+    case 'session':
+      localSessionTouch.delete(entityId)
+      break
+  }
+}
+
+function rowsToRemoteEntities(
+  activeRows: SyncActiveRow[],
+  matchRows: SyncMatchRow[],
+  playerRows: RemotePlayerRow[],
+  sessionRows: {
+    id: string
+    name: string
+    started_at: string
+    ended_at: string | null
+    archived_at: string | null
+    deleted_at: string | null
+    updated_at: string
+    updated_by?: string
+  }[],
+): RemoteGroupEntities {
+  const meta = {
+    matchUpdatedAt: new Map<string, string>(),
+    matchUpdatedBy: new Map<string, string | null>(),
+    playerUpdatedAt: new Map<string, string>(),
+    playerUpdatedBy: new Map<string, string | null>(),
+    sessionUpdatedAt: new Map<string, string>(),
+    sessionUpdatedBy: new Map<string, string | null>(),
+    activeUpdatedAt: new Map<string, string>(),
+    activeUpdatedBy: new Map<string, string | null>(),
+  }
+
+  for (const row of matchRows) {
+    meta.matchUpdatedAt.set(row.id, row.updated_at)
+    meta.matchUpdatedBy.set(row.id, row.updated_by ?? null)
+  }
+  for (const row of playerRows) {
+    meta.playerUpdatedAt.set(row.id, row.updated_at)
+    meta.playerUpdatedBy.set(row.id, row.updated_by ?? null)
+  }
+  for (const row of sessionRows) {
+    meta.sessionUpdatedAt.set(row.id, row.updated_at)
+    meta.sessionUpdatedBy.set(row.id, row.updated_by ?? null)
+  }
+  for (const row of activeRows) {
+    meta.activeUpdatedAt.set(row.id, row.updated_at)
+    meta.activeUpdatedBy.set(row.id, row.updated_by ?? null)
+  }
+
+  const players = playerRows.map((row) => mergeRemotePlayer(undefined, row))
+  const matches = matchRows.map((row) => rowToMatch(row))
+  const activeMatches = activeRows.map((row) => rowToActiveMatch(row))
+  const sessions = sessionRows.map((remote) => {
+    const now = new Date().toISOString()
+    return {
+      id: remote.id,
+      name: remote.name,
+      startedAt: remote.started_at,
+      endedAt: remote.ended_at,
+      archivedAt: remote.archived_at ?? null,
+      deletedAt: remote.deleted_at ?? null,
+      createdAt: now,
+    } satisfies Session
+  })
+
+  return { activeMatches, matches, players, sessions, meta }
+}
+
+export async function fetchRemoteGroupEntities(groupCode: string): Promise<RemoteGroupEntities> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) throw new Error('Supabase 未設定')
+  const groupKey = await resolveGroupKey(groupCode)
+
+  const [activeRes, matchRes, playerRes, sessionRes] = await Promise.all([
+    supabase.from('sync_active_matches').select('*').eq('group_key', groupKey),
+    fetchAllRemoteMatches(supabase, groupKey),
+    supabase.from('sync_players').select('*').eq('group_key', groupKey),
+    supabase.from('sync_sessions').select('*').eq('group_key', groupKey),
+  ])
+
+  if (activeRes.error) throw activeRes.error
+  if (playerRes.error) throw playerRes.error
+  if (sessionRes.error) throw sessionRes.error
+
+  return rowsToRemoteEntities(
+    activeRes.data as SyncActiveRow[],
+    matchRes,
+    playerRes.data as RemotePlayerRow[],
+    sessionRes.data as {
+      id: string
+      name: string
+      started_at: string
+      ended_at: string | null
+      archived_at: string | null
+      deleted_at: string | null
+      updated_at: string
+      updated_by?: string
+    }[],
+  )
+}
+
+function applyJoinMerge(
+  state: AppState,
+  snapshot: ReturnType<typeof captureGroupScopedSnapshot>,
+  remote: RemoteGroupEntities,
+  conflicts: SyncConflict[],
+): AppState {
+  const playersById = new Map<string, Player>()
+  for (const player of remote.players) {
+    if (isConflictEntity(conflicts, 'player', player.id)) continue
+    playersById.set(player.id, player)
+  }
+  for (const conflict of conflicts) {
+    if (conflict.entityKind === 'player' && conflict.localPlayer) {
+      playersById.set(conflict.entityId, conflict.localPlayer)
+    }
+  }
+  for (const local of snapshot.players) {
+    if (!playersById.has(local.id)) playersById.set(local.id, local)
+  }
+
+  const sessionsById = new Map<string, Session>()
+  for (const session of remote.sessions) {
+    if (isConflictEntity(conflicts, 'session', session.id)) continue
+    sessionsById.set(session.id, session)
+  }
+  for (const conflict of conflicts) {
+    if (conflict.entityKind === 'session' && conflict.localSession) {
+      sessionsById.set(conflict.entityId, conflict.localSession)
+    }
+  }
+  for (const local of snapshot.sessions) {
+    if (!sessionsById.has(local.id)) sessionsById.set(local.id, local)
+  }
+
+  const matchesById = new Map<string, Match>()
+  for (const match of remote.matches) {
+    if (isConflictEntity(conflicts, 'match', match.id)) continue
+    matchesById.set(match.id, match)
+  }
+  for (const conflict of conflicts) {
+    if (conflict.entityKind === 'match' && conflict.localMatch) {
+      matchesById.set(conflict.entityId, conflict.localMatch)
+    }
+  }
+  for (const local of snapshot.matches) {
+    if (!matchesById.has(local.id)) matchesById.set(local.id, local)
+  }
+
+  const activeById = new Map<string, ActiveMatch>()
+  for (const match of remote.activeMatches) {
+    if (isConflictEntity(conflicts, 'active_match', match.id)) continue
+    activeById.set(match.id, match)
+  }
+  for (const conflict of conflicts) {
+    if (conflict.entityKind === 'active_match' && conflict.localActive) {
+      activeById.set(conflict.entityId, conflict.localActive)
+    }
+  }
+  for (const local of snapshot.activeMatches) {
+    if (!activeById.has(local.id)) activeById.set(local.id, local)
+  }
+
+  return {
+    ...state,
+    currentSessionId: snapshot.currentSessionId,
+    players: [...playersById.values()],
+    playerAliases: snapshot.playerAliases,
+    sessionPlayers: snapshot.sessionPlayers,
+    sessionDecks: snapshot.sessionDecks,
+    sessions: [...sessionsById.values()].sort(
+      (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
+    ),
+    activeMatches: [...activeById.values()],
+    matches: [...matchesById.values()].sort(
+      (left, right) => new Date(right.finishedAt).getTime() - new Date(left.finishedAt).getTime(),
+    ),
+    matchRevisions: snapshot.matchRevisions,
+    importBatches: snapshot.importBatches,
+    importRows: snapshot.importRows,
+    importRecords: snapshot.importRecords,
+  }
 }
 
 function activePayloadChanged(before: ActiveMatch, after: ActiveMatch): boolean {
@@ -373,6 +606,7 @@ type RemotePlayerRow = {
   deleted_at: string | null
   linked_user_id?: string | null
   updated_at: string
+  updated_by?: string
 }
 
 function mergeRemotePlayer(existing: Player | undefined, remote: RemotePlayerRow): Player {
@@ -746,7 +980,22 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
 
     const hasRemote = await remoteGroupHasData(groupCode)
     if (hasRemote) {
-      await pullGroupCollabState(groupCode)
+      const remote = await fetchRemoteGroupEntities(groupCode)
+      const joinConflicts = hadLocalData ? detectJoinConflicts(incomingSnapshot, remote) : []
+
+      if (hadLocalData) {
+        updateAppState((state) => applyJoinMerge(state, incomingSnapshot, remote, joinConflicts))
+      } else {
+        await pullGroupCollabState(groupCode, remote)
+      }
+
+      if (joinConflicts.length) {
+        updateAppState((state) => ({
+          ...state,
+          syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], joinConflicts),
+        }))
+      }
+
       updateAppState((state) => finalizeGroupProfileSession(state))
       return
     }
@@ -891,107 +1140,134 @@ export async function pushFullGroupState(groupCode: string, state: AppState): Pr
   await pushSyncedActiveMatches(groupCode, state.activeMatches)
 }
 
-export async function pullGroupCollabState(groupCode: string): Promise<void> {
-  const supabase = await getSupabaseClient()
-  if (!supabase) throw new Error('Supabase 未設定')
-  const groupKey = await resolveGroupKey(groupCode)
-
-  const [activeRes, matchRes, playerRes, sessionRes] = await Promise.all([
-    supabase.from('sync_active_matches').select('*').eq('group_key', groupKey),
-    fetchAllRemoteMatches(supabase, groupKey),
-    supabase.from('sync_players').select('*').eq('group_key', groupKey),
-    supabase.from('sync_sessions').select('*').eq('group_key', groupKey),
-  ])
-
-  if (activeRes.error) throw activeRes.error
-  if (playerRes.error) throw playerRes.error
-  if (sessionRes.error) throw sessionRes.error
+export async function pullGroupCollabState(
+  groupCode: string,
+  prefetched?: RemoteGroupEntities,
+): Promise<void> {
+  const remote = prefetched ?? (await fetchRemoteGroupEntities(groupCode))
 
   let remoteMatchUpdates = 0
   let remoteUpdaterId: string | null = null
+  const pullConflicts: SyncConflict[] = []
 
   updateAppState((current) => {
-    const remoteActive = activeRes.data as SyncActiveRow[]
-    const remoteMatches = matchRes
-    const remotePlayers = playerRes.data as RemotePlayerRow[]
-    const remoteSessions = sessionRes.data as {
-      id: string
-      name: string
-      started_at: string
-      ended_at: string | null
-      archived_at: string | null
-      deleted_at: string | null
-      updated_at: string
-    }[]
-
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
-    const remoteActiveIds = new Set(remoteActive.map((row) => row.id))
-    for (const row of remoteActive) {
-      if (!shouldApplyRemoteActive(row)) continue
-      activeById.set(row.id, rowToActiveMatch(row))
-    }
-    for (const [id, match] of activeById) {
-      if (!remoteActiveIds.has(id)) {
-        const localTouch = localActiveTouch.get(id) ?? 0
-        if (!localTouch) {
-          activeById.delete(id)
-        }
+    const remoteActiveIds = new Set(remote.activeMatches.map((item) => item.id))
+
+    for (const remoteActive of remote.activeMatches) {
+      const existing = activeById.get(remoteActive.id)
+      const updatedAt = remote.meta.activeUpdatedAt.get(remoteActive.id) ?? ''
+      const localTouch = localActiveTouch.get(remoteActive.id) ?? 0
+      const remoteAt = new Date(updatedAt).getTime()
+
+      if (existing && localTouch > 0 && remoteAt >= localTouch && activeEntitiesDiffer(existing, remoteActive)) {
+        pullConflicts.push(
+          buildActiveConflict(
+            'pull',
+            existing,
+            remoteActive,
+            updatedAt,
+            remote.meta.activeUpdatedBy.get(remoteActive.id) ?? null,
+          ),
+        )
         continue
       }
-      const row = remoteActive.find((item) => item.id === id)
-      if (row && !shouldApplyRemoteActive(row)) {
-        activeById.set(id, current.activeMatches.find((item) => item.id === id) ?? match)
+
+      if (!existing || remoteAt >= localTouch) {
+        activeById.set(remoteActive.id, remoteActive)
+      }
+    }
+
+    for (const [id] of activeById) {
+      if (!remoteActiveIds.has(id)) {
+        const localTouch = localActiveTouch.get(id) ?? 0
+        if (!localTouch) activeById.delete(id)
       }
     }
 
     const matchesById = new Map(current.matches.map((match) => [match.id, match]))
-    for (const row of remoteMatches) {
-      const remote = rowToMatch(row)
-      const existing = matchesById.get(remote.id)
-      if (!existing || shouldApplyRemoteMatch(existing, row)) {
+    for (const remoteMatch of remote.matches) {
+      const existing = matchesById.get(remoteMatch.id)
+      const updatedAt = remote.meta.matchUpdatedAt.get(remoteMatch.id) ?? ''
+      const localTouch = localMatchTouch.get(remoteMatch.id) ?? 0
+      const remoteAt = new Date(updatedAt).getTime()
+
+      if (existing && localTouch > 0 && remoteAt >= localTouch && matchEntitiesDiffer(existing, remoteMatch)) {
+        pullConflicts.push(
+          buildMatchConflict(
+            'pull',
+            existing,
+            remoteMatch,
+            updatedAt,
+            remote.meta.matchUpdatedBy.get(remoteMatch.id) ?? null,
+          ),
+        )
+        continue
+      }
+
+      if (!existing || remoteAt >= localTouch) {
+        const updatedBy = remote.meta.matchUpdatedBy.get(remoteMatch.id)
         if (
-          row.updated_by &&
-          row.updated_by !== current.settings.cloudUserId &&
-          (!existing || existing.finishedAt !== remote.finishedAt || existing.winnerPlayerId !== remote.winnerPlayerId)
+          updatedBy &&
+          updatedBy !== current.settings.cloudUserId &&
+          (!existing ||
+            existing.finishedAt !== remoteMatch.finishedAt ||
+            existing.winnerPlayerId !== remoteMatch.winnerPlayerId)
         ) {
           remoteMatchUpdates += 1
-          remoteUpdaterId = row.updated_by
+          remoteUpdaterId = updatedBy
         }
-        matchesById.set(remote.id, remote)
+        matchesById.set(remoteMatch.id, remoteMatch)
       }
     }
 
     const playersById = new Map(current.players.map((player) => [player.id, player]))
-    for (const remote of remotePlayers) {
-      const existing = playersById.get(remote.id)
-      if (!shouldApplyRemotePlayer(existing, remote)) continue
-      playersById.set(remote.id, mergeRemotePlayer(existing, remote))
+    for (const remotePlayer of remote.players) {
+      const existing = playersById.get(remotePlayer.id)
+      const updatedAt = remote.meta.playerUpdatedAt.get(remotePlayer.id) ?? ''
+      const localTouch = localPlayerTouch.get(remotePlayer.id) ?? 0
+      const remoteAt = new Date(updatedAt).getTime()
+
+      if (existing && localTouch > 0 && remoteAt >= localTouch && playerEntitiesDiffer(existing, remotePlayer)) {
+        pullConflicts.push(
+          buildPlayerConflict(
+            'pull',
+            existing,
+            remotePlayer,
+            updatedAt,
+            remote.meta.playerUpdatedBy.get(remotePlayer.id) ?? null,
+          ),
+        )
+        continue
+      }
+
+      if (!existing || remoteAt >= localTouch) {
+        playersById.set(remotePlayer.id, remotePlayer)
+      }
     }
 
     const sessionsById = new Map(current.sessions.map((session) => [session.id, session]))
-    for (const remote of remoteSessions) {
-      const existing = sessionsById.get(remote.id)
-      if (existing && !shouldApplyRemoteSession(existing, remote)) continue
-      if (existing) {
-        sessionsById.set(remote.id, {
-          ...existing,
-          name: remote.name,
-          startedAt: remote.started_at,
-          endedAt: remote.ended_at,
-          archivedAt: remote.archived_at ?? null,
-          deletedAt: remote.deleted_at ?? null,
-        })
-      } else {
-        const now = new Date().toISOString()
-        sessionsById.set(remote.id, {
-          id: remote.id,
-          name: remote.name,
-          startedAt: remote.started_at,
-          endedAt: remote.ended_at,
-          archivedAt: remote.archived_at ?? null,
-          deletedAt: remote.deleted_at ?? null,
-          createdAt: now,
-        })
+    for (const remoteSession of remote.sessions) {
+      const existing = sessionsById.get(remoteSession.id)
+      const updatedAt = remote.meta.sessionUpdatedAt.get(remoteSession.id) ?? ''
+      const localTouch = localSessionTouch.get(remoteSession.id) ?? 0
+      const remoteAt = new Date(updatedAt).getTime()
+
+      if (existing && localTouch > 0 && remoteAt >= localTouch && sessionEntitiesDiffer(existing, remoteSession)) {
+        pullConflicts.push(
+          buildSessionConflict(
+            'pull',
+            existing,
+            remoteSession,
+            updatedAt,
+            remote.meta.sessionUpdatedBy.get(remoteSession.id) ?? null,
+          ),
+        )
+        continue
+      }
+
+      if (!existing || remoteAt >= localTouch) {
+        sessionsById.set(remoteSession.id, remoteSession)
       }
     }
 
@@ -1007,6 +1283,14 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       ),
     }
   })
+
+  if (pullConflicts.length) {
+    updateAppState((state) => ({
+      ...state,
+      syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], pullConflicts),
+    }))
+  }
+
   if (remoteMatchUpdates > 0 && remoteUpdaterId) {
     const updaterId = remoteUpdaterId
     updateAppState((state) =>

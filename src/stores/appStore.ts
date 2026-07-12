@@ -17,9 +17,15 @@ import {
   replaceMaterializedMatch,
 } from '@/lib/materializedStats'
 import {
+  applyLocalConflictResolution,
+  applyRemoteConflictResolution,
+} from '@/lib/conflictResolver'
+import {
+  clearLocalEntityTouch,
   flushGroupCollabSyncNowAsync,
   pauseGroupCollabNotify,
   pushFullGroupState,
+  reinforceLocalEntityTouch,
   resumeGroupCollabNotify,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
@@ -122,6 +128,7 @@ interface AppStore extends AppState {
   promoteImportBatchToHistorical: (batchId: string) => Promise<number>
   restoreImportSnapshot: (snapshotId: string) => void
   setGroupSyncPaused: (paused: boolean) => Promise<void>
+  resolveSyncConflict: (conflictId: string, choice: 'local' | 'remote') => void
   switchWorkspace: (
     target: 'local' | string,
     options?: { leaveMembership?: boolean; preserveCollabForInit?: boolean },
@@ -174,6 +181,7 @@ function toPersistedState(store: AppStore): AppState {
     achievementUnlocks: store.achievementUnlocks,
     profileLifetime: store.profileLifetime,
     auditLog: store.auditLog,
+    syncConflicts: store.syncConflicts ?? [],
     settings: store.settings,
   }
 }
@@ -1617,6 +1625,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         }
       }
 
+      next = { ...next, syncConflicts: [] }
       next = tryAutoRelinkGroupProfile(next)
 
       const linkedId = next.settings.linkedPlayerId
@@ -1690,6 +1699,37 @@ export const useAppStore = create<AppStore>((set, get) => ({
         })
         throw caught
       }
+    }
+  },
+
+  resolveSyncConflict: (conflictId, choice) => {
+    const current = getAppState()
+    const conflict = (current.syncConflicts ?? []).find((item) => item.id === conflictId)
+    if (!conflict) return
+
+    let next =
+      choice === 'remote'
+        ? applyRemoteConflictResolution(current, conflict)
+        : applyLocalConflictResolution(current, conflict)
+
+    if (choice === 'remote') {
+      clearLocalEntityTouch(conflict.entityKind, conflict.entityId)
+    } else {
+      reinforceLocalEntityTouch(conflict.entityKind, conflict.entityId)
+    }
+
+    next = {
+      ...next,
+      syncConflicts: (next.syncConflicts ?? []).filter((item) => item.id !== conflictId),
+    }
+    next = persist(next)
+    set({ ...next })
+
+    const groupCode = next.settings.lastGroupCode
+    if (groupCode && choice === 'local') {
+      flushGroupCollabSyncNowAsync(groupCode).catch((error) => {
+        console.error('Conflict resolution push failed', error)
+      })
     }
   },
 

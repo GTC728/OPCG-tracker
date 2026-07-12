@@ -9,6 +9,16 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.20.0 - 2026-07-12
+
+### New
+
+- **Conflict merge UI (G-03)**: Detect join/pull entity conflicts; `GroupConflictPanel` with keep local / keep remote; banner alert.
+- **Deck meta transfer chart (S-02)**: 100% stacked weekly deck appearance chart on Stats overview.
+- **iPad landscape record layout (R-04)**: Tables left, assignment dock right; wider shell in landscape tablet.
+
+See `docs/V4.20-CONFLICT-META-LANDSCAPE.md` and `docs/V4.16-ROADMAP.md` for V4.21+ schedule.
+
 ## V4.19.0 - 2026-07-12
 
 ### New

@@ -391,6 +391,11 @@ const migrations: Record<number, Migration> = {
       players,
     } as AppState
   },
+  19: (state) => ({
+    ...state,
+    schemaVersion: 19,
+    syncConflicts: Array.isArray(state.syncConflicts) ? state.syncConflicts : [],
+  }),
 }
 
 function withLocaleAliases(deck: Deck): Deck {
@@ -490,6 +495,7 @@ function normalizeState(raw: Partial<AppState>): AppState {
     achievementUnlocks: Array.isArray(raw.achievementUnlocks)
       ? raw.achievementUnlocks
       : defaults.achievementUnlocks,
+    syncConflicts: Array.isArray(raw.syncConflicts) ? raw.syncConflicts : defaults.syncConflicts,
     profileLifetime: raw.profileLifetime ?? defaults.profileLifetime,
     settings: {
       ...defaults.settings,

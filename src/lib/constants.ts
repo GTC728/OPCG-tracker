@@ -3,8 +3,8 @@ import { SEEDED_LEADER_DECKS } from '@/data/leaderDecks'
 import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/dataModel'
 import type { AppState, Deck } from '@/types'
 
-export const SCHEMA_VERSION = 18
-export const APP_VERSION = '4.19.0'
+export const SCHEMA_VERSION = 19
+export const APP_VERSION = '4.20.0'
 export const LIVE_APP_URL = 'https://opcg-tracker-v2.pages.dev'
 export const GITHUB_REPO_URL = 'https://github.com/GTC728/OPCG-tracker'
 export const GITHUB_CREDIT_HANDLE = 'GTC728'
@@ -82,5 +82,6 @@ export function createDefaultAppState(): AppState {
     },
     auditLog: [],
     achievementUnlocks: [],
+    syncConflicts: [],
   }
 }

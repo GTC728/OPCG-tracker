@@ -10,5 +10,8 @@ export const ASSIGNMENT_DRAWER_HEADER = '2.125rem'
 /** Expanded drawer body cap — fits 3 compact rows without clipping chip text. */
 export const ASSIGNMENT_DRAWER_EXPANDED = 'min(46dvh, 12rem)'
 
+/** Side panel width for landscape tablet record layout (R-04). */
+export const ASSIGNMENT_SIDE_PANEL_WIDTH = '17.5rem'
+
 export const ASSIGNMENT_DRAWER_HEIGHT = (expanded: boolean) =>
   expanded ? ASSIGNMENT_DRAWER_EXPANDED : ASSIGNMENT_DRAWER_HEADER

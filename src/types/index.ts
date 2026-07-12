@@ -195,6 +195,31 @@ export interface MatchRevision {
   actor?: AuditActor
 }
 
+export type SyncConflictEntityKind = 'match' | 'active_match' | 'player' | 'session'
+export type SyncConflictSource = 'join' | 'pull'
+
+/** Pending merge decision when local and remote diverge on the same entity id. */
+export interface SyncConflict {
+  id: string
+  at: string
+  source: SyncConflictSource
+  entityKind: SyncConflictEntityKind
+  entityId: string
+  localLabel: string
+  remoteLabel: string
+  diffLines: string[]
+  remoteUpdatedAt: string
+  remoteUpdatedBy: string | null
+  localMatch?: Match
+  remoteMatch?: Match
+  localActive?: ActiveMatch
+  remoteActive?: ActiveMatch
+  localPlayer?: Player
+  remotePlayer?: Player
+  localSession?: Session
+  remoteSession?: Session
+}
+
 export interface MatchEditInput {
   player1Id: string
   deck1Id: string
@@ -378,6 +403,8 @@ export interface AppState {
   importRecords: ImportRecord[]
   achievementUnlocks: AchievementUnlock[]
   profileLifetime: ProfileLifetimeStats | null
+  /** Unresolved group sync conflicts awaiting user choice. */
+  syncConflicts: SyncConflict[]
   settings: AppSettings
 }
 

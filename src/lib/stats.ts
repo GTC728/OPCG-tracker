@@ -782,3 +782,118 @@ export function buildWeeklyWinRateChartPoints(stats: WeeklyWinRateStat[]): Weekl
     }
   })
 }
+
+export interface WeeklyDeckMetaSlice {
+  deckId: string
+  deckName: string
+  count: number
+  share: number
+}
+
+export interface WeeklyDeckMetaStat {
+  weekStart: string
+  label: string
+  total: number
+  decks: WeeklyDeckMetaSlice[]
+}
+
+export function buildWeeklyDeckMetaStats(
+  decks: Deck[],
+  matches: Match[],
+  language: Language,
+  weekCount = 12,
+  topN = 6,
+): WeeklyDeckMetaStat[] {
+  const deckById = new Map(decks.map((deck) => [deck.id, deck]))
+  const now = new Date()
+  const weeks: WeeklyDeckMetaStat[] = []
+
+  for (let offset = weekCount - 1; offset >= 0; offset -= 1) {
+    const anchor = new Date(now)
+    anchor.setDate(anchor.getDate() - offset * 7)
+    const weekStart = getWeekStart(anchor)
+    const weekStartDate = new Date(`${weekStart}T00:00:00`)
+    const weekEndDate = new Date(weekStartDate)
+    weekEndDate.setDate(weekEndDate.getDate() + 7)
+
+    const counts = new Map<string, number>()
+    for (const match of getCompletedMatches(matches)) {
+      const finished = new Date(match.finishedAt)
+      if (finished < weekStartDate || finished >= weekEndDate) continue
+      counts.set(match.deck1Id, (counts.get(match.deck1Id) ?? 0) + 1)
+      counts.set(match.deck2Id, (counts.get(match.deck2Id) ?? 0) + 1)
+    }
+
+    const total = [...counts.values()].reduce((sum, value) => sum + value, 0)
+    const sorted = [...counts.entries()]
+      .map(([deckId, count]) => ({
+        deckId,
+        deckName: deckById.get(deckId)
+          ? localizedDeckName(deckById.get(deckId)!, language)
+          : '未知牌組',
+        count,
+        share: total ? count / total : 0,
+      }))
+      .sort((left, right) => right.count - left.count)
+
+    const head = sorted.slice(0, Math.max(1, topN - 1))
+    const tail = sorted.slice(Math.max(1, topN - 1))
+    const otherCount = tail.reduce((sum, item) => sum + item.count, 0)
+    const deckSlices =
+      tail.length > 0
+        ? [
+            ...head,
+            {
+              deckId: '__other__',
+              deckName: 'Other',
+              count: otherCount,
+              share: total ? otherCount / total : 0,
+            },
+          ]
+        : head
+
+    weeks.push({
+      weekStart,
+      label: formatWeekLabel(weekStart),
+      total,
+      decks: deckSlices,
+    })
+  }
+
+  return weeks
+}
+
+export interface MetaTransferChartPoint {
+  label: string
+  total: number
+  [deckKey: string]: number | string
+}
+
+/** Stable deck keys for stacked chart — largest total appearances first, bottom layer first. */
+export function buildMetaTransferChartPoints(
+  stats: WeeklyDeckMetaStat[],
+): { points: MetaTransferChartPoint[]; deckKeys: Array<{ key: string; name: string }> } {
+  const totals = new Map<string, { name: string; count: number }>()
+  for (const week of stats) {
+    for (const deck of week.decks) {
+      const key = deck.deckId
+      const current = totals.get(key) ?? { name: deck.deckName, count: 0 }
+      totals.set(key, { name: deck.deckName, count: current.count + deck.count })
+    }
+  }
+
+  const deckKeys = [...totals.entries()]
+    .sort((left, right) => right[1].count - left[1].count)
+    .map(([key, value]) => ({ key, name: value.name }))
+
+  const points = stats.map((week) => {
+    const point: MetaTransferChartPoint = { label: week.label, total: week.total }
+    for (const { key } of deckKeys) {
+      const slice = week.decks.find((deck) => deck.deckId === key)
+      point[key] = slice?.count ?? 0
+    }
+    return point
+  })
+
+  return { points, deckKeys }
+}
