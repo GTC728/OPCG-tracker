@@ -101,7 +101,7 @@ export function OperationHistoryPanel() {
   )
 
   return (
-    <section className={[uiCard, 'hidden p-3 md:block'].join(' ')}>
+    <section className={[uiCard, 'p-3'].join(' ')}>
       <h3 className="text-sm font-semibold">{t('audit.historyTitle')}</h3>
       <p className="mt-1 text-[11px] text-text-secondary">{t('audit.historyDesc')}</p>
       {history.length ? (

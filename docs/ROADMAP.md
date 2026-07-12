@@ -104,14 +104,15 @@
 
 ## Next
 
-詳見 **[`docs/V4.16-ROADMAP.md`](V4.16-ROADMAP.md)**（V4.16–V4.21 重排版）。
+詳見 **[`docs/V4.16-ROADMAP.md`](V4.16-ROADMAP.md)**（V4.16–V4.22 重排版）。
 
 - **V4.16** ✅：A-02 成就帳本、A-04 週期備份、D-01 去重、G-02 同步佇列 UI。
 - **V4.17** ✅：R-01 計時器收尾、S-03 置信度 UI、S-01a Stats 趨勢。
 - **V4.18** ✅：G-05 大廳、G-01+ 多群組、G-04 claim 雲端。
 - **V4.20** ✅：G-03 衝突合併、S-02 Meta 轉移圖、R-04 橫屏。
 - **V4.21** ✅：成就 backlog 批次、四語系 i18n、diff codes、schema v20。
-- **V5.0+**：Event / League 主線。
+- **V4.22** ✅：切換群組假衝突修復、Stats/Meta UI、分配收起、大廳 Phase 1。見 [`docs/V4.22-UX-POLISH.md`](V4.22-UX-POLISH.md)。
+- **V5.0+**：Event / League 主線；遊戲大廳完整版（公開檢索、加入申請）。
 
 ## V4.16+ 排程摘要
 
@@ -123,6 +124,7 @@
 | V4.19 | 操作可追溯 |
 | V4.20 | 衝突與 Meta |
 | V4.21 | 拋光與成就擴充 ✅ |
+| V4.22 | UX 拋光（衝突、Stats、大廳 Phase 1）✅ |
 
 ~~V4.4 草案~~ 已由 V4.16+ 取代。
 

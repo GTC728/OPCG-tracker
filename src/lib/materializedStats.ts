@@ -398,8 +398,8 @@ export function materializedFirstSecondStats(scope: MaterializedScope): FirstSec
   const total = agg.firstAttackTotal
   const secondWins = total - firstWins
   return [
-    { label: '先攻', wins: firstWins, total, winRate: getWinRate(firstWins, total) },
-    { label: '後攻', wins: secondWins, total, winRate: getWinRate(secondWins, total) },
+    { label: 'first', wins: firstWins, total, winRate: getWinRate(firstWins, total) },
+    { label: 'second', wins: secondWins, total, winRate: getWinRate(secondWins, total) },
   ]
 }
 

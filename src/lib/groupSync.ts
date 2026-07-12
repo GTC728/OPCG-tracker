@@ -1,4 +1,5 @@
 import { appendAuditEntry, remoteAuditActor } from '@/lib/auditLog'
+import { groupStorageKey } from '@/lib/appStateLayers'
 import {
   activeEntitiesDiffer,
   buildActiveConflict,
@@ -8,9 +9,11 @@ import {
   detectJoinConflicts,
   isConflictEntity,
   matchEntitiesDiffer,
+  mergeBenignJoinedPlayer,
   mergeUniqueConflicts,
   playerEntitiesDiffer,
   sessionEntitiesDiffer,
+  type JoinConflictContext,
   type RemoteGroupEntities,
 } from '@/lib/conflictResolver'
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
@@ -246,11 +249,13 @@ function applyJoinMerge(
   snapshot: ReturnType<typeof captureGroupScopedSnapshot>,
   remote: RemoteGroupEntities,
   conflicts: SyncConflict[],
+  joinCtx?: JoinConflictContext,
 ): AppState {
   const playersById = new Map<string, Player>()
   for (const player of remote.players) {
     if (isConflictEntity(conflicts, 'player', player.id)) continue
-    playersById.set(player.id, player)
+    const local = snapshot.players.find((item) => item.id === player.id)
+    playersById.set(player.id, mergeBenignJoinedPlayer(local, player, joinCtx))
   }
   for (const conflict of conflicts) {
     if (conflict.entityKind === 'player' && conflict.localPlayer) {
@@ -981,10 +986,15 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
     const hasRemote = await remoteGroupHasData(groupCode)
     if (hasRemote) {
       const remote = await fetchRemoteGroupEntities(groupCode)
-      const joinConflicts = hadLocalData ? detectJoinConflicts(incomingSnapshot, remote) : []
+      const joinCtx: JoinConflictContext = {
+        cloudUserId: current.settings.cloudUserId ?? null,
+        bookmarkPlayerId:
+          current.settings.groupProfileLinks?.[groupStorageKey(groupCode)]?.playerId ?? null,
+      }
+      const joinConflicts = hadLocalData ? detectJoinConflicts(incomingSnapshot, remote, joinCtx) : []
 
       if (hadLocalData) {
-        updateAppState((state) => applyJoinMerge(state, incomingSnapshot, remote, joinConflicts))
+        updateAppState((state) => applyJoinMerge(state, incomingSnapshot, remote, joinConflicts, joinCtx))
       } else {
         await pullGroupCollabState(groupCode, remote)
       }

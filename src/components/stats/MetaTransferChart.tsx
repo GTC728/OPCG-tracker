@@ -92,6 +92,7 @@ export function MetaTransferChart({
           </li>
         ))}
       </ul>
+      <p className="text-[10px] text-text-secondary">{t('stats.metaTransferHint')}</p>
     </section>
   )
 }

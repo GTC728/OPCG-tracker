@@ -474,7 +474,7 @@ export function TableBoard({
 
   const [pendingAssignment, setPendingAssignment] = useState<PendingTableAssignment | null>(null)
   const [pendingTableTarget, setPendingTableTarget] = useState<PendingTableTarget | null>(null)
-  const [drawerExpanded, setDrawerExpanded] = useState(true)
+  const [drawerExpanded, setDrawerExpanded] = useState(false)
 
   const tableCount = getSessionTableCount(appState, sessionId)
   const sessionMatches = useMemo(
