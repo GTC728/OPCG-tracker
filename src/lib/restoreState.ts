@@ -1,4 +1,5 @@
 import { finalizeProfileLink } from '@/lib/profileGroupLink'
+import { scheduleAchievementLedgerSync } from '@/lib/achievementLedgerSync'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import type { AppState, Match } from '@/types'
@@ -23,5 +24,6 @@ export function prepareRestoredAppState(state: AppState): AppState {
   } else if (linkedId) {
     next = finalizeProfileLink(next)
   }
+  scheduleAchievementLedgerSync()
   return next
 }

@@ -15,6 +15,7 @@ import {
   validateHistoricalImportRows,
 } from '@/lib/historicalImport'
 import { fetchHistoricalBypassPrivilege } from '@/lib/serverIntegrity'
+import { countImportDuplicates } from '@/lib/importDedup'
 import { useI18n } from '@/lib/i18n'
 import { importAppStateJson } from '@/lib/storage'
 import { getCompletedMatches } from '@/lib/stats'
@@ -229,6 +230,9 @@ function ImportTool() {
   const [confirmText, setConfirmText] = useState('')
   const inGroup = useAppStore((state) => Boolean(state.settings.lastGroupCode))
   const groupSyncPaused = useAppStore((state) => state.settings.groupSyncPaused)
+  const allMatches = useAppStore((state) => state.matches)
+  const allPlayers = useAppStore((state) => state.players)
+  const allDecks = useAppStore((state) => state.decks)
 
   const mappedRows = useMemo<ImportMatchInput[]>(() => {
     return bodyRows.map((row) => ({
@@ -254,6 +258,13 @@ function ImportTool() {
   const historicalValidation = useMemo(
     () => (historicalRestore && mappedRows.length ? validateHistoricalImportRows(mappedRows) : null),
     [historicalRestore, mappedRows],
+  )
+  const duplicateCount = useMemo(
+    () =>
+      mappedRows.length
+        ? countImportDuplicates(mappedRows, allMatches, allPlayers, allDecks)
+        : 0,
+    [mappedRows, allMatches, allPlayers, allDecks],
   )
 
   useEffect(() => {
@@ -405,6 +416,11 @@ function ImportTool() {
             ) : null}
             {importWarning ? (
               <p className="mt-2 rounded-lg bg-amber-500/15 p-2 text-amber-100">{importWarning}</p>
+            ) : null}
+            {duplicateCount > 0 ? (
+              <p className="mt-2 rounded-lg bg-brand-500/15 p-2 text-brand-100">
+                偵測到 {duplicateCount} 筆與現有對局重複，匯入時將自動略過。
+              </p>
             ) : null}
             {inGroup ? (
               <p className="mt-2 text-text-secondary">

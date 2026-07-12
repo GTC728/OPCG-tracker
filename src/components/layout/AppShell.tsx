@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react'
+import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
 import { AppBrandCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -119,6 +120,10 @@ export function AppShell({
             <AppBrandCredit />
           </div>
         </header>
+
+        <div className="px-[var(--ui-page-px)]">
+          <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
+        </div>
 
         <main className="app-main-bottom-pad flex-1 space-y-[var(--ui-section-gap)] px-[var(--ui-page-px)] pt-[var(--ui-page-pt)]">
           {children}

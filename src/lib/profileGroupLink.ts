@@ -2,6 +2,7 @@ import { groupStorageKey } from '@/lib/appStateLayers'
 import { isTestGroupCode } from '@/lib/groupTest'
 import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { invalidateDerivedCache } from '@/lib/derivedData'
+import { scheduleAchievementLedgerSync } from '@/lib/achievementLedgerSync'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
 import { applyProfileClaim, isPlayerClaimedByOtherDevice } from '@/lib/profileClaim'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
@@ -99,9 +100,11 @@ export function finalizeProfileLink(state: AppState): AppState {
     }
   }
 
-  return reconcileAchievementUnlocks(next, linkedId, {
+  const result = reconcileAchievementUnlocks(next, linkedId, {
     provisional: isTestGroupCode(next.settings.lastGroupCode),
-  }).state
+  })
+  scheduleAchievementLedgerSync()
+  return result.state
 }
 
 export function finalizeGroupProfileSession(state: AppState): AppState {

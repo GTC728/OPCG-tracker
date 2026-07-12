@@ -4,6 +4,7 @@ import { flushGroupCollabSyncNow, isGroupCollabPushEnabled } from '@/lib/groupSy
 import { useI18n } from '@/lib/i18n'
 import { getCachedSyncPendingCount } from '@/lib/syncQueue'
 import { uiCard } from '@/lib/uiSurface'
+import { SyncQueuePanel } from '@/components/settings/SyncQueuePanel'
 import { useAppStore } from '@/stores/appStore'
 
 function formatSyncTime(iso: string | null): string {
@@ -88,6 +89,7 @@ export function GroupSyncSection({ compact = false }: GroupSyncSectionProps) {
               {t('systemStatus.retrySync')}
             </Button>
           ) : null}
+          <SyncQueuePanel />
         </div>
       ) : null}
     </section>

@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.16.0 - 2026-07-12
+
+### New
+
+- **成就伺服器帳本（A-02）**：`achievementLedgerSync` — 登入/reconcile 後 pull→merge→push `profile_achievement_unlocks`。
+- **Import 去重（D-01）**：匯入前偵測重複對局指紋，預覽與匯入時自動略過。
+- **週期雲端備份（A-04）**：App 啟動與回到前景時依 `backupReminderIntervalDays` 自動備份。
+- **同步佇列明細（G-02）**：頂部 `SyncStatusBanner` + `SyncQueuePanel` 列出待送項目與錯誤。
+
+### Database
+
+- 請執行 `docs/supabase-v4.16-achievement-ledger.sql`（需先完成 v4.15）。
+
+See `docs/V4.16-ROADMAP.md` for V4.17+ schedule.
+
 ## V4.15.1 - 2026-07-12
 
 ### Fixed
