@@ -559,6 +559,7 @@ export async function pushSyncedMatches(groupCode: string, matches: Match[]): Pr
 function matchPayloadChanged(before: Match, after: Match): boolean {
   return (
     before.deletedAt !== after.deletedAt ||
+    before.source !== after.source ||
     before.notes !== after.notes ||
     before.winnerPlayerId !== after.winnerPlayerId ||
     before.winnerDeckId !== after.winnerDeckId ||
@@ -1073,6 +1074,17 @@ function applyRemoteSessionRow(row: {
   })
 }
 
+let reconcileAfterRemoteMatchTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Rebuild profile lifetime + achievement unlocks after remote match ingest. */
+function scheduleReconcileAfterRemoteMatches(): void {
+  if (reconcileAfterRemoteMatchTimer) clearTimeout(reconcileAfterRemoteMatchTimer)
+  reconcileAfterRemoteMatchTimer = setTimeout(() => {
+    reconcileAfterRemoteMatchTimer = null
+    updateAppState((state) => finalizeGroupProfileSession(state))
+  }, 300)
+}
+
 function applyRemoteMatchRow(row: SyncMatchRow): void {
   const remote = rowToMatch(row)
   updateAppState((current) => {
@@ -1086,6 +1098,7 @@ function applyRemoteMatchRow(row: SyncMatchRow): void {
     )
     return { ...current, matches }
   })
+  scheduleReconcileAfterRemoteMatches()
 }
 
 function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow | null; old: { id?: string } | null }): void {
@@ -1101,6 +1114,7 @@ function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow
           : match,
       ),
     }))
+    scheduleReconcileAfterRemoteMatches()
     return
   }
   if (payload.new) applyRemoteMatchRow(payload.new)

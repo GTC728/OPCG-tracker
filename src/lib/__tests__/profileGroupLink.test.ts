@@ -6,6 +6,7 @@ import { groupStorageKey } from '@/lib/appStateLayers'
 import { createPersonalProfile, hasPersonalProfile } from '@/lib/personalProfile'
 import {
   finalizeProfileLink,
+  finalizeGroupProfileSession,
   tryAutoRelinkGroupProfile,
 } from '@/lib/profileGroupLink'
 import {
@@ -72,6 +73,25 @@ describe('成就誤判修正', () => {
     const extras = backlogExtrasFromState(state)
     const metrics = evaluateRemainingBacklogMetrics(PLAYER_A, players, state.decks, [], extras)
     expect(metrics.secret_handshake).toBe(0)
+  })
+})
+
+describe('群組同步後成就重算', () => {
+  it('finalizeGroupProfileSession 會依 historical 對局重算成就', () => {
+    let state = baseLinkedState({ lastGroupCode: 'CLUB-A', profileDisplayName: 'GTC' })
+    const historical = makeWinStreak(12, PLAYER_A, PLAYER_B).map((match) => ({
+      ...match,
+      source: 'historical' as const,
+    }))
+    state = {
+      ...state,
+      matches: historical,
+      achievementUnlocks: [],
+      profileLifetime: null,
+    }
+    state = finalizeGroupProfileSession(state)
+    expect(veteranLevel(state)).toBeGreaterThan(0)
+    expect(state.achievementUnlocks.length).toBeGreaterThan(0)
   })
 })
 
