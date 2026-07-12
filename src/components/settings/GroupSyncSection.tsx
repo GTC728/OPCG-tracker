@@ -74,6 +74,11 @@ export function GroupSyncSection({ compact = false }: GroupSyncSectionProps) {
           {t('systemStatus.device')}: {settings.deviceLabel}
         </p>
       ) : null}
+      {settings.lastGroupPullAt ? (
+        <p className="text-[11px] text-text-secondary">
+          {t('systemStatus.lastPullAt').replace('{time}', formatSyncTime(settings.lastGroupPullAt))}
+        </p>
+      ) : null}
       {inGroup ? (
         <div className="flex flex-col gap-2 pt-1">
           <Button

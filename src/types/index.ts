@@ -133,11 +133,25 @@ export type AuditKind =
   | 'sync'
   | 'session'
 
+export type AuditActorType = 'device' | 'user' | 'remote'
+
+export interface AuditActor {
+  type: AuditActorType
+  id: string
+  label: string
+}
+
 export interface AuditEntry {
   id: string
   at: string
   kind: AuditKind
   message: string
+  /** Who performed the action — local device/user or remote group member. */
+  actor?: AuditActor
+  /** Related entity id (match, session, etc.) when known. */
+  entityId?: string
+  /** Optional structured metadata (e.g. updated_by from group sync). */
+  meta?: Record<string, string>
 }
 
 export interface ActiveMatchInput {
@@ -178,6 +192,7 @@ export interface MatchRevision {
   before: Partial<Match>
   after: Partial<Match>
   reason: string | null
+  actor?: AuditActor
 }
 
 export interface MatchEditInput {
@@ -321,6 +336,8 @@ export interface AppSettings {
   achievementNotifications: boolean
   lastGroupSyncAt: string | null
   lastGroupSyncError: string | null
+  /** Last successful group pull timestamp (auto-sync throttle). */
+  lastGroupPullAt: string | null
   /** When true, local edits are not pushed to the group until resumed. Pull still applies. */
   groupSyncPaused: boolean
   groupSyncPausedAt: string | null

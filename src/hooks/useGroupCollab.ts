@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
+import { resetGroupAutoSyncClocks, runGroupForegroundSync } from '@/lib/groupAutoSync'
 import {
-  flushGroupCollabSyncNow,
   initializeGroupCollab,
-  pullGroupCollabState,
   startGroupCollabRealtime,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
 import { useAppStore } from '@/stores/appStore'
+
+const FOREGROUND_POLL_MS = 12_000
 
 export function useGroupCollab() {
   const hydrated = useAppStore((state) => state.hydrated)
@@ -18,6 +19,7 @@ export function useGroupCollab() {
   useEffect(() => {
     if (!hydrated || !groupCode) {
       stopGroupCollabRealtime()
+      resetGroupAutoSyncClocks()
       return
     }
 
@@ -47,11 +49,9 @@ export function useGroupCollab() {
               groupMemberBannedAt,
             })
           }
-        } else {
-          await pullGroupCollabState(groupCode!)
         }
         if (!cancelled) {
-          flushGroupCollabSyncNow(groupCode!)
+          await runGroupForegroundSync(groupCode!, 'init')
           await startGroupCollabRealtime(groupCode!)
         }
       } catch (error) {
@@ -68,16 +68,14 @@ export function useGroupCollab() {
 
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !groupCode) return
-      flushGroupCollabSyncNow(groupCode)
-      void pullGroupCollabState(groupCode).catch((error) => {
+      void runGroupForegroundSync(groupCode, 'visibility').catch((error) => {
         console.error('Group collab pull failed', error)
       })
     }
 
     const onOnline = () => {
       if (!groupCode) return
-      flushGroupCollabSyncNow(groupCode)
-      void pullGroupCollabState(groupCode).catch((error) => {
+      void runGroupForegroundSync(groupCode, 'online').catch((error) => {
         console.error('Group collab pull failed', error)
       })
     }
@@ -86,11 +84,10 @@ export function useGroupCollab() {
     window.addEventListener('online', onOnline)
     const pollId = window.setInterval(() => {
       if (document.visibilityState !== 'visible' || !groupCode) return
-      flushGroupCollabSyncNow(groupCode)
-      void pullGroupCollabState(groupCode).catch((error) => {
+      void runGroupForegroundSync(groupCode, 'interval').catch((error) => {
         console.error('Group collab poll failed', error)
       })
-    }, 5000)
+    }, FOREGROUND_POLL_MS)
 
     return () => {
       cancelled = true
@@ -98,6 +95,7 @@ export function useGroupCollab() {
       window.removeEventListener('online', onOnline)
       window.clearInterval(pollId)
       stopGroupCollabRealtime()
+      resetGroupAutoSyncClocks()
     }
   }, [groupCode, groupCollabBootstrapped, groupDataBoundCode, hydrated, updateSettings])
 }
