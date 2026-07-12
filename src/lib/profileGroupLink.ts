@@ -1,6 +1,7 @@
 import { groupStorageKey } from '@/lib/appStateLayers'
 import { isTestGroupCode } from '@/lib/groupTest'
 import { reconcileAchievementUnlocks } from '@/lib/achievements'
+import { invalidateDerivedCache } from '@/lib/derivedData'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
 import { applyProfileClaim, isPlayerClaimedByOtherDevice } from '@/lib/profileClaim'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
@@ -104,7 +105,8 @@ export function finalizeProfileLink(state: AppState): AppState {
 }
 
 export function finalizeGroupProfileSession(state: AppState): AppState {
-  return tryAutoRelinkGroupProfile(state)
+  invalidateDerivedCache()
+  return finalizeProfileLink(tryAutoRelinkGroupProfile(state))
 }
 
 export function bookmarkCurrentGroupProfile(state: AppState): AppState {

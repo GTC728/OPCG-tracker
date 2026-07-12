@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.15.1 - 2026-07-12
+
+### Fixed
+
+- **手機成就不同步**：群組拉取/即時同步對局後，會重算 `profileLifetime` 與 `achievementUnlocks`（先前僅 PC 匯入時在本機計算，手機有對局紀錄但成就為 0）。
+- **升級歷史還原未推送**：`source` 變更（`import` → `historical`）現在會觸發群組同步。
+
 ## V4.15.0 - 2026-07-11
 
 ### New
