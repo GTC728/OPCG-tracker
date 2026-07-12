@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { Match } from '@/types'
 
 export function formatMatchDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000))
@@ -18,6 +19,14 @@ export function getMatchDurationMs(startedAt: string | null, finishedAt?: string
   const end = finishedAt ? new Date(finishedAt).getTime() : Date.now()
   if (Number.isNaN(end)) return null
   return Math.max(0, end - start)
+}
+
+export function getAverageMatchDurationMs(matches: Match[]): number | null {
+  const durations = matches
+    .map((match) => getMatchDurationMs(match.startedAt, match.finishedAt))
+    .filter((duration): duration is number => duration !== null && duration > 0)
+  if (durations.length === 0) return null
+  return Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length)
 }
 
 export function useLiveMatchDuration(startedAt: string | null, active = true): string | null {

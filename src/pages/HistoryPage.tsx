@@ -244,7 +244,7 @@ function HistoryMatchCard({
           </div>
         </div>
         <div className="mt-1.5 min-w-0">
-          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors />
+          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors showDuration />
         </div>
       </button>
 

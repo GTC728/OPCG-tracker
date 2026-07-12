@@ -3,12 +3,9 @@ import { RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
 import { formatStreakLine } from '@/components/profile/RecentFormBars'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecentFormStat, type RecordStat, type WinStreakStats } from '@/lib/stats'
+import { getDisplayWinRate } from '@/lib/winRateDisplay'
 import { uiGlassCard, uiLink } from '@/lib/uiSurface'
 import type { Match } from '@/types'
-
-function getDisplayWinRate(winRate: number | null, total: number): number | null {
-  return total > 0 ? winRate : null
-}
 
 function getRecentWindowStat(recentForm: RecentFormStat[], windowSize: number): RecentFormStat | null {
   return recentForm.find((item) => item.label.includes(String(windowSize))) ?? recentForm[1] ?? recentForm[0] ?? null
@@ -57,7 +54,7 @@ export function ProfileIdentityCard({
       <div className="mt-2 grid grid-cols-3 gap-2">
         <article className="rounded-lg border border-[var(--ui-border)] bg-surface/40 px-2 py-1.5 text-center">
           <p className="text-[10px] text-text-secondary">{t('stats.winRate')}</p>
-          <p className="text-sm font-bold">{formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}</p>
+          <p className="text-sm font-bold">{formatPercent(getDisplayWinRate(stat?.wins ?? 0, stat?.total ?? 0))}</p>
         </article>
         <article className="rounded-lg border border-[var(--ui-border)] bg-surface/40 px-2 py-1.5 text-center">
           <p className="text-[10px] text-text-secondary">{t('stats.record')}</p>

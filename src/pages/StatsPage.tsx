@@ -9,11 +9,13 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
+import { WeeklyWinRateChart } from '@/components/stats/PlayerTrendCharts'
 import {
   buildDeckStats,
   buildFirstSecondStats,
   buildMatchupStats,
   buildPlayerDeckStats,
+  buildWeeklyWinRateStats,
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
@@ -27,6 +29,15 @@ import {
   type RecentFormStat,
   type RecordStat,
 } from '@/lib/stats'
+import { formatMatchDuration, getAverageMatchDurationMs } from '@/lib/matchTimer'
+import {
+  formatWinRateTooltip,
+  getDisplayWinRate,
+  getDisplayWinRateFromRaw,
+  getSampleLabel,
+  getWinRateHeatmapColor,
+  isReliableSample,
+} from '@/lib/winRateDisplay'
 import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
 import { useAppStore } from '@/stores/appStore'
@@ -53,24 +64,6 @@ function SummaryCard({
       {detail ? <p className="mt-0.5 text-xs text-text-secondary">{detail}</p> : null}
     </article>
   )
-}
-
-function getWinRateColor(winRate: number | null): string {
-  if (winRate === null) return 'rgba(71, 85, 105, 0.35)'
-  const opacity = 0.24 + Math.abs(winRate - 0.5) * 1.3
-  return winRate >= 0.5 ? `rgba(34, 197, 94, ${opacity})` : `rgba(239, 68, 68, ${opacity})`
-}
-
-function getSampleLabel(total: number): string {
-  if (total === 0) return ''
-  if (total < 3) return `資料不足 · ${total}場`
-  if (total <= 5) return `初步 · ${total}場`
-  if (total <= 10) return `可參考 · ${total}場`
-  return `可信 · ${total}場`
-}
-
-function getDisplayWinRate(winRate: number | null, total: number): number | null {
-  return total > 0 ? winRate : null
 }
 
 function getMatchupVerdict(winRate: number | null, total: number): string {
@@ -118,7 +111,7 @@ function StatRow({
   deck?: Deck | null
   onSelect?: () => void
 }) {
-  const displayWinRate = getDisplayWinRate(stat.winRate, stat.total)
+  const displayWinRate = getDisplayWinRate(stat.wins, stat.total)
   const width = `${Math.round((displayWinRate ?? 0) * 100)}%`
 
   const content = (
@@ -190,14 +183,16 @@ function HeatmapCell({
   displayWinRate,
   wins,
   losses,
+  reliable,
 }: {
   displayWinRate: number | null
   wins: number
   losses: number
+  reliable: boolean
 }) {
   return (
-    <span className="text-[10px] font-semibold leading-tight">
-      {displayWinRate === null ? '不足' : formatPercent(displayWinRate)}
+    <span className={['text-[10px] font-semibold leading-tight', reliable ? '' : 'text-text-secondary'].join(' ')}>
+      {displayWinRate === null ? '—' : formatPercent(displayWinRate)}
       <span className="block font-normal text-text-secondary">
         {wins}W-{losses}L
       </span>
@@ -223,7 +218,7 @@ function MatchupRow({
     anchorIsB && matchup.deckAWinRate !== null ? 1 - matchup.deckAWinRate : matchup.deckAWinRate
   const selfWins = anchorIsB ? matchup.deckBWins : matchup.deckAWins
   const oppWins = anchorIsB ? matchup.deckAWins : matchup.deckBWins
-  const displayWinRate = getDisplayWinRate(selfWinRate, matchup.total)
+  const displayWinRate = getDisplayWinRate(selfWins, matchup.total)
   const verdict = getMatchupVerdict(selfWinRate, matchup.total)
   const rateClass =
     displayWinRate === null
@@ -373,16 +368,21 @@ function MatchupHeatmap({
                   </div>
                   {rankedDecks.map((columnEntry) => {
                     const cell = getCell(rowEntry.id, columnEntry.id)
-                    const displayWinRate = cell ? getDisplayWinRate(cell.winRate, cell.total) : null
+                    const displayWinRate = cell ? getDisplayWinRate(cell.wins, cell.total) : null
+                    const reliable = cell ? isReliableSample(cell.total) : false
 
                     return (
                       <div
                         key={`${rowEntry.id}:${columnEntry.id}`}
                         className="grid min-h-11 place-items-center rounded-lg px-0.5 text-center"
-                        style={{ backgroundColor: getWinRateColor(displayWinRate) }}
+                        style={{
+                          backgroundColor: cell
+                            ? getWinRateHeatmapColor(cell.wins, cell.total)
+                            : 'rgba(71, 85, 105, 0.35)',
+                        }}
                         title={
                           cell
-                            ? `${getSampleLabel(cell.total)} ${formatPercent(displayWinRate)} · ${cell.wins}W-${cell.losses}L`
+                            ? formatWinRateTooltip(cell.wins, cell.losses, cell.total, cell.winRate)
                             : '未有對局'
                         }
                       >
@@ -391,6 +391,7 @@ function MatchupHeatmap({
                             displayWinRate={displayWinRate}
                             wins={cell.wins}
                             losses={cell.losses}
+                            reliable={reliable}
                           />
                         ) : (
                           <span className="text-text-secondary">—</span>
@@ -401,7 +402,9 @@ function MatchupHeatmap({
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-text-secondary">少於 3 場標示資料不足；綠色優勢，紅色劣勢。左右滑動可查看更多牌組。</p>
+            <p className="mt-3 text-xs text-text-secondary">
+              少於 3 場以灰階標示；數字為平滑勝率，hover 可看實際戰績。綠色優勢，紅色劣勢。
+            </p>
           </div>
         ) : (
           <p className="text-sm text-text-secondary">完成兩種以上牌組對局後會顯示對位矩陣。</p>
@@ -490,16 +493,21 @@ function PlayerMatchupHeatmap({
                   </div>
                   {rankedPlayers.map((columnEntry) => {
                     const cell = getCell(rowEntry.id, columnEntry.id)
-                    const displayWinRate = cell ? getDisplayWinRate(cell.winRate, cell.total) : null
+                    const displayWinRate = cell ? getDisplayWinRate(cell.wins, cell.total) : null
+                    const reliable = cell ? isReliableSample(cell.total) : false
 
                     return (
                       <div
                         key={`${rowEntry.id}:${columnEntry.id}`}
                         className="grid min-h-11 place-items-center rounded-lg px-0.5 text-center"
-                        style={{ backgroundColor: getWinRateColor(displayWinRate) }}
+                        style={{
+                          backgroundColor: cell
+                            ? getWinRateHeatmapColor(cell.wins, cell.total)
+                            : 'rgba(71, 85, 105, 0.35)',
+                        }}
                         title={
                           cell
-                            ? `${getSampleLabel(cell.total)} ${formatPercent(displayWinRate)} · ${cell.wins}W-${cell.losses}L`
+                            ? formatWinRateTooltip(cell.wins, cell.losses, cell.total, cell.winRate)
                             : '未有對局'
                         }
                       >
@@ -508,6 +516,7 @@ function PlayerMatchupHeatmap({
                             displayWinRate={displayWinRate}
                             wins={cell.wins}
                             losses={cell.losses}
+                            reliable={reliable}
                           />
                         ) : (
                           <span className="text-text-secondary">—</span>
@@ -600,7 +609,7 @@ function DeckListSection({
               <div className="shrink-0 text-right tabular-nums">
                 <p className="text-sm font-bold">{usage.toFixed(0)}%</p>
                 <p className="text-xs text-text-secondary">
-                  {formatPercent(getDisplayWinRate(stat.winRate, stat.total))}
+                  {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
                 </p>
               </div>
             </button>
@@ -704,7 +713,7 @@ function MiniLeaderboard({
                 {stat.wins}W-{stat.losses}L
               </span>
               <span className="shrink-0 text-xs font-semibold">
-                {formatPercent(getDisplayWinRate(stat.winRate, stat.total))}
+                {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
               </span>
             </button>
           </li>
@@ -734,8 +743,8 @@ function InsightsSection({ insights }: { insights: InsightMessage[] }) {
 function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
   const first = stats.find((stat) => stat.label === '先攻')
   const second = stats.find((stat) => stat.label === '後攻')
-  const firstWinRate = getDisplayWinRate(first?.winRate ?? null, first?.total ?? 0)
-  const secondWinRate = getDisplayWinRate(second?.winRate ?? null, second?.total ?? 0)
+  const firstWinRate = getDisplayWinRate(first?.wins ?? 0, first?.total ?? 0)
+  const secondWinRate = getDisplayWinRate(second?.wins ?? 0, second?.total ?? 0)
   const firstPercent = firstWinRate ? firstWinRate * 100 : 0
   const secondPercent = secondWinRate ? secondWinRate * 100 : 0
 
@@ -760,7 +769,7 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
       </article>
       <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => {
-          const displayWinRate = getDisplayWinRate(stat.winRate, stat.total)
+          const displayWinRate = getDisplayWinRate(stat.wins, stat.total)
           return (
             <article key={stat.label} className={[uiCard, 'p-4'].join(' ')}>
               <p className="text-sm text-text-secondary">{stat.label}</p>
@@ -795,7 +804,7 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
               </p>
             </div>
             <span className="text-right font-bold">
-              {formatPercent(getDisplayWinRate(stat.winRate, stat.total))}
+              {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
               <span className="block text-sm font-normal text-text-secondary">
                 {getSampleLabel(stat.total)}
               </span>
@@ -882,7 +891,7 @@ function MiniStatGrid({ stat }: { stat: RecordStat | null }) {
     <section className="grid grid-cols-3 gap-3">
       <SummaryCard
         label="勝率"
-        value={formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
+        value={formatPercent(getDisplayWinRate(stat?.wins ?? 0, stat?.total ?? 0))}
         detail={getSampleLabel(stat?.total ?? 0)}
       />
       <SummaryCard label="勝場" value={String(stat?.wins ?? 0)} />
@@ -1099,6 +1108,16 @@ export function StatsPage() {
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
+  const averageMatchDurationMs = useMemo(
+    () => getAverageMatchDurationMs(scopedMatches),
+    [scopedMatches],
+  )
+
+  const linkedPlayerWeeklyStats = useMemo(() => {
+    if (!linkedPlayer) return null
+    return buildWeeklyWinRateStats(linkedPlayer.id, scopedMatches)
+  }, [linkedPlayer, scopedMatches])
+
   const openProfile = (target: ProfileNavTarget) => {
     setProfileStack((prev) => {
       if (prev.length === 0) listScrollY.current = window.scrollY
@@ -1219,11 +1238,18 @@ export function StatsPage() {
         <>
           <section className="grid grid-cols-3 gap-2">
             <SummaryCard label="總場數" value={String(dashboard.totalMatches)} />
+            {averageMatchDurationMs !== null ? (
+              <SummaryCard
+                label="均局時長"
+                value={formatMatchDuration(averageMatchDurationMs)}
+                detail="含計時對局"
+              />
+            ) : null}
             {dashboard.firstPlayerSample > 0 ? (
               <SummaryCard
                 label="先攻勝率"
                 value={formatPercent(
-                  getDisplayWinRate(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
+                  getDisplayWinRateFromRaw(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
                 )}
                 detail={getSampleLabel(dashboard.firstPlayerSample)}
               />
@@ -1232,10 +1258,17 @@ export function StatsPage() {
               <SummaryCard
                 label="MVP"
                 value={dashboard.topPlayer.name}
-                detail={`${formatPercent(dashboard.topPlayer.winRate)} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
+                detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
               />
             ) : null}
           </section>
+          {linkedPlayerWeeklyStats ? (
+            <WeeklyWinRateChart
+              stats={linkedPlayerWeeklyStats}
+              title={t('stats.weeklyWinRate')}
+              compact
+            />
+          ) : null}
           <MetaSummarySection summary={metaSummary} />
           <FirstSecondSection stats={firstSecondStats} />
           <RecentFormSection recentForm={globalRecentForm} />
