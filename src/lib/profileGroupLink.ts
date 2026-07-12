@@ -57,19 +57,36 @@ function findPlayerForBookmark(state: AppState, bookmark: GroupProfileBookmark):
   return null
 }
 
+function findPlayerForCloudClaim(state: AppState): Player | null {
+  const userId = state.settings.cloudUserId
+  if (!userId) return null
+  return (
+    state.players.find(
+      (player) =>
+        player.deletedAt === null &&
+        isSelectablePlayer(player) &&
+        player.linkedUserId === userId &&
+        !isPlayerClaimedByOtherDevice(player),
+    ) ?? null
+  )
+}
+
 /** After group data loads, restore linkedPlayerId for an existing personal profile. */
 export function tryAutoRelinkGroupProfile(state: AppState): AppState {
   if (state.settings.linkedPlayerId) return state
   if (!state.settings.profileIdentityId || !state.settings.profileSetupCompleted) return state
-  const groupCode = state.settings.lastGroupCode
-  if (!groupCode) return state
+  if (!state.settings.lastGroupCode) return state
 
-  const bookmark = state.settings.groupProfileLinks?.[groupStorageKey(groupCode)]
-  if (!bookmark) return state
+  const bookmark = state.settings.groupProfileLinks?.[groupStorageKey(state.settings.lastGroupCode)]
+  if (bookmark) {
+    const player = findPlayerForBookmark(state, bookmark)
+    if (player) return finalizeProfileLink(applyProfileClaim(state, player.id))
+  }
 
-  const player = findPlayerForBookmark(state, bookmark)
-  if (!player) return state
-  return finalizeProfileLink(applyProfileClaim(state, player.id))
+  const cloudPlayer = findPlayerForCloudClaim(state)
+  if (cloudPlayer) return finalizeProfileLink(applyProfileClaim(state, cloudPlayer.id))
+
+  return state
 }
 
 /** Rebuild lifetime (non-TEST), reconcile unlocks, persist group bookmark. */

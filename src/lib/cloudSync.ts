@@ -185,7 +185,19 @@ async function ensureGroupMembership(
   if (error && error.code !== '23505') throw error
 
   const membership = await fetchCurrentGroupMembership(groupCode)
-  return { groupKey, role: membership?.role ?? role }
+  const resolvedRole = membership?.role ?? role
+
+  try {
+    const { ensureGroupRegistryOnJoin } = await import('@/lib/groupRegistry')
+    await ensureGroupRegistryOnJoin(groupCode, {
+      isOwner: resolvedRole === 'owner',
+      displayName: displayName,
+    })
+  } catch {
+    // registry optional until SQL migration applied
+  }
+
+  return { groupKey, role: resolvedRole }
 }
 
 export async function fetchCurrentGroupMembership(

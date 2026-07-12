@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { GroupLobbyPanel } from '@/components/settings/GroupLobbyPanel'
 import { GroupMembershipPanel } from '@/components/settings/GroupMembershipPanel'
 import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
 import { useToast } from '@/components/ui/Toast'
 import { groupRoleLabel } from '@/lib/groupPermissions'
+import { listMyGroupMemberships } from '@/lib/groupRegistry'
+import { getCloudSession, isCloudConfigured } from '@/lib/cloudSync'
 import { useI18n } from '@/lib/i18n'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
 import { buildWorkspaceList, type WorkspaceDescriptor } from '@/lib/workspace'
@@ -29,12 +32,29 @@ export function WorkspaceHub({ compact = false, onNavigate, onClose }: Workspace
   const [items, setItems] = useState<WorkspaceDescriptor[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [showJoin, setShowJoin] = useState(false)
+  const [cloudMemberships, setCloudMemberships] = useState<Awaited<ReturnType<typeof listMyGroupMemberships>>>([])
 
   useEffect(() => subscribeSyncPendingCount(setPendingCount), [])
 
   useEffect(() => {
-    void buildWorkspaceList(settings, pendingCount).then(setItems)
-  }, [settings, pendingCount])
+    if (!isCloudConfigured()) {
+      setCloudMemberships([])
+      return
+    }
+    void getCloudSession().then(({ user }) => {
+      if (!user) {
+        setCloudMemberships([])
+        return
+      }
+      void listMyGroupMemberships()
+        .then(setCloudMemberships)
+        .catch(() => setCloudMemberships([]))
+    })
+  }, [settings.lastGroupCode, settings.cloudUserId])
+
+  useEffect(() => {
+    void buildWorkspaceList(settings, pendingCount, cloudMemberships).then(setItems)
+  }, [settings, pendingCount, cloudMemberships])
 
   const active = useMemo(() => items.find((item) => item.isActive), [items])
 
@@ -116,6 +136,11 @@ export function WorkspaceHub({ compact = false, onNavigate, onClose }: Workspace
                       {groupRoleLabel(item.role)}
                     </span>
                   ) : null}
+                  {item.inviteSlug ? (
+                    <span className="mt-0.5 block font-mono text-[10px] text-text-secondary">
+                      @{item.inviteSlug}
+                    </span>
+                  ) : null}
                 </span>
                 {item.isActive ? (
                   <span className="text-xs text-brand-400">{t('workspace.active')}</span>
@@ -139,6 +164,8 @@ export function WorkspaceHub({ compact = false, onNavigate, onClose }: Workspace
       {compact && showJoin ? <GroupMembershipPanel /> : null}
 
       {compact && settings.lastGroupCode ? <GroupSyncSection compact /> : null}
+
+      {settings.lastGroupCode ? <GroupLobbyPanel /> : null}
     </div>
   )
 }
