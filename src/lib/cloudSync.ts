@@ -187,17 +187,31 @@ async function ensureGroupMembership(
   const membership = await fetchCurrentGroupMembership(groupCode)
   const resolvedRole = membership?.role ?? role
 
-  try {
-    const { ensureGroupRegistryOnJoin } = await import('@/lib/groupRegistry')
-    await ensureGroupRegistryOnJoin(groupCode, {
-      isOwner: resolvedRole === 'owner',
-      displayName: displayName,
-    })
-  } catch {
-    // registry optional until SQL migration applied
-  }
+  await touchGroupRegistry(groupCode, displayName, resolvedRole === 'owner')
 
   return { groupKey, role: resolvedRole }
+}
+
+async function touchGroupRegistry(
+  groupCode: string,
+  displayName: string,
+  isOwner: boolean,
+): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+  const { user } = await getCloudSession()
+  if (!user) return
+  const storageCode = groupCode.trim().toLowerCase()
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase.rpc('ensure_group_registry', {
+    p_group_key: groupKey,
+    p_storage_code: storageCode,
+    p_display_name: displayName.trim() || storageCode.toUpperCase(),
+    p_owner_user_id: isOwner ? user.id : null,
+  })
+  if (error && error.code !== '42883' && error.code !== 'PGRST202') {
+    // Registry RPC optional until v4.18 SQL is applied.
+  }
 }
 
 export async function fetchCurrentGroupMembership(
