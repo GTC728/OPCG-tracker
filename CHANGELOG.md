@@ -9,6 +9,27 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.22.0 - 2026-07-13
+
+### Fixed
+
+- **False sync conflict on workspace switch**: Auto-merge benign profile-link drift for bookmarked players when remote `linked_user_id` is still null (`isBenignPlayerJoinDrift`).
+- **First/second win rate bars**: Label keys `first` / `second`; unified single-card layout; removed duplicate mislabeled cards.
+- **Meta transfer chart gaps**: Chart x-axis compresses to weeks with recorded matches only.
+
+### Changed
+
+- **Stats overview**: Removed personal weekly win-rate chart (stays on linked player profile).
+- **Record assignment dock**: Collapsed by default.
+- **Operation history**: Panel visible on mobile; deduplicated audit list in sync status.
+- **Group lobby (phase 1)**: Hide plaintext group secret; show player/match/session stats and public `@slug` handle.
+
+### New
+
+- Tests: `v422Features.test.ts` for benign join drift detection and merge.
+
+See `docs/V4.22-UX-POLISH.md` for V5 game-lobby roadmap.
+
 ## V4.21.0 - 2026-07-12
 
 ### New

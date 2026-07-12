@@ -328,7 +328,7 @@ export function AssignmentDock({
   onExpandedChange?: (expanded: boolean) => void
 }) {
   const { t } = useI18n()
-  const [expandedInternal, setExpandedInternal] = useState(variant === 'drawer')
+  const [expandedInternal, setExpandedInternal] = useState(false)
   const expanded = expandedProp ?? expandedInternal
   const setExpanded = onExpandedChange ?? setExpandedInternal
 

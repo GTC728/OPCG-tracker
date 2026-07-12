@@ -9,14 +9,12 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
-import { WeeklyWinRateChart } from '@/components/stats/PlayerTrendCharts'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
 import {
   buildDeckStats,
   buildFirstSecondStats,
   buildMatchupStats,
   buildPlayerDeckStats,
-  buildWeeklyWinRateStats,
   buildWeeklyDeckMetaStats,
   formatPercent,
   getCompletedMatches,
@@ -77,10 +75,6 @@ function getMatchupVerdict(
   if (winRate >= 0.6) return t('stats.matchup.advantage')
   if (winRate <= 0.4) return t('stats.matchup.disadvantage')
   return t('stats.matchup.even')
-}
-
-function firstSecondLabel(label: string, t: (key: TranslationKey) => string): string {
-  return label === 'first' ? t('stats.first') : t('stats.second')
 }
 
 function EmptyState({ children }: { children: string }) {
@@ -764,48 +758,45 @@ function InsightsSection({ insights }: { insights: InsightMessage[] }) {
   )
 }
 
+function resolveFirstSecondStat(stats: FirstSecondStat[], key: 'first' | 'second') {
+  return stats.find((stat) => stat.label === key || stat.label === (key === 'first' ? '先攻' : '後攻'))
+}
+
 function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
   const { t } = useI18n()
-  const first = stats.find((stat) => stat.label === 'first')
-  const second = stats.find((stat) => stat.label === 'second')
+  const first = resolveFirstSecondStat(stats, 'first')
+  const second = resolveFirstSecondStat(stats, 'second')
   const firstWinRate = getDisplayWinRate(first?.wins ?? 0, first?.total ?? 0)
   const secondWinRate = getDisplayWinRate(second?.wins ?? 0, second?.total ?? 0)
   const firstPercent = firstWinRate ? firstWinRate * 100 : 0
   const secondPercent = secondWinRate ? secondWinRate * 100 : 0
+  const sampleTotal = first?.total ?? second?.total ?? 0
+
+  if (!sampleTotal) return null
 
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">{t('stats.firstSecond.title')}</h2>
       <article className={[uiCard, 'p-4'].join(' ')}>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-text-secondary">{t('stats.firstWinRate')}</span>
-          <strong>{formatPercent(firstWinRate)}</strong>
+          <span className="font-medium">{t('stats.first')}</span>
+          <span className="text-text-secondary">
+            {formatPercent(firstWinRate)} · {first?.wins ?? 0}W · {getSampleLabel(first?.total ?? 0)}
+          </span>
         </div>
         <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
           <div className="h-full rounded-full bg-brand-500" style={{ width: `${firstPercent}%` }} />
         </div>
         <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-text-secondary">{t('stats.secondWinRate')}</span>
-          <strong>{formatPercent(secondWinRate)}</strong>
+          <span className="font-medium">{t('stats.second')}</span>
+          <span className="text-text-secondary">
+            {formatPercent(secondWinRate)} · {second?.wins ?? 0}W · {getSampleLabel(second?.total ?? 0)}
+          </span>
         </div>
         <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
           <div className="h-full rounded-full bg-emerald-500" style={{ width: `${secondPercent}%` }} />
         </div>
       </article>
-      <div className="grid grid-cols-2 gap-3">
-        {stats.map((stat) => {
-          const displayWinRate = getDisplayWinRate(stat.wins, stat.total)
-          return (
-            <article key={stat.label} className={[uiCard, 'p-4'].join(' ')}>
-              <p className="text-sm text-text-secondary">{firstSecondLabel(stat.label, t)}</p>
-              <p className="mt-2 text-3xl font-bold">{formatPercent(displayWinRate)}</p>
-              <p className="mt-1 text-sm text-text-secondary">
-                {stat.wins}W · {getSampleLabel(stat.total)}
-              </p>
-            </article>
-          )
-        })}
-      </div>
     </section>
   )
 }
@@ -1149,11 +1140,6 @@ export function StatsPage() {
     [scopedMatches],
   )
 
-  const linkedPlayerWeeklyStats = useMemo(() => {
-    if (!linkedPlayer) return null
-    return buildWeeklyWinRateStats(linkedPlayer.id, scopedMatches)
-  }, [linkedPlayer, scopedMatches])
-
   const weeklyDeckMetaStats = useMemo(
     () => buildWeeklyDeckMetaStats(decks, scopedMatches, language),
     [decks, scopedMatches, language],
@@ -1303,13 +1289,6 @@ export function StatsPage() {
               />
             ) : null}
           </section>
-          {linkedPlayerWeeklyStats ? (
-            <WeeklyWinRateChart
-              stats={linkedPlayerWeeklyStats}
-              title={t('stats.weeklyWinRate')}
-              compact
-            />
-          ) : null}
           <MetaSummarySection summary={metaSummary} />
           <MetaTransferChart stats={weeklyDeckMetaStats} title={t('stats.metaTransfer')} compact />
           <FirstSecondSection stats={firstSecondStats} />

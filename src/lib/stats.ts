@@ -914,7 +914,8 @@ export function buildMetaTransferChartPoints(
     .sort((left, right) => right[1].count - left[1].count)
     .map(([key, value]) => ({ key, name: value.name }))
 
-  const points = stats.map((week) => {
+  const activeWeeks = stats.filter((week) => week.total > 0)
+  const points = activeWeeks.map((week) => {
     const point: MetaTransferChartPoint = { label: week.label, total: week.total }
     for (const { key } of deckKeys) {
       const slice = week.decks.find((deck) => deck.deckId === key)

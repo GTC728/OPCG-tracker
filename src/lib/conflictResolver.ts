@@ -117,6 +117,45 @@ export function summarizeActiveEntityDiff(left: ActiveMatch, right: ActiveMatch)
   return summarizeActiveDiffCodes(left, right)
 }
 
+export interface JoinConflictContext {
+  cloudUserId: string | null
+  bookmarkPlayerId: string | null
+}
+
+/** Profile-link-only drift for the bookmarked roster identity — safe to auto-merge. */
+export function isBenignPlayerJoinDrift(
+  local: Player,
+  remote: Player,
+  ctx: JoinConflictContext,
+): boolean {
+  const diffs = summarizePlayerEntityDiff(local, remote)
+  const materialDiffs = diffs.filter((code) => code !== 'aliasesChanged')
+  if (materialDiffs.length !== 1 || materialDiffs[0] !== 'profileLinkChanged') return false
+
+  const localLink = local.linkedUserId ?? null
+  const remoteLink = remote.linkedUserId ?? null
+  if (localLink === remoteLink) return true
+
+  if (ctx.bookmarkPlayerId && local.id !== ctx.bookmarkPlayerId) return false
+
+  if (!ctx.cloudUserId) return localLink === null || remoteLink === null
+
+  return localLink === ctx.cloudUserId || remoteLink === ctx.cloudUserId || localLink === null || remoteLink === null
+}
+
+export function mergeBenignJoinedPlayer(
+  local: Player | undefined,
+  remote: Player,
+  ctx: JoinConflictContext | undefined,
+): Player {
+  if (!local || !ctx || !isBenignPlayerJoinDrift(local, remote, ctx)) return remote
+  return {
+    ...remote,
+    linkedUserId: local.linkedUserId ?? remote.linkedUserId,
+    aliases: local.aliases.length ? local.aliases : remote.aliases,
+  }
+}
+
 function buildConflictBase(
   source: ConflictSource,
   entityKind: ConflictEntityKind,
@@ -236,6 +275,7 @@ export function buildActiveConflict(
 export function detectJoinConflicts(
   snapshot: GroupScopedSnapshot,
   remote: RemoteGroupEntities,
+  ctx?: JoinConflictContext,
 ): SyncConflict[] {
   const conflicts: SyncConflict[] = []
   const conflictIds = new Set<string>()
@@ -258,6 +298,7 @@ export function detectJoinConflicts(
   for (const local of snapshot.players) {
     const remotePlayer = remote.players.find((item) => item.id === local.id)
     if (!remotePlayer || !playerEntitiesDiffer(local, remotePlayer)) continue
+    if (ctx && isBenignPlayerJoinDrift(local, remotePlayer, ctx)) continue
     conflicts.push(
       buildPlayerConflict(
         'join',
