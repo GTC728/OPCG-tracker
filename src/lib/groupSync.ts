@@ -108,6 +108,7 @@ function playerPayloadChanged(before: Player, after: Player): boolean {
     before.name !== after.name ||
     before.archived !== after.archived ||
     before.deletedAt !== after.deletedAt ||
+    before.linkedUserId !== after.linkedUserId ||
     before.aliases.join('\u0000') !== after.aliases.join('\u0000')
   )
 }

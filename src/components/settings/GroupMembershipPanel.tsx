@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
 import { getCloudSession, isCloudConfigured, joinGroupWithRole, loadGroupCloudState } from '@/lib/cloudSync'
+import { resolveInviteSlug } from '@/lib/groupRegistry'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -69,6 +70,7 @@ export function GroupMembershipPanel() {
       ) : (
         <div className="mt-4 space-y-3">
           <p className="text-xs text-text-secondary">{t('cloud.groupSecret')}</p>
+          <p className="text-[11px] text-text-secondary">{t('groupLobby.slugJoinHint')}</p>
           <input
             className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
             placeholder={t('workspace.groupCodePlaceholder')}
@@ -77,7 +79,7 @@ export function GroupMembershipPanel() {
           />
           <Button
             fullWidth
-            disabled={busy || groupCode.trim().length < 8}
+            disabled={busy || groupCode.trim().length < 3}
             loading={busy}
             onClick={async () => {
               setBusy(true)
@@ -85,7 +87,12 @@ export function GroupMembershipPanel() {
               try {
                 const { user } = await getCloudSession()
                 if (!user) throw new Error(t('cloud.loginRequired'))
-                const code = groupCode.trim()
+                let code = groupCode.trim()
+                if (code.length < 8) {
+                  const resolved = await resolveInviteSlug(code)
+                  if (!resolved) throw new Error(t('groupLobby.slugNotFound'))
+                  code = resolved.groupCode
+                }
                 await joinGroupWithRole(code)
                 await switchWorkspace(code, { preserveCollabForInit: true })
                 const latest = await loadGroupCloudState(code)

@@ -9,6 +9,24 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.18.0 - 2026-07-12
+
+### New
+
+- **群組大廳（G-05）**：`groups` 表 registry — 顯示名稱、邀請代碼；管理員可編輯 `GroupLobbyPanel`。
+- **多群組列表（G-01+）**：登入後從 `list_my_group_memberships` 拉取已加入群組，合併進 `WorkspaceHub`。
+- **邀請代碼加入**：可輸入 slug（3 字以上）代替 8 字群組碼。
+
+### Changed
+
+- **雲端 Profile claim（G-04）**：`tryAutoRelinkGroupProfile` 依 `sync_players.linked_user_id` 自動連結；`linkedUserId` 變更會觸發群組推送。
+
+### Database
+
+- 請執行 `docs/supabase-v4.18-group-lobby.sql`（需先完成 v4.11 `groups` 表）。
+
+See `docs/V4.16-ROADMAP.md` for V4.19+ schedule.
+
 ## V4.17.0 - 2026-07-12
 
 ### New
