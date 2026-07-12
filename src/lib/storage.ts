@@ -165,6 +165,7 @@ const migrations: Record<number, Migration> = {
         ...settings,
         lastGroupSyncAt: settings.lastGroupSyncAt ?? null,
         lastGroupSyncError: settings.lastGroupSyncError ?? null,
+        lastGroupPullAt: settings.lastGroupPullAt ?? null,
       },
     }
   },

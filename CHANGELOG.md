@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.19.0 - 2026-07-12
+
+### New
+
+- **Operation history panel (R-02)**: Desktop `OperationHistoryPanel` — audit kinds, expandable match revisions, undo from history.
+- **Structured audit (R-03)**: `AuditEntry` gains `actor`, `entityId`, `meta`; `MatchRevision` gains `actor`; group pulls log remote updater.
+- **Foreground auto sync (9E)**: `groupAutoSync.ts` centralizes throttled flush (3s) and pull (10s); `lastGroupPullAt` in settings.
+
+### Changed
+
+- `useGroupCollab` uses `runGroupForegroundSync` instead of ad-hoc intervals.
+- Mobile audit list shows actor labels; desktop gets full history panel.
+
+See `docs/V4.19-OPERATION-TRACEABILITY.md` and `docs/V4.16-ROADMAP.md` for V4.20+ schedule.
+
 ## V4.18.0 - 2026-07-12
 
 ### New

@@ -1,3 +1,4 @@
+import { appendAuditEntry, remoteAuditActor } from '@/lib/auditLog'
 import { getCloudSession, getSupabaseClient, resolveGroupKey } from '@/lib/cloudSync'
 import {
   applyGroupScopedSnapshot,
@@ -906,6 +907,9 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
   if (playerRes.error) throw playerRes.error
   if (sessionRes.error) throw sessionRes.error
 
+  let remoteMatchUpdates = 0
+  let remoteUpdaterId: string | null = null
+
   updateAppState((current) => {
     const remoteActive = activeRes.data as SyncActiveRow[]
     const remoteMatches = matchRes
@@ -945,6 +949,14 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       const remote = rowToMatch(row)
       const existing = matchesById.get(remote.id)
       if (!existing || shouldApplyRemoteMatch(existing, row)) {
+        if (
+          row.updated_by &&
+          row.updated_by !== current.settings.cloudUserId &&
+          (!existing || existing.finishedAt !== remote.finishedAt || existing.winnerPlayerId !== remote.winnerPlayerId)
+        ) {
+          remoteMatchUpdates += 1
+          remoteUpdaterId = row.updated_by
+        }
         matchesById.set(remote.id, remote)
       }
     }
@@ -995,6 +1007,15 @@ export async function pullGroupCollabState(groupCode: string): Promise<void> {
       ),
     }
   })
+  if (remoteMatchUpdates > 0 && remoteUpdaterId) {
+    const updaterId = remoteUpdaterId
+    updateAppState((state) =>
+      appendAuditEntry(state, 'sync', `Group pull: ${remoteMatchUpdates} match update(s)`, {
+        actor: remoteAuditActor(updaterId),
+        meta: { updated_by: updaterId },
+      }),
+    )
+  }
   updateAppState((state) => finalizeGroupProfileSession(state))
 }
 

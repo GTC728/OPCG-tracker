@@ -42,7 +42,7 @@ import {
   importRowFingerprint,
 } from '@/lib/importDedup'
 import { scheduleAchievementLedgerSync } from '@/lib/achievementLedgerSync'
-import { appendAuditEntry } from '@/lib/auditLog'
+import { appendAuditEntry, resolveLocalAuditActor } from '@/lib/auditLog'
 import { validateHistoricalImportRows, validateHistoricalImportMatches } from '@/lib/historicalImport'
 import {
   fetchHistoricalBypassPrivilege,
@@ -927,6 +927,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
       'match_complete',
       `#${match.matchNumber} ${getPlayerName(current.players, winnerPlayerId)} 勝`,
+      { entityId: match.id },
     )
     next = applyLifetimeForCompletedMatch(next, match)
     const achievementResult = applyAchievementUnlocks(next, [
@@ -999,12 +1000,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
             before: beforeMatch,
             after: afterMatch,
             reason: 'manual_edit',
+            actor: resolveLocalAuditActor(current),
           },
           ...current.matchRevisions,
         ],
       }),
       'match_edit',
       `#${afterMatch.matchNumber} 已編輯`,
+      { entityId: id },
     )
     set({ ...next })
   },
@@ -1047,6 +1050,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
       'match_undo',
       `#${match.matchNumber} 已還原為進行中`,
+      { entityId: matchId },
     )
     set({ ...next })
   },
@@ -1074,6 +1078,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
       'match_delete',
       `#${match.matchNumber} 已刪除`,
+      { entityId: matchId },
     )
     const achievementResult = applyAchievementUnlocks(next, [
       match.player1Id,

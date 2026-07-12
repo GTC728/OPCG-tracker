@@ -1,43 +1,38 @@
 import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
+import { OperationHistoryPanel } from '@/components/settings/OperationHistoryPanel'
+import { formatAuditActor, formatAuditTime } from '@/lib/auditLog'
 import { useI18n } from '@/lib/i18n'
 import { uiCard } from '@/lib/uiSurface'
 import type { AuditEntry, AuditKind } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-const AUDIT_KIND_LABEL: Record<AuditKind, string> = {
-  match_complete: '完成',
-  match_undo: '還原',
-  match_edit: '編輯',
-  match_delete: '刪除',
-  import: '匯入',
-  import_revert: '撤銷',
-  sync: '同步',
-  session: '場次',
+const AUDIT_KIND_I18N: Record<AuditKind, import('@/lib/i18n').TranslationKey> = {
+  match_complete: 'audit.kind.matchComplete',
+  match_undo: 'audit.kind.matchUndo',
+  match_edit: 'audit.kind.matchEdit',
+  match_delete: 'audit.kind.matchDelete',
+  import: 'audit.kind.import',
+  import_revert: 'audit.kind.importRevert',
+  sync: 'audit.kind.sync',
+  session: 'audit.kind.session',
 }
 
 function AuditRow({ entry }: { entry: AuditEntry }) {
+  const { t } = useI18n()
   return (
     <li className="flex items-start gap-2 border-b border-[var(--ui-border)] py-2 last:border-0">
       <span className="shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-text-secondary">
-        {AUDIT_KIND_LABEL[entry.kind]}
+        {t(AUDIT_KIND_I18N[entry.kind])}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-xs">{entry.message}</p>
-        <p className="mt-0.5 text-[10px] text-text-secondary">{formatAuditTime(entry.at)}</p>
+        <p className="mt-0.5 text-[10px] text-text-secondary">
+          {formatAuditTime(entry.at)}
+          {entry.actor ? ` · ${formatAuditActor(entry.actor)}` : ''}
+        </p>
       </div>
     </li>
   )
-}
-
-function formatAuditTime(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleString(undefined, {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 export function SystemStatusPanel() {
@@ -48,7 +43,9 @@ export function SystemStatusPanel() {
     <div className="space-y-3">
       <GroupSyncSection />
 
-      <section className={[uiCard, 'p-3'].join(' ')}>
+      <OperationHistoryPanel />
+
+      <section className={[uiCard, 'p-3 md:hidden'].join(' ')}>
         <h3 className="text-sm font-semibold">{t('systemStatus.auditTitle')}</h3>
         <p className="mt-1 text-[11px] text-text-secondary">{t('systemStatus.auditDesc')}</p>
         {auditLog.length ? (
