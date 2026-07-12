@@ -1,8 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { listImportSnapshots } from '@/lib/importSnapshots'
-import { validateHistoricalImportMatches, HISTORICAL_IMPORT_RULES } from '@/lib/historicalImport'
+import {
+  HISTORICAL_IMPORT_MAX_ROWS,
+  validateHistoricalImportMatches,
+  HISTORICAL_IMPORT_RULES,
+} from '@/lib/historicalImport'
+import { fetchHistoricalBypassPrivilege } from '@/lib/serverIntegrity'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -17,6 +22,17 @@ export function ImportHistoryPanel() {
   const matches = useAppStore((state) => state.matches)
   const restoreImportSnapshot = useAppStore((state) => state.restoreImportSnapshot)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [historicalBypass, setHistoricalBypass] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchHistoricalBypassPrivilege().then((value) => {
+      if (!cancelled) setHistoricalBypass(value)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const snapshots = useMemo(() => listImportSnapshots(), [importBatches.length])
 
@@ -44,11 +60,15 @@ export function ImportHistoryPanel() {
             const batchMatches = matches.filter(
               (match) => batchMatchIds.includes(match.id) && match.deletedAt === null,
             )
+            const promoteValidation = validateHistoricalImportMatches(batchMatches)
             const canPromote =
               !batch.revertedAt &&
               !batch.historicalRestore &&
               batch.successCount > 0 &&
-              validateHistoricalImportMatches(batchMatches).ok
+              (promoteValidation.ok ||
+                (historicalBypass &&
+                  batchMatches.length > 0 &&
+                  batchMatches.length <= HISTORICAL_IMPORT_MAX_ROWS))
 
             return (
             <li key={batch.id} className="rounded-xl bg-surface p-3 text-xs">
@@ -67,14 +87,14 @@ export function ImportHistoryPanel() {
                     variant="secondary"
                     className="min-h-8 px-3 text-xs"
                     disabled={busyId === batch.id}
-                    onClick={() => {
+                    onClick={async () => {
                       const ok = window.confirm(
                         `將 ${batch.successCount} 場升級為歷史還原？\n\n${HISTORICAL_IMPORT_RULES.map((r) => `· ${r}`).join('\n')}`,
                       )
                       if (!ok) return
                       setBusyId(batch.id)
                       try {
-                        const count = promoteImportBatchToHistorical(batch.id)
+                        const count = await promoteImportBatchToHistorical(batch.id)
                         toast.success(`已升級 ${count} 場為歷史還原，成就已重算`)
                       } catch (caught) {
                         toast.error(caught instanceof Error ? caught.message : t('delete.failed'))

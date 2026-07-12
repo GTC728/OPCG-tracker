@@ -9,6 +9,23 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.15.0 - 2026-07-11
+
+### New
+
+- **伺服器完整性驗證**：Supabase RLS 限制觀眾/封禁帳號寫入 `sync_*`；觸發器驗證對局來源與勝方；歷史還原需 `integrity_grant_id`。
+- **歷史還原授權 RPC**：`request_historical_import_grant` 於伺服器驗證 ≤100 場、≥30 天跨度。
+- **`app_privileges` 特權表**：開發者於 Dashboard 手動加入 UUID 可略過跨度限制（不寫入 GitHub）。
+
+### Security
+
+- 群組同步拒絕 `import` source；`historical` 對局須附伺服器 grant 方可寫入。
+
+### Database
+
+- 請在 Supabase 執行 `docs/supabase-v4.15-integrity.sql`（需先完成 v4.13）。
+- 詳見 `docs/SERVER-INTEGRITY.md`。
+
 ## V4.14.2 - 2026-07-11
 
 ### Changed
