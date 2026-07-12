@@ -48,12 +48,13 @@
 - **觸發器**：拒絕同步 `import` source；`historical` 插入需有效 `integrity_grant_id`。
 - **RPC**：`request_historical_import_grant` 於伺服器驗證 ≤100 場、≥30 天跨度。
 - **特權**：`app_privileges` 表 — 於 Supabase Dashboard 手動加入 `user_id`（勿提交至 GitHub）。詳見 `docs/SERVER-INTEGRITY.md`。
+- **成就帳本（V4.16）**：`profile_achievement_unlocks` client pull/merge/push — `src/lib/achievementLedgerSync.ts`。
 
 ## 待做（Roadmap）
 
 - **G-05** 遊戲大廳：群組 display name 可重複、invite slug、成員列表
 - ~~**G-06** RLS 依 role 限制 `sync_*` 寫入~~（V4.15 已實作）
-- **A-02** Supabase `profile_achievement_unlocks` 伺服器帳本
+- ~~**A-02** Supabase `profile_achievement_unlocks` 伺服器帳本~~（V4.16 client sync）
 - **A-03** 雙方確認 → `trustTier: verified`
 
 Run SQL: `docs/supabase-v4.11.sql`，`docs/supabase-v4.15-integrity.sql`

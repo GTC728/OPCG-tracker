@@ -37,6 +37,11 @@ import { loadGroupScopedState, loadOfflineGroupState, saveGroupScopedState, save
 import { clearSyncQueue } from '@/lib/syncQueue'
 import { loadImportSnapshot, saveImportSnapshot } from '@/lib/importSnapshots'
 import { LARGE_IMPORT_THRESHOLD } from '@/lib/importSafety'
+import {
+  buildExistingMatchFingerprints,
+  importRowFingerprint,
+} from '@/lib/importDedup'
+import { scheduleAchievementLedgerSync } from '@/lib/achievementLedgerSync'
 import { appendAuditEntry } from '@/lib/auditLog'
 import { validateHistoricalImportRows, validateHistoricalImportMatches } from '@/lib/historicalImport'
 import {
@@ -1175,6 +1180,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const errors: Array<{ row: number; message: string }> = []
     const createdMatches: Match[] = []
       const createdMatchIdsByRow = new Map<number, string>()
+    const seenFingerprints = buildExistingMatchFingerprints(state.matches, state.players, state.decks)
+    let skippedDuplicates = 0
 
     rows.forEach((row, index) => {
         const rowNumber = index + 2
@@ -1182,6 +1189,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
         if (!row.player1Name || !row.player2Name || !row.deck1Query || !row.deck2Query || !row.winnerName) {
           throw new Error('缺少玩家、牌組或勝方')
         }
+
+        const rowFingerprint = importRowFingerprint(row)
+        if (seenFingerprints.has(rowFingerprint)) {
+          skippedDuplicates += 1
+          return
+        }
+        seenFingerprints.add(rowFingerprint)
 
         const p1 = findOrCreatePlayer(state, row.player1Name)
         state = p1.state
@@ -1312,8 +1326,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
       options.historicalRestore ? 'import' : 'import',
       options.historicalRestore
-        ? `歷史還原 ${filename}：${createdMatches.length} 場（計入成就）`
-        : `匯入 ${filename}：成功 ${createdMatches.length} 場${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
+        ? `歷史還原 ${filename}：${createdMatches.length} 場（計入成就）${skippedDuplicates ? `，略過 ${skippedDuplicates} 筆重複` : ''}`
+        : `匯入 ${filename}：成功 ${createdMatches.length} 場${skippedDuplicates ? `，略過 ${skippedDuplicates} 筆重複` : ''}${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
     )
 
     if (options.historicalRestore && createdMatches.length) {
@@ -1333,6 +1347,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       if (linkedId) {
         next = reconcileAchievementUnlocks(next, linkedId).state
       }
+      scheduleAchievementLedgerSync()
     }
 
     syncMaterializedFromState(next)
@@ -1342,6 +1357,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return {
       importRecord,
       createdMatches: createdMatches.length,
+      skippedDuplicates: skippedDuplicates || undefined,
     }
     } finally {
       resumeGroupCollabNotify()

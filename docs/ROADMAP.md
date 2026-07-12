@@ -104,10 +104,25 @@
 
 ## Next
 
-- **V4.4**（優先）：Approved backlog 中 Record、Import、Sync indicator、Stats 加強。
-- **V5.0**：Event / League foundation（見 [`docs/EVENTS-AND-LEAGUES.md`](EVENTS-AND-LEAGUES.md)）— 可並行設計。
-- ~~Stats backlog：Recent form 分母~~ → 併入 **S-01**。
-- ~~Group backlog：衝突合併~~ → **G-03**；profile claim 雲端 → **G-04**。
+詳見 **[`docs/V4.16-ROADMAP.md`](V4.16-ROADMAP.md)**（V4.16–V4.21 重排版）。
+
+- **V4.16**（本輪）：A-02 成就帳本、A-04 週期備份、D-01 去重、G-02 同步佇列 UI。
+- **V4.17**：R-01 計時器收尾、S-03 置信度 UI、S-01a Stats 趨勢。
+- **V4.18**：G-05 大廳、G-01+ 多群組列表、G-04 claim 雲端。
+- **V5.0+**：Event / League 主線。
+
+## V4.16+ 排程摘要
+
+| 版本 | 聚焦 |
+|------|------|
+| V4.16 | 信任與同步基礎 |
+| V4.17 | 記錄與統計收尾 |
+| V4.18 | 群組體驗 |
+| V4.19 | 操作可追溯 |
+| V4.20 | 衝突與 Meta |
+| V4.21 | 拋光與成就擴充 |
+
+~~V4.4 草案~~ 已由 V4.16+ 取代。
 
 ## V4 Personal System (shipped — V4.1 through V4.3.5)
 

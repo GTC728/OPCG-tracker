@@ -10,11 +10,12 @@ import { StatsPage } from '@/pages/StatsPage'
 import { Button } from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { formatAchievementToast } from '@/lib/achievements'
+import { runPeriodicBackupIfNeeded } from '@/lib/autoBackup'
 import { flushPersistNow } from '@/lib/persistScheduler'
 import { playInteractionSound } from '@/lib/motion'
 import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
-import { useAppStore } from '@/stores/appStore'
+import { getAppState, useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
 const TAB_ORDER: TabId[] = ['record', 'stats', 'history', 'settings']
@@ -160,6 +161,33 @@ function ThemeBridge() {
   const density = useAppStore((state) => state.settings.density)
 
   useEffect(() => applyAppearanceSettings(theme, accent, density), [theme, accent, density])
+
+  return null
+}
+
+function PeriodicBackupBridge() {
+  const hydrated = useAppStore((state) => state.hydrated)
+  const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
+  const replaceState = useAppStore((state) => state.replaceState)
+
+  useEffect(() => {
+    if (!hydrated || !cloudUserId) return
+
+    const run = async () => {
+      const state = getAppState()
+      const label = state.settings.deviceLabel?.trim() || 'PWA'
+      const next = await runPeriodicBackupIfNeeded(state, label)
+      if (next !== state) replaceState(next)
+    }
+
+    void run()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void run()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [cloudUserId, hydrated, replaceState])
+
   return null
 }
 
@@ -224,6 +252,7 @@ export default function App() {
   return (
     <ToastProvider>
       <ThemeBridge />
+      <PeriodicBackupBridge />
       <AchievementToastBridge />
       <GlobalSessionRosterPrompt />
       <SessionDayPrompt />

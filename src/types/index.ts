@@ -263,6 +263,7 @@ export interface ImportMatchInput {
 export interface ImportSummary {
   importRecord: ImportRecord
   createdMatches: number
+  skippedDuplicates?: number
 }
 
 export interface AchievementUnlock {

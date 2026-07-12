@@ -11,6 +11,7 @@ import {
 } from '@/lib/cloudSync'
 import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
 import { backupAgeDays, needsBackupReminder, runAutoCloudBackup, shouldAutoBackupOnLogin } from '@/lib/autoBackup'
+import { syncAchievementLedger } from '@/lib/achievementLedgerSync'
 import { prepareRestoredAppState } from '@/lib/restoreState'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
@@ -71,6 +72,12 @@ export function AccountBackupPanel() {
           } catch {
             // non-blocking
           }
+        }
+        try {
+          const synced = await syncAchievementLedger(getAppState())
+          replaceState(synced)
+        } catch {
+          // non-blocking
         }
         const latest = await loadLatestCloudSnapshot()
         setLatestBackup(latest?.created_at ?? null)
