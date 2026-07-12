@@ -12,6 +12,8 @@
 docs/supabase-v4.15-integrity.sql
 ```
 
+若先前執行失敗並出現 `relation "public.app_privileges" does not exist`，請重新執行**整份**更新後的 SQL（已修正函式與建表順序）。`create table if not exists` 與 `create or replace function` 可安全重跑。
+
 ## 機制摘要
 
 | 層級 | 內容 |

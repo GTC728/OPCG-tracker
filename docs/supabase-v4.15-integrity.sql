@@ -2,7 +2,7 @@
 -- Run after supabase-v4.13.sql (and v4.11.1 RLS fix if needed).
 
 -- ---------------------------------------------------------------------------
--- 1) Helpers
+-- 1) Helpers (tables must exist before functions that reference them)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.user_can_write_group_collab(p_group_key text)
@@ -19,21 +19,6 @@ as $$
       and gm.user_id = auth.uid()
       and gm.role in ('owner', 'member')
       and gm.banned_at is null
-  );
-$$;
-
-create or replace function public.user_has_historical_bypass()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.app_privileges ap
-    where ap.user_id = auth.uid()
-      and ap.historical_bypass_span = true
   );
 $$;
 
@@ -56,6 +41,21 @@ for select to authenticated
 using (auth.uid() = user_id);
 
 -- No client insert/update/delete — manage via Dashboard or service role.
+
+create or replace function public.user_has_historical_bypass()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.app_privileges ap
+    where ap.user_id = auth.uid()
+      and ap.historical_bypass_span = true
+  );
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 3) Historical import grants (consumed when syncing source=historical matches)
