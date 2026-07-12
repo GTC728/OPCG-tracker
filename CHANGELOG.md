@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.17.0 - 2026-07-12
+
+### New
+
+- **均局時長（R-01）**：Stats 總覽顯示計時對局平均時長；歷史紀錄列表顯示每場 duration。
+- **週勝率趨勢（S-01a）**：Stats 總覽（已連結個人檔案時）顯示週勝率圖，沿用 Profile 圖表元件。
+
+### Changed
+
+- **對位置信度 UI（S-03）**：Heatmap 小樣本灰階、平滑勝率顯示；tooltip 含可靠性標籤與實際戰績。
+- **勝率顯示統一**：`winRateDisplay.ts` 整合 `getWeightedWinRate`，Stats / Profile 不再重複實作。
+
+See `docs/V4.16-ROADMAP.md` for V4.18+ schedule.
+
 ## V4.16.0 - 2026-07-12
 
 ### New

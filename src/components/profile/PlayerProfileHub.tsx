@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useDerivedStats'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecordStat } from '@/lib/stats'
+import { getDisplayWinRate, getSampleLabel } from '@/lib/winRateDisplay'
 import { uiCard, uiHorizontalRail } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -44,18 +45,6 @@ function PanelSheet({
       <div className={manageScroll ? 'flex min-h-0 flex-1 flex-col' : 'space-y-4'}>{children}</div>
     </BottomSheet>
   )
-}
-
-function getSampleLabel(total: number): string {
-  if (total === 0) return ''
-  if (total < 3) return `資料不足 · ${total}場`
-  if (total <= 5) return `初步 · ${total}場`
-  if (total <= 10) return `可參考 · ${total}場`
-  return `可信 · ${total}場`
-}
-
-function getDisplayWinRate(winRate: number | null, total: number): number | null {
-  return total > 0 ? winRate : null
 }
 
 export function PlayerProfileHub({
@@ -233,7 +222,7 @@ export function PlayerProfileHub({
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>
             <p className="text-xs text-text-secondary">{t('stats.winRate')}</p>
             <p className="mt-1 text-2xl font-bold">
-              {formatPercent(getDisplayWinRate(stat?.winRate ?? null, stat?.total ?? 0))}
+              {formatPercent(getDisplayWinRate(stat?.wins ?? 0, stat?.total ?? 0))}
             </p>
           </article>
           <article className={[uiCard, 'p-3 text-center'].join(' ')}>

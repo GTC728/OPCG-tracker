@@ -63,6 +63,7 @@ export function MatchResultRow({
   perspectivePlayerId,
   showTurnOrder = false,
   showWinLossBadge = false,
+  showDuration = false,
 }: {
   match: Match
   players: Player[]
@@ -74,8 +75,12 @@ export function MatchResultRow({
   perspectivePlayerId?: string
   showTurnOrder?: boolean
   showWinLossBadge?: boolean
+  showDuration?: boolean
 }) {
   const [left, right] = getOrderedMatchSides(match)
+  const durationMs = showDuration ? getMatchDurationMs(match.startedAt, match.finishedAt) : null
+  const durationLabel = durationMs !== null ? formatMatchDuration(durationMs) : null
+  const resolvedMeta = meta ?? durationLabel
   const badges =
     perspectivePlayerId && (showTurnOrder || showWinLossBadge) ? (
       <div className="flex shrink-0 items-center gap-1.5">
@@ -118,9 +123,9 @@ export function MatchResultRow({
           showResultColors={showResultColors}
           align="end"
         />
-        {meta ? (
+        {resolvedMeta ? (
           <span className="match-result-meta col-span-3 text-right text-xs tabular-nums text-text-secondary">
-            {meta}
+            {resolvedMeta}
           </span>
         ) : null}
       </div>
