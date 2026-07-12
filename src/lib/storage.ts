@@ -28,7 +28,7 @@ import {
   playerAliasesFromPlayers,
 } from '@/lib/dataModel'
 import { getSessionDateLabel } from '@/lib/sessions'
-import type { AppState, Deck, Session } from '@/types'
+import type { AppSettings, AppState, Deck, Session } from '@/types'
 
 type Migration = (state: Partial<AppState>) => Partial<AppState>
 
@@ -396,6 +396,38 @@ const migrations: Record<number, Migration> = {
     schemaVersion: 19,
     syncConflicts: Array.isArray(state.syncConflicts) ? state.syncConflicts : [],
   }),
+  20: (state) => {
+    const defaults = createDefaultAppState()
+    const settings =
+      state.settings && typeof state.settings === 'object'
+        ? {
+            ...defaults.settings,
+            ...(state.settings as AppState['settings']),
+            conflictsResolvedCount:
+              (state.settings as AppSettings).conflictsResolvedCount ?? 0,
+            groupVisitCodes: (state.settings as AppSettings).groupVisitCodes ?? [],
+          }
+        : defaults.settings
+    const syncConflicts = (Array.isArray(state.syncConflicts) ? state.syncConflicts : []).map(
+      (conflict) => {
+        const legacy = conflict as typeof conflict & { diffLines?: string[] }
+        return {
+          ...conflict,
+          diffCodes:
+            legacy.diffCodes ??
+            (Array.isArray(legacy.diffLines)
+              ? legacy.diffLines.map(() => 'fieldsUpdated')
+              : []),
+        }
+      },
+    )
+    return {
+      ...state,
+      schemaVersion: 20,
+      settings,
+      syncConflicts,
+    } as AppState
+  },
 }
 
 function withLocaleAliases(deck: Deck): Deck {

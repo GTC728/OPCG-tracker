@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
+import { formatEntityDiffCodes } from '@/lib/entityDiffI18n'
 import { uiCard } from '@/lib/uiSurface'
 import type { SyncConflict, SyncConflictEntityKind } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -30,7 +31,7 @@ function ConflictRow({ conflict }: { conflict: SyncConflict }) {
             {conflict.remoteUpdatedBy ? ` · ${conflict.remoteUpdatedBy.slice(0, 8)}` : ''}
           </p>
           <ul className="mt-1 list-inside list-disc text-[10px] text-text-secondary">
-            {conflict.diffLines.map((line) => (
+            {formatEntityDiffCodes(conflict.diffCodes ?? [], t).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>

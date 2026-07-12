@@ -1,11 +1,20 @@
+import { translate } from '@/lib/i18n'
+import type { TranslationKey } from '@/lib/i18n'
 import {
   formatPercent,
   getReliabilityLabel,
   getWeightedWinRate,
   MIN_RELIABLE_SAMPLE,
 } from '@/lib/stats'
+import { useAppStore } from '@/stores/appStore'
 
 export { MIN_RELIABLE_SAMPLE }
+
+type TranslateFn = (key: TranslationKey) => string
+
+function defaultTranslate(key: TranslationKey): string {
+  return translate(useAppStore.getState().settings.language, key)
+}
 
 export function isReliableSample(total: number): boolean {
   return total >= MIN_RELIABLE_SAMPLE
@@ -24,12 +33,14 @@ export function getDisplayWinRateFromRaw(rawWinRate: number | null, total: numbe
   return getWeightedWinRate(wins, total)
 }
 
-export function getSampleLabel(total: number): string {
+export function getSampleLabel(total: number, t: TranslateFn = defaultTranslate): string {
   if (total === 0) return ''
-  if (total < MIN_RELIABLE_SAMPLE) return `資料不足 · ${total}場`
-  if (total <= 5) return `初步 · ${total}場`
-  if (total <= 10) return `可參考 · ${total}場`
-  return `可信 · ${total}場`
+  if (total < MIN_RELIABLE_SAMPLE) {
+    return t('stats.sample.insufficient').replace('{n}', String(total))
+  }
+  if (total <= 5) return t('stats.sample.preliminary').replace('{n}', String(total))
+  if (total <= 10) return t('stats.sample.reference').replace('{n}', String(total))
+  return t('stats.sample.reliable').replace('{n}', String(total))
 }
 
 export function getWinRateHeatmapColor(wins: number, total: number): string {
@@ -45,12 +56,22 @@ export function formatWinRateTooltip(
   losses: number,
   total: number,
   rawWinRate: number | null,
+  t: TranslateFn = defaultTranslate,
 ): string {
-  const reliability = getReliabilityLabel(total)
+  const reliability = getReliabilityLabel(total, t)
   const smoothed = formatPercent(getWeightedWinRate(wins, total))
   const raw = formatPercent(rawWinRate)
   if (!isReliableSample(total)) {
-    return `${reliability} · 平滑 ${smoothed}（實際 ${raw}）· ${wins}W-${losses}L`
+    return t('stats.tooltip.smoothedRaw')
+      .replace('{reliability}', reliability)
+      .replace('{smoothed}', smoothed)
+      .replace('{raw}', raw)
+      .replace('{wins}', String(wins))
+      .replace('{losses}', String(losses))
   }
-  return `${reliability} · ${smoothed} · ${wins}W-${losses}L`
+  return t('stats.tooltip.standard')
+    .replace('{reliability}', reliability)
+    .replace('{smoothed}', smoothed)
+    .replace('{wins}', String(wins))
+    .replace('{losses}', String(losses))
 }

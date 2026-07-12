@@ -1,4 +1,5 @@
 import { isDeletedPlayer } from '@/lib/entityVisibility'
+import { translate } from '@/lib/i18n'
 import type { Deck, Language, Match, Player } from '@/types'
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
 
@@ -151,7 +152,14 @@ export function formatPercent(value: number | null): string {
   return `${(value * 100).toFixed(1)}%`
 }
 
-export function getReliabilityLabel(total: number): string {
+export function getReliabilityLabel(total: number, t?: (key: import('@/lib/i18n').TranslationKey) => string): string {
+  if (t) {
+    if (total === 0) return t('stats.reliability.none')
+    if (total <= 2) return t('stats.reliability.low')
+    if (total <= 5) return t('stats.reliability.preliminary')
+    if (total <= 10) return t('stats.reliability.reference')
+    return t('stats.reliability.high')
+  }
   if (total === 0) return '無資料'
   if (total <= 2) return '樣本不足'
   if (total <= 5) return '初步參考'
@@ -409,13 +417,13 @@ export function buildFirstSecondStats(matches: Match[]): FirstSecondStat[] {
 
   return [
     {
-      label: '先攻',
+      label: 'first',
       wins: firstWins,
       total: completed.length,
       winRate: getWinRate(firstWins, completed.length),
     },
     {
-      label: '後攻',
+      label: 'second',
       wins: secondWins,
       total: completed.length,
       winRate: getWinRate(secondWins, completed.length),
@@ -454,8 +462,8 @@ export function buildInsightMessages(
   const completed = getCompletedMatches(matches)
   const insights: InsightMessage[] = []
   const firstSecond = buildFirstSecondStats(matches)
-  const first = firstSecond.find((stat) => stat.label === '先攻')
-  const second = firstSecond.find((stat) => stat.label === '後攻')
+  const first = firstSecond.find((stat) => stat.label === 'first')
+  const second = firstSecond.find((stat) => stat.label === 'second')
   const matchupStats = buildMatchupStats(decks, matches, language)
   const playerDeckStats = buildPlayerDeckStats(players, decks, matches, language)
   const playerStats = buildPlayerStats(players, matches)
@@ -463,7 +471,9 @@ export function buildInsightMessages(
   if (first && second && first.total >= 3) {
     insights.push({
       id: 'first-second',
-      text: `先攻 ${formatPercent(first.winRate)}，後攻 ${formatPercent(second.winRate)}，可留意先後攻差距。`,
+      text: translate(language, 'stats.insight.firstSecond')
+        .replace('{first}', formatPercent(first.winRate))
+        .replace('{second}', formatPercent(second.winRate)),
     })
   }
 
@@ -473,7 +483,11 @@ export function buildInsightMessages(
   if (weakMatchup) {
     insights.push({
       id: 'weak-matchup',
-      text: `${weakMatchup.deckAName} 對 ${weakMatchup.deckBName} 目前 ${weakMatchup.deckAWins}-${weakMatchup.deckBWins}，值得練。`,
+      text: translate(language, 'stats.insight.weakMatchup')
+        .replace('{deckA}', weakMatchup.deckAName)
+        .replace('{deckB}', weakMatchup.deckBName)
+        .replace('{wins}', String(weakMatchup.deckAWins))
+        .replace('{losses}', String(weakMatchup.deckBWins)),
     })
   }
 
@@ -481,7 +495,10 @@ export function buildInsightMessages(
   if (hotPilot) {
     insights.push({
       id: 'hot-pilot',
-      text: `${hotPilot.playerName} 使用 ${hotPilot.deckName} 有 ${formatPercent(hotPilot.winRate)}，狀態不錯。`,
+      text: translate(language, 'stats.insight.hotPilot')
+        .replace('{player}', hotPilot.playerName)
+        .replace('{deck}', hotPilot.deckName)
+        .replace('{rate}', formatPercent(hotPilot.winRate)),
     })
   }
 
@@ -499,7 +516,9 @@ export function buildInsightMessages(
       const winner = players.find((player) => player.id === last.winnerPlayerId)
       insights.push({
         id: 'win-streak',
-        text: `${winner?.name ?? '玩家'} 連勝 ${streak} 場，狀態火熱。`,
+        text: translate(language, 'stats.insight.winStreak')
+          .replace('{player}', winner?.name ?? translate(language, 'stats.section.players'))
+          .replace('{n}', String(streak)),
       })
     }
   }
@@ -513,7 +532,10 @@ export function buildInsightMessages(
     const deck = decks.find((item) => item.id === coldWin.winnerDeckId)
     insights.push({
       id: 'upset',
-      text: `${deck ? localizedDeckName(deck, language) : '冷門牌組'} 低勝率但剛剛贏了，值得留意。`,
+      text: translate(language, 'stats.insight.upset').replace(
+        '{deck}',
+        deck ? localizedDeckName(deck, language) : translate(language, 'stats.insight.upsetUnknownDeck'),
+      ),
     })
   }
 
@@ -525,7 +547,10 @@ export function buildInsightMessages(
   if (completed.length >= 4) {
     insights.push({
       id: 'diversity',
-      text: `本範圍 ${uniqueDecks.size} 副不同牌組 / ${completed.length} 場，meta 多樣度 ${((uniqueDecks.size / completed.length) * 100).toFixed(0)}%。`,
+      text: translate(language, 'stats.insight.diversity')
+        .replace('{decks}', String(uniqueDecks.size))
+        .replace('{matches}', String(completed.length))
+        .replace('{pct}', ((uniqueDecks.size / completed.length) * 100).toFixed(0)),
     })
   }
 
@@ -534,7 +559,10 @@ export function buildInsightMessages(
     if (margin >= 2) {
       insights.push({
         id: 'mvp-margin',
-        text: `${playerStats[0].name} 領先 ${playerStats[1].name} ${margin} 勝。`,
+        text: translate(language, 'stats.insight.mvpMargin')
+          .replace('{leader}', playerStats[0].name)
+          .replace('{runner}', playerStats[1].name)
+          .replace('{margin}', String(margin)),
       })
     }
   }
@@ -592,7 +620,7 @@ export function buildRecentForm(matches: Match[], playerId?: string): RecentForm
       : windowMatches.length
 
     return {
-      label: `最近 ${windowSize} 場`,
+      label: String(windowSize),
       wins,
       total: windowMatches.length,
       winRate: playerId ? getWinRate(wins, windowMatches.length) : null,

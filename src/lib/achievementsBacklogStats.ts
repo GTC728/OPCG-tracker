@@ -147,6 +147,9 @@ export interface BacklogStats {
   metaMaxCount: number
   categoryUnlocked: number
   sameSessionUnlocks: number
+  secretAllDashWins: number
+  secretLuckyRollWins: number
+  groupParticipation: number
   profileLinked: number
   onboardingDone: number
   groupCollab: number
@@ -570,6 +573,18 @@ export function buildBacklogStats(
       : extras.achievementUnlocks.filter((u) => u.playerId === playerId && !u.provisional)
   const maxTierFamilies = new Set(unlocks.map((u) => u.achievementId)).size
 
+  let secretAllDashWins = 0
+  let secretLuckyRollWins = 0
+  for (const match of relevant) {
+    if (match.winnerPlayerId !== playerId) continue
+    const notes = match.notes?.trim() ?? ''
+    if (/^[-—]{3,}$/.test(notes)) secretAllDashWins += 1
+    if (/roll|骰/i.test(notes)) secretLuckyRollWins += 1
+  }
+
+  const groupParticipation =
+    extras.linkedPlayerId === playerId && extras.settings.lastGroupCode ? total : 0
+
   return {
     wins,
     losses: total - wins,
@@ -697,6 +712,9 @@ export function buildBacklogStats(
     metaMaxCount: 0,
     categoryUnlocked: 0,
     sameSessionUnlocks: 0,
+    secretAllDashWins,
+    secretLuckyRollWins,
+    groupParticipation,
     profileLinked,
     onboardingDone: extras.settings.onboardingCompleted ? 1 : 0,
     groupCollab: extras.settings.groupCollabEnabled ? 1 : 0,

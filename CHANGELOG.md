@@ -9,6 +9,22 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V4.21.0 - 2026-07-12
+
+### New
+
+- **Achievement backlog batch**: `conflict_survivor`, `multi_group_tourist`; fixed `group_anchor`, secret dash/roll, session unlock burst, weighted progress metrics.
+- **Entity diff i18n**: Stable `diffCodes` on conflicts and revisions; localized labels in conflict and operation history panels.
+- **Stats i18n**: Full four-locale pass on Stats overview, heatmaps, profiles, insights, sync queue, and group role banner.
+
+### Changed
+
+- Schema v20: `conflictsResolvedCount`, `groupVisitCodes`; migrates legacy `diffLines` → `diffCodes`.
+- `buildFirstSecondStats` uses `first` / `second` keys; UI translates via `stats.first` / `stats.second`.
+- Split `achievementsRemainingDefinitions.ts` to avoid circular module init with `achievements.ts`.
+
+See `docs/V4.21-POLISH.md` for V5.0+ schedule.
+
 ## V4.20.0 - 2026-07-12
 
 ### New

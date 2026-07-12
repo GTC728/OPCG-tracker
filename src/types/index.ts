@@ -207,7 +207,7 @@ export interface SyncConflict {
   entityId: string
   localLabel: string
   remoteLabel: string
-  diffLines: string[]
+  diffCodes: string[]
   remoteUpdatedAt: string
   remoteUpdatedBy: string | null
   localMatch?: Match
@@ -380,6 +380,10 @@ export interface AppSettings {
   cloudUserId: string | null
   lastCloudBackupAt: string | null
   autoBackupOnLogin: boolean
+  /** Resolved group sync conflicts (G-03). */
+  conflictsResolvedCount: number
+  /** Distinct group codes visited (multi-group tourist). */
+  groupVisitCodes: string[]
 }
 
 export interface AppState {

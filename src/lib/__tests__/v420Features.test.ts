@@ -42,10 +42,10 @@ describe('conflictResolver', () => {
     expect(matchEntitiesDiffer(match(), match())).toBe(false)
   })
 
-  it('summarizes match diff lines', () => {
+  it('summarizes match diff codes', () => {
     const lines = summarizeMatchEntityDiff(match(), match({ winnerPlayerId: 'p2', notes: 'x' }))
-    expect(lines).toContain('Winner changed')
-    expect(lines).toContain('Notes changed')
+    expect(lines).toContain('winnerChanged')
+    expect(lines).toContain('notesChanged')
   })
 
   it('detects join conflicts on overlapping ids', () => {

@@ -1621,6 +1621,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
             lastGroupSyncError: null,
             groupSyncPaused: false,
             groupSyncPausedAt: null,
+            groupVisitCodes:
+              targetCode && !next.settings.groupVisitCodes.includes(targetCode)
+                ? [...next.settings.groupVisitCodes, targetCode]
+                : next.settings.groupVisitCodes,
           },
         }
       }
@@ -1721,6 +1725,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
     next = {
       ...next,
       syncConflicts: (next.syncConflicts ?? []).filter((item) => item.id !== conflictId),
+      settings: {
+        ...next.settings,
+        conflictsResolvedCount: (next.settings.conflictsResolvedCount ?? 0) + 1,
+      },
+    }
+    const linkedId = next.settings.linkedPlayerId
+    if (linkedId) {
+      next = reconcileAchievementUnlocks(next, linkedId).state
     }
     next = persist(next)
     set({ ...next })

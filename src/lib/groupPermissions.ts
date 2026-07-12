@@ -48,6 +48,17 @@ export function isReadOnlyMember(role: GroupMemberRole | null | undefined): bool
   return role === 'reader'
 }
 
+export function groupRoleLabelKey(role: GroupMemberRole): import('@/lib/i18n').TranslationKey {
+  switch (role) {
+    case 'owner':
+      return 'groupRole.owner'
+    case 'member':
+      return 'groupRole.member'
+    case 'reader':
+      return 'groupRole.reader'
+  }
+}
+
 export function groupRoleLabel(role: GroupMemberRole): string {
   switch (role) {
     case 'owner':
