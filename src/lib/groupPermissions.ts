@@ -1,17 +1,17 @@
 /** Group roles — stored on Supabase group_members.role and cached in settings.groupMemberRole. */
-export type GroupMemberRole = 'owner' | 'member' | 'reader'
+export type GroupMemberRole = 'owner' | 'admin' | 'member' | 'reader'
 
-export const GROUP_MEMBER_ROLES: GroupMemberRole[] = ['owner', 'member', 'reader']
+export const GROUP_MEMBER_ROLES: GroupMemberRole[] = ['owner', 'admin', 'member']
 
 export function normalizeGroupMemberRole(value: unknown): GroupMemberRole {
-  if (value === 'owner' || value === 'member' || value === 'reader') return value
+  if (value === 'owner' || value === 'admin' || value === 'member' || value === 'reader') return value
   return 'member'
 }
 
 /** Legacy groups without role column behave as member (can record, cannot delete). */
 export function canRecordMatches(role: GroupMemberRole | null | undefined): boolean {
   if (!role) return true
-  return role === 'owner' || role === 'member'
+  return role === 'owner' || role === 'admin' || role === 'member'
 }
 
 export function canDeleteMatches(
@@ -19,16 +19,20 @@ export function canDeleteMatches(
   inGroup: boolean,
 ): boolean {
   if (!inGroup) return true
-  return role === 'owner'
+  return role === 'owner' || role === 'admin'
 }
 
 export function canManageGroup(role: GroupMemberRole | null | undefined): boolean {
+  return role === 'owner' || role === 'admin'
+}
+
+export function canTransferOwnership(role: GroupMemberRole | null | undefined): boolean {
   return role === 'owner'
 }
 
 export function canManageMembers(role: GroupMemberRole | null | undefined, banned?: boolean): boolean {
   if (banned) return false
-  return role === 'owner'
+  return role === 'owner' || role === 'admin'
 }
 
 export function isBannedFromGroup(bannedAt: string | null | undefined): boolean {
@@ -44,6 +48,7 @@ export function canRecordMatchesEffective(
   return canRecordMatches(role)
 }
 
+/** @deprecated V5: public visibility replaces reader role. Kept for legacy rows. */
 export function isReadOnlyMember(role: GroupMemberRole | null | undefined): boolean {
   return role === 'reader'
 }
@@ -52,20 +57,24 @@ export function groupRoleLabelKey(role: GroupMemberRole): import('@/lib/i18n').T
   switch (role) {
     case 'owner':
       return 'groupRole.owner'
+    case 'admin':
+      return 'groupRole.admin'
     case 'member':
       return 'groupRole.member'
     case 'reader':
-      return 'groupRole.reader'
+      return 'groupRole.member'
   }
 }
 
 export function groupRoleLabel(role: GroupMemberRole): string {
   switch (role) {
     case 'owner':
+      return '團長'
+    case 'admin':
       return '管理員'
     case 'member':
-      return '記錄者'
+      return '玩家'
     case 'reader':
-      return '觀看者'
+      return '玩家'
   }
 }

@@ -14,7 +14,7 @@ import { useAppStore } from '@/stores/appStore'
 
 interface WorkspaceHubProps {
   compact?: boolean
-  onNavigate?: (section: 'session' | 'players' | 'members' | 'sync' | 'join') => void
+  onNavigate?: (section: 'session' | 'players' | 'members' | 'sync' | 'join' | 'lobby') => void
   onClose?: () => void
 }
 
@@ -115,6 +115,16 @@ export function WorkspaceHub({ compact = false, onNavigate, onClose }: Workspace
 
       <section className="space-y-1.5">
         <p className="text-xs font-semibold text-text-secondary">{t('workspace.switchTitle')}</p>
+        {onNavigate ? (
+          <Button
+            variant="secondary"
+            fullWidth
+            className="min-h-10 justify-start text-sm"
+            onClick={() => onNavigate('lobby')}
+          >
+            {t('lobby.explore')}
+          </Button>
+        ) : null}
         <ul className="space-y-1.5">
           {items.map((item) => (
             <li key={item.id}>

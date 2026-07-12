@@ -10,6 +10,9 @@ export interface GroupMembershipSummary {
   groupCode: string
   displayName: string
   inviteSlug: string | null
+  publicId: string | null
+  visibility: import('@/lib/groupLobby').GroupVisibility | null
+  joinPolicy: import('@/lib/groupLobby').GroupJoinPolicy | null
   role: GroupMemberRole
   joinedAt: string
 }
@@ -43,7 +46,7 @@ export function isValidInviteSlug(value: string): boolean {
 }
 
 function parseRole(raw: unknown): GroupMemberRole {
-  return raw === 'owner' || raw === 'member' || raw === 'reader' ? raw : 'member'
+  return raw === 'owner' || raw === 'admin' || raw === 'member' || raw === 'reader' ? raw : 'member'
 }
 
 export async function listMyGroupMemberships(): Promise<GroupMembershipSummary[]> {
@@ -67,6 +70,9 @@ export async function listMyGroupMemberships(): Promise<GroupMembershipSummary[]
         groupCode: storageCode,
         displayName: String(row.display_name ?? storageCode.toUpperCase()),
         inviteSlug: (row.invite_slug as string | null) ?? null,
+        publicId: (row.public_id as string | null) ?? storageCode,
+        visibility: (row.visibility as GroupMembershipSummary['visibility']) ?? null,
+        joinPolicy: (row.join_policy as GroupMembershipSummary['joinPolicy']) ?? null,
         role: parseRole(row.role),
         joinedAt: String(row.joined_at ?? new Date().toISOString()),
       }

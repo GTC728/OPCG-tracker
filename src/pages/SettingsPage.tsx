@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GroupLobbyHub } from '@/components/lobby/GroupLobbyHub'
 import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
@@ -30,6 +31,7 @@ type SettingsSection =
   | 'workspace-members'
   | 'workspace-sync'
   | 'workspace-join'
+  | 'lobby-browse'
   | 'account'
   | 'profile'
   | 'appearance'
@@ -91,7 +93,11 @@ export function SettingsPage() {
     ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
     : t('workspace.local')
 
-  const navigateWorkspace = (target: 'session' | 'players' | 'members' | 'sync' | 'join') => {
+  const navigateWorkspace = (target: 'session' | 'players' | 'members' | 'sync' | 'join' | 'lobby') => {
+    if (target === 'lobby') {
+      setSection('lobby-browse')
+      return
+    }
     if (target === 'members') {
       setSection('workspace-players')
       return
@@ -129,6 +135,11 @@ export function SettingsPage() {
             <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
               {t('workspace.sectionTitle')}
             </p>
+            <SettingsRow
+              title={t('lobby.title')}
+              description={t('lobby.homeDesc')}
+              onClick={() => setSection('lobby-browse')}
+            />
             <SettingsRow
               title={t('workspace.sectionTitle')}
               description={t('workspace.sectionDesc')}
@@ -225,6 +236,13 @@ export function SettingsPage() {
         <>
           <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
           <GroupSyncSection />
+        </>
+      ) : null}
+
+      {section === 'lobby-browse' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <GroupLobbyHub onClose={() => setSection('workspace')} />
         </>
       ) : null}
 
