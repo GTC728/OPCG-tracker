@@ -9,6 +9,31 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.0.0 - 2026-07-13
+
+### New
+
+- **Game lobby (G-05 full)**: `GroupLobbyHub` browse/search; public group cards; detail + join CTA.
+- **Join policy**: Open / request / invite-only via `join_group_with_policy` RPC.
+- **Join requests**: Admin approve/reject queue in `GroupLobbyPanel`.
+- **Admin role**: Owner / admin / member; `reader` migrated to `member`; public visibility replaces viewer role.
+- **Public ID**: Search by name, `public_id`, or `@slug` — no secret key in UI.
+- **Invite links**: `create_group_invite_link` for invite-only groups.
+- **Ownership transfer**: `transfer_group_ownership` RPC + admin UI.
+- **Operation undo V5**: Revert local `match_edit` and `match_delete` (remote actions blocked).
+
+### Changed
+
+- `GroupMembershipPanel` — search-based join (3+ chars), pending request flow.
+- `WorkspaceHub` —「探索群組大廳」entry.
+- `groupPermissions` — admin can manage group and delete matches.
+
+### Database
+
+- Run `docs/supabase-v5.0-group-lobby.sql` after v4.18 SQL.
+
+See `docs/V5.0-GAME-LOBBY.md`.
+
 ## V4.22.0 - 2026-07-13
 
 ### Fixed

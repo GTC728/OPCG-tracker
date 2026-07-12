@@ -28,7 +28,7 @@ function HistoryRow({
   onUndo,
 }: {
   item: OperationHistoryItem
-  onUndo: (matchId: string) => void
+  onUndo: (item: OperationHistoryItem) => void
 }) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
@@ -63,22 +63,22 @@ function HistoryRow({
             </ul>
           ) : null}
         </div>
-        {item.canUndo && item.match ? (
+        {item.canUndo ? (
           <Button
             variant="secondary"
             className="hidden min-h-8 shrink-0 px-2 py-1 text-[10px] md:inline-flex"
-            onClick={() => onUndo(item.match!.id)}
+            onClick={() => onUndo(item)}
           >
             {t('audit.undo')}
           </Button>
         ) : null}
       </div>
-      {item.canUndo && item.match ? (
+      {item.canUndo ? (
         <Button
           variant="secondary"
           fullWidth
           className="mt-2 min-h-8 text-[10px] md:hidden"
-          onClick={() => onUndo(item.match!.id)}
+          onClick={() => onUndo(item)}
         >
           {t('audit.undo')}
         </Button>
@@ -93,21 +93,31 @@ export function OperationHistoryPanel() {
   const matchRevisions = useAppStore((state) => state.matchRevisions)
   const matches = useAppStore((state) => state.matches)
   const activeMatches = useAppStore((state) => state.activeMatches)
+  const settings = useAppStore((state) => state.settings)
   const undoCompletedMatch = useAppStore((state) => state.undoCompletedMatch)
+  const undoMatchEdit = useAppStore((state) => state.undoMatchEdit)
+  const undoMatchDelete = useAppStore((state) => state.undoMatchDelete)
 
   const history = useMemo(
-    () => buildOperationHistory({ auditLog, matchRevisions, matches, activeMatches }),
-    [auditLog, matchRevisions, matches, activeMatches],
+    () => buildOperationHistory({ auditLog, matchRevisions, matches, activeMatches, settings }),
+    [auditLog, matchRevisions, matches, activeMatches, settings],
   )
+
+  const handleUndo = (item: OperationHistoryItem) => {
+    if (!item.match) return
+    if (item.undoKind === 'complete') undoCompletedMatch(item.match.id)
+    else if (item.undoKind === 'edit') undoMatchEdit(item.match.id)
+    else if (item.undoKind === 'delete') undoMatchDelete(item.match.id)
+  }
 
   return (
     <section className={[uiCard, 'p-3'].join(' ')}>
       <h3 className="text-sm font-semibold">{t('audit.historyTitle')}</h3>
-      <p className="mt-1 text-[11px] text-text-secondary">{t('audit.historyDesc')}</p>
+      <p className="mt-1 text-[11px] text-text-secondary">{t('audit.historyDescV5')}</p>
       {history.length ? (
         <ol className="mt-2 max-h-80 overflow-y-auto">
           {history.map((item) => (
-            <HistoryRow key={item.id} item={item} onUndo={undoCompletedMatch} />
+            <HistoryRow key={item.id} item={item} onUndo={handleUndo} />
           ))}
         </ol>
       ) : (

@@ -236,7 +236,7 @@ export async function fetchCurrentGroupMembership(
   if (!data) return null
   const raw = data.role
   const role: GroupMemberRole =
-    raw === 'owner' || raw === 'member' || raw === 'reader' ? raw : 'member'
+    raw === 'owner' || raw === 'admin' || raw === 'member' || raw === 'reader' ? raw : 'member'
   return { role, bannedAt: (data.banned_at as string | null) ?? null }
 }
 
@@ -257,7 +257,7 @@ export async function listGroupMembers(groupCode: string): Promise<GroupMemberRe
   if (error) throw error
   return (data ?? []).map((row) => ({
     userId: row.user_id as string,
-    role: (row.role === 'owner' || row.role === 'member' || row.role === 'reader'
+    role: (row.role === 'owner' || row.role === 'admin' || row.role === 'member' || row.role === 'reader'
       ? row.role
       : 'member') as GroupMemberRole,
     displayName: (row.display_name as string | null) ?? null,
@@ -274,7 +274,7 @@ export async function updateGroupMemberRole(
   const supabase = await requireClient()
   const self = await requireUser()
   if (userId === self.id) throw new Error('無法變更自己的角色')
-  if (role === 'owner') throw new Error('無法透過此介面轉移管理員')
+  if (role === 'owner') throw new Error('無法透過此介面轉移團長')
   const groupKey = await createGroupKey(groupCode)
   const { error } = await supabase
     .from('group_members')
@@ -343,10 +343,29 @@ export async function leaveGroupMembership(groupCode: string): Promise<void> {
   if (error) throw error
 }
 
-export async function joinGroupWithRole(
+export async function joinGroupLegacy(
   groupCode: string,
 ): Promise<{ groupKey: string; role: GroupMemberRole }> {
   return ensureGroupMembership(groupCode)
+}
+
+export async function joinGroupWithRole(
+  groupCode: string,
+  options?: { message?: string; inviteToken?: string },
+): Promise<{ groupKey: string; role: GroupMemberRole }> {
+  const { joinGroupWithPolicy } = await import('@/lib/groupLobby')
+  const result = await joinGroupWithPolicy(groupCode, options)
+  if (!result.ok) {
+    throw new Error(result.error ?? '加入群組失敗')
+  }
+  if (result.pending) {
+    throw new Error('join_pending')
+  }
+  if (!result.joined || !result.storageCode) {
+    throw new Error('加入群組失敗')
+  }
+  const groupKey = await createGroupKey(result.storageCode)
+  return { groupKey, role: result.role ?? 'member' }
 }
 
 async function ensureGroupMembershipLegacy(groupCode: string): Promise<string> {

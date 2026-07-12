@@ -1,7 +1,7 @@
 export type ResultType = 'normal' | 'draw' | 'forfeit'
 export type MatchSource = 'manual' | 'import' | 'manual_edit' | 'restore' | 'historical'
 export type MatchTrustTier = 'self' | 'group' | 'verified'
-export type GroupMemberRole = 'owner' | 'member' | 'reader'
+export type GroupMemberRole = 'owner' | 'admin' | 'member' | 'reader'
 
 export interface GroupMemberRecord {
   userId: string

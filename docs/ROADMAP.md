@@ -112,7 +112,8 @@
 - **V4.20** ✅：G-03 衝突合併、S-02 Meta 轉移圖、R-04 橫屏。
 - **V4.21** ✅：成就 backlog 批次、四語系 i18n、diff codes、schema v20。
 - **V4.22** ✅：切換群組假衝突修復、Stats/Meta UI、分配收起、大廳 Phase 1。見 [`docs/V4.22-UX-POLISH.md`](V4.22-UX-POLISH.md)。
-- **V5.0+**：Event / League 主線；遊戲大廳完整版（公開檢索、加入申請）。
+- **V5.0** ✅：遊戲大廳完整版、加入政策、admin 角色、操作 undo 擴充。見 [`docs/V5.0-GAME-LOBBY.md`](V5.0-GAME-LOBBY.md)。
+- **V5.1+**：Event / League 主線。
 
 ## V4.16+ 排程摘要
 
@@ -125,6 +126,7 @@
 | V4.20 | 衝突與 Meta |
 | V4.21 | 拋光與成就擴充 ✅ |
 | V4.22 | UX 拋光（衝突、Stats、大廳 Phase 1）✅ |
+| V5.0 | 遊戲大廳完整版 ✅ |
 
 ~~V4.4 草案~~ 已由 V4.16+ 取代。
 

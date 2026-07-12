@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n'
-import { getCloudSession, isCloudConfigured, joinGroupWithRole, loadGroupCloudState } from '@/lib/cloudSync'
-import { resolveInviteSlug } from '@/lib/groupRegistry'
+import { getCloudSession, isCloudConfigured, loadGroupCloudState } from '@/lib/cloudSync'
+import { joinGroupWithPolicy } from '@/lib/groupLobby'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
@@ -69,11 +69,10 @@ export function GroupMembershipPanel() {
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          <p className="text-xs text-text-secondary">{t('cloud.groupSecret')}</p>
-          <p className="text-[11px] text-text-secondary">{t('groupLobby.slugJoinHint')}</p>
+          <p className="text-xs text-text-secondary">{t('lobby.searchJoinHint')}</p>
           <input
             className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
-            placeholder={t('workspace.groupCodePlaceholder')}
+            placeholder={t('lobby.searchPlaceholder')}
             value={groupCode}
             onChange={(event) => setGroupCode(event.target.value)}
           />
@@ -87,15 +86,25 @@ export function GroupMembershipPanel() {
               try {
                 const { user } = await getCloudSession()
                 if (!user) throw new Error(t('cloud.loginRequired'))
-                let code = groupCode.trim()
-                if (code.length < 8) {
-                  const resolved = await resolveInviteSlug(code)
-                  if (!resolved) throw new Error(t('groupLobby.slugNotFound'))
-                  code = resolved.groupCode
+                const lookup = groupCode.trim()
+                if (lookup.length < 3) throw new Error(t('lobby.lookupTooShort'))
+
+                const result = await joinGroupWithPolicy(lookup)
+                if (!result.ok) {
+                  throw new Error(result.error ?? t('lobby.joinFailed'))
                 }
-                await joinGroupWithRole(code)
-                await switchWorkspace(code, { preserveCollabForInit: true })
-                const latest = await loadGroupCloudState(code)
+                if (result.pending) {
+                  const nextMessage = t('lobby.requestSent')
+                  setMessage(nextMessage)
+                  toast.info(nextMessage)
+                  return
+                }
+                if (!result.joined || !result.storageCode) {
+                  throw new Error(t('lobby.joinFailed'))
+                }
+
+                await switchWorkspace(result.storageCode, { preserveCollabForInit: true })
+                const latest = await loadGroupCloudState(result.storageCode)
                 setGroupUpdatedAt(latest?.updated_at ?? null)
                 const nextMessage = latest ? t('cloud.joinedGroup') : t('cloud.joinedNewGroup')
                 setMessage(nextMessage)

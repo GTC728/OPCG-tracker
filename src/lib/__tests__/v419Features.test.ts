@@ -90,12 +90,13 @@ describe('auditLog actors', () => {
 
 describe('operationHistory', () => {
   const match = completedMatch()
+  const settings = createDefaultAppState().settings
 
   it('allows undo when match is completed and not active', () => {
     const entry = auditEntry()
     expect(
       canUndoAuditEntry(
-        { auditLog: [entry], matchRevisions: [], matches: [match], activeMatches: [] },
+        { auditLog: [entry], matchRevisions: [], matches: [match], activeMatches: [], settings },
         entry,
       ),
     ).toBe(true)
@@ -109,18 +110,40 @@ describe('operationHistory', () => {
           auditLog: [entry],
           matchRevisions: [],
           matches: [match],
-          activeMatches: [{ ...match, tableSlot: 1 }],
+          activeMatches: [{ ...match, tableSlot: 1 } as import('@/types').ActiveMatch],
+          settings,
         },
         entry,
       ),
     ).toBe(false)
   })
 
-  it('disallows undo for non-complete kinds', () => {
+  it('allows undo for local match_edit with revision', () => {
+    const revision: MatchRevision = {
+      id: 'rev-1',
+      matchId: 'match-1',
+      editedAt: '2026-07-01T12:00:00.000Z',
+      before: { winnerPlayerId: 'p1' },
+      after: { winnerPlayerId: 'p2' },
+      reason: 'manual_edit',
+    }
     const entry = auditEntry({ kind: 'match_edit' })
     expect(
       canUndoAuditEntry(
-        { auditLog: [entry], matchRevisions: [], matches: [match], activeMatches: [] },
+        { auditLog: [entry], matchRevisions: [revision], matches: [match], activeMatches: [], settings },
+        entry,
+      ),
+    ).toBe(true)
+  })
+
+  it('disallows undo for remote match_edit', () => {
+    const entry = auditEntry({
+      kind: 'match_edit',
+      actor: remoteAuditActor('other-user'),
+    })
+    expect(
+      canUndoAuditEntry(
+        { auditLog: [entry], matchRevisions: [], matches: [match], activeMatches: [], settings },
         entry,
       ),
     ).toBe(false)
@@ -148,11 +171,13 @@ describe('operationHistory', () => {
       matchRevisions: [revision],
       matches: [match],
       activeMatches: [],
+      settings,
     })
 
     expect(items).toHaveLength(2)
     expect(items[0].revision?.id).toBe('rev-1')
-    expect(items[0].canUndo).toBe(false)
+    expect(items[0].canUndo).toBe(true)
+    expect(items[0].undoKind).toBe('edit')
     expect(items[1].canUndo).toBe(true)
     expect(items[1].match?.id).toBe('match-1')
   })

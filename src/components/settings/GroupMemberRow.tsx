@@ -63,13 +63,13 @@ export function MemberActionBar({
         title={t('members.changeRole')}
         showAllOption={false}
         options={[
+          { value: 'admin', label: groupRoleLabel('admin') },
           { value: 'member', label: groupRoleLabel('member') },
-          { value: 'reader', label: groupRoleLabel('reader') },
         ]}
-        value={member.role === 'reader' ? 'reader' : 'member'}
+        value={member.role === 'admin' ? 'admin' : 'member'}
         allLabel=""
         onChange={(value) => {
-          if (value === 'member' || value === 'reader') {
+          if (value === 'member' || value === 'admin') {
             void onRoleChange(member.userId, value).finally(() => setRolePickerOpen(false))
           }
         }}

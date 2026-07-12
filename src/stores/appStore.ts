@@ -115,6 +115,8 @@ interface AppStore extends AppState {
   completeActiveMatch: (id: string, winnerPlayerId: string) => Match
   updateMatch: (id: string, input: MatchEditInput) => void
   undoCompletedMatch: (matchId: string) => void
+  undoMatchEdit: (matchId: string) => void
+  undoMatchDelete: (matchId: string) => void
   deleteMatch: (matchId: string) => void
   deletePlayer: (playerId: string) => void
   permanentlyDeleteDeck: (deckId: string) => void
@@ -1061,6 +1063,51 @@ export const useAppStore = create<AppStore>((set, get) => ({
       { entityId: matchId },
     )
     set({ ...next })
+  },
+
+  undoMatchEdit: (matchId) => {
+    const current = getAppState()
+    const revision = current.matchRevisions.find((item) => item.matchId === matchId)
+    const match = current.matches.find((item) => item.id === matchId)
+    if (!revision || !match || match.deletedAt !== null) return
+
+    const restored: Match = {
+      ...match,
+      ...revision.before,
+      source: 'manual_edit',
+    }
+    replaceMaterializedMatch(match, restored)
+    const next = appendAuditEntry(
+      persist({
+        ...current,
+        matches: current.matches.map((item) => (item.id === matchId ? restored : item)),
+      }),
+      'match_undo',
+      `#${restored.matchNumber} 已還原編輯`,
+      { entityId: matchId },
+    )
+    set({ ...next })
+  },
+
+  undoMatchDelete: (matchId) => {
+    const current = getAppState()
+    const match = current.matches.find((item) => item.id === matchId)
+    if (!match || match.deletedAt === null) return
+
+    const restored: Match = { ...match, deletedAt: null, source: 'manual_edit' }
+    afterMatchAdded(restored)
+    let nextState = applyLifetimeForCompletedMatch(current, restored)
+    const next = appendAuditEntry(
+      persist({
+        ...nextState,
+        matches: nextState.matches.map((item) => (item.id === matchId ? restored : item)),
+      }),
+      'match_undo',
+      `#${restored.matchNumber} 已還原刪除`,
+      { entityId: matchId },
+    )
+    const achievementResult = applyAchievementUnlocks(next, [restored.player1Id, restored.player2Id])
+    set({ ...persist(achievementResult.state) })
   },
 
   deleteMatch: (matchId) => {
