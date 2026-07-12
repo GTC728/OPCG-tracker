@@ -7,7 +7,7 @@ import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
-import { useI18n } from '@/lib/i18n'
+import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { WeeklyWinRateChart } from '@/components/stats/PlayerTrendCharts'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
@@ -68,11 +68,19 @@ function SummaryCard({
   )
 }
 
-function getMatchupVerdict(winRate: number | null, total: number): string {
-  if (total < 3 || winRate === null) return '資料不足'
-  if (winRate >= 0.6) return '優勢'
-  if (winRate <= 0.4) return '劣勢'
-  return '接近'
+function getMatchupVerdict(
+  winRate: number | null,
+  total: number,
+  t: (key: TranslationKey) => string,
+): string {
+  if (total < 3 || winRate === null) return t('stats.matchup.insufficient')
+  if (winRate >= 0.6) return t('stats.matchup.advantage')
+  if (winRate <= 0.4) return t('stats.matchup.disadvantage')
+  return t('stats.matchup.even')
+}
+
+function firstSecondLabel(label: string, t: (key: TranslationKey) => string): string {
+  return label === 'first' ? t('stats.first') : t('stats.second')
 }
 
 function EmptyState({ children }: { children: string }) {
@@ -90,15 +98,16 @@ function SectionTabs({
   activeSection: StatsSectionId
   onChange: (section: StatsSectionId) => void
 }) {
+  const { t } = useI18n()
   return (
     <SegmentedControl
       className="grid-cols-3"
       value={activeSection}
       onChange={onChange}
       options={[
-        { value: 'overview', label: '總覽' },
-        { value: 'players', label: '玩家' },
-        { value: 'decks', label: '牌組' },
+        { value: 'overview', label: t('stats.section.overview') },
+        { value: 'players', label: t('stats.section.players') },
+        { value: 'decks', label: t('stats.section.decks') },
       ]}
     />
   )
@@ -157,12 +166,13 @@ function StatSection({
   variant?: 'player' | 'deck'
   onSelect?: (stat: RecordStat) => void
 }) {
+  const { t } = useI18n()
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className={uiSectionTitle}>{title}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          {stats.length} 項
+          {t('stats.itemCount').replace('{n}', String(stats.length))}
         </span>
       </div>
       {stats.length ? (
@@ -175,7 +185,7 @@ function StatSection({
           />
         ))
       ) : (
-        <EmptyState>完成對局後會顯示統計。</EmptyState>
+        <EmptyState>{t('stats.emptyAfterMatches')}</EmptyState>
       )}
     </section>
   )
@@ -211,6 +221,7 @@ function MatchupRow({
   decks: Deck[]
   anchorDeckId?: string
 }) {
+  const { t } = useI18n()
   const deckA = decks.find((deck) => deck.id === matchup.deckAId)
   const deckB = decks.find((deck) => deck.id === matchup.deckBId)
   const anchorIsB = anchorDeckId === matchup.deckBId
@@ -221,7 +232,7 @@ function MatchupRow({
   const selfWins = anchorIsB ? matchup.deckBWins : matchup.deckAWins
   const oppWins = anchorIsB ? matchup.deckAWins : matchup.deckBWins
   const displayWinRate = getDisplayWinRate(selfWins, matchup.total)
-  const verdict = getMatchupVerdict(selfWinRate, matchup.total)
+  const verdict = getMatchupVerdict(selfWinRate, matchup.total, t)
   const rateClass =
     displayWinRate === null
       ? 'text-text-secondary'
@@ -234,7 +245,7 @@ function MatchupRow({
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           {anchorDeckId ? (
-            <p className="text-xs text-text-secondary">對手牌組</p>
+            <p className="text-xs text-text-secondary">{t('stats.matchup.opponentDeck')}</p>
           ) : (
             <p className="text-xs text-text-secondary">
               <DeckLabel deck={selfDeck} showCode compact className="inline-flex" />
@@ -278,7 +289,7 @@ function MatchupHeatmap({
   matchups,
   decks,
   maxDecks = 14,
-  title = '對位表',
+  title,
   deckIds,
 }: {
   matchups: MatchupStat[]
@@ -287,6 +298,8 @@ function MatchupHeatmap({
   title?: string
   deckIds?: string[]
 }) {
+  const { t } = useI18n()
+  const resolvedTitle = title ?? t('stats.matchup.matrix')
   const deckTotals = new Map<string, { id: string; total: number }>()
   const matchupByPair = new Map(matchups.map((matchup) => [matchup.key, matchup]))
 
@@ -326,9 +339,9 @@ function MatchupHeatmap({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-lg font-semibold">{resolvedTitle}</h2>
         <span className="shrink-0 rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          勝率 / W-L
+          {t('stats.matchup.winRateWL')}
         </span>
       </div>
       <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
@@ -385,7 +398,7 @@ function MatchupHeatmap({
                         title={
                           cell
                             ? formatWinRateTooltip(cell.wins, cell.losses, cell.total, cell.winRate)
-                            : '未有對局'
+                            : t('stats.matchup.noMatch')
                         }
                       >
                         {cell ? (
@@ -404,12 +417,10 @@ function MatchupHeatmap({
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-text-secondary">
-              少於 3 場以灰階標示；數字為平滑勝率，hover 可看實際戰績。綠色優勢，紅色劣勢。
-            </p>
+            <p className="mt-3 text-xs text-text-secondary">{t('stats.matchup.matrixHint')}</p>
           </div>
         ) : (
-          <p className="text-sm text-text-secondary">完成兩種以上牌組對局後會顯示對位矩陣。</p>
+          <p className="text-sm text-text-secondary">{t('stats.matchup.matrixEmpty')}</p>
         )}
       </article>
     </section>
@@ -423,6 +434,7 @@ function PlayerMatchupHeatmap({
   matchups: PlayerMatchupStat[]
   maxPlayers?: number
 }) {
+  const { t } = useI18n()
   const playerTotals = new Map<string, { id: string; name: string; total: number }>()
   const matchupByPair = new Map(matchups.map((matchup) => [matchup.key, matchup]))
 
@@ -461,9 +473,9 @@ function PlayerMatchupHeatmap({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">玩家對位表</h2>
+        <h2 className="text-lg font-semibold">{t('stats.matchup.playerMatrix')}</h2>
         <span className="shrink-0 rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          勝率 / W-L
+          {t('stats.matchup.winRateWL')}
         </span>
       </div>
       <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
@@ -510,7 +522,7 @@ function PlayerMatchupHeatmap({
                         title={
                           cell
                             ? formatWinRateTooltip(cell.wins, cell.losses, cell.total, cell.winRate)
-                            : '未有對局'
+                            : t('stats.matchup.noMatch')
                         }
                       >
                         {cell ? (
@@ -531,7 +543,7 @@ function PlayerMatchupHeatmap({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-text-secondary">完成兩位以上玩家的對局後會顯示對位矩陣。</p>
+          <p className="text-sm text-text-secondary">{t('stats.matchup.playerMatrixEmpty')}</p>
         )}
       </article>
     </section>
@@ -539,16 +551,21 @@ function PlayerMatchupHeatmap({
 }
 
 function MetaSummarySection({ summary }: { summary: MetaSummaryStats }) {
+  const { t } = useI18n()
   if (!summary.totalMatches) return null
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold">環境概覽</h2>
+      <h2 className="text-lg font-semibold">{t('stats.meta.overview')}</h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <SummaryCard label="總場數" value={String(summary.totalMatches)} />
-        <SummaryCard label="活躍玩家" value={String(summary.uniquePlayers)} />
-        <SummaryCard label="牌組種類" value={String(summary.uniqueDecks)} />
-        <SummaryCard label="Meta 多樣度" value={`${summary.diversityPercent}%`} detail="牌組數 / 總場數" />
+        <SummaryCard label={t('stats.totalMatches')} value={String(summary.totalMatches)} />
+        <SummaryCard label={t('stats.activePlayers')} value={String(summary.uniquePlayers)} />
+        <SummaryCard label={t('stats.deckVariety')} value={String(summary.uniqueDecks)} />
+        <SummaryCard
+          label={t('stats.metaDiversity')}
+          value={`${summary.diversityPercent}%`}
+          detail={t('stats.metaDiversityDetail')}
+        />
       </div>
     </section>
   )
@@ -563,37 +580,40 @@ function DeckListSection({
   decks: Deck[]
   onSelectDeck: (deckId: string) => void
 }) {
+  const { t } = useI18n()
   const sorted = sortStatsByUsage(stats)
   const totalAppearances = sorted.reduce((sum, stat) => sum + stat.total, 0)
   if (!sorted.length || !totalAppearances) {
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">牌組列表</h2>
-        <EmptyState>完成對局後會顯示牌組統計。</EmptyState>
+        <h2 className="text-lg font-semibold">{t('stats.deckList')}</h2>
+        <EmptyState>{t('stats.emptyAfterMatches')}</EmptyState>
       </section>
     )
+  }
+
+  const deckTag = (stat: RecordStat) => {
+    if (stat.total < 3) return t('stats.deckTag.insufficient')
+    if ((stat.winRate ?? 0) >= 0.6) return t('stats.deckTag.strong')
+    if ((stat.winRate ?? 0) <= 0.4) return t('stats.deckTag.weak')
+    return t('stats.deckTag.average')
   }
 
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">牌組列表</h2>
+        <h2 className="text-lg font-semibold">{t('stats.deckList')}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          {sorted.length} 項 · 總出場 {totalAppearances}
+          {t('stats.deckListCount')
+            .replace('{n}', String(sorted.length))
+            .replace('{total}', String(totalAppearances))}
         </span>
       </div>
       <article className={[uiCard, 'divide-y divide-white/[0.06] overflow-hidden'].join(' ')}>
         {sorted.map((stat) => {
           const usage = (stat.total / totalAppearances) * 100
           const deck = decks.find((item) => item.id === stat.id)
-          const tag =
-            stat.total >= 3 && (stat.winRate ?? 0) >= 0.6
-              ? '強勢'
-              : stat.total >= 3 && (stat.winRate ?? 0) <= 0.4
-                ? '弱勢'
-                : stat.total >= 3
-                  ? '平均'
-                  : '樣本不足'
+          const tag = deckTag(stat)
 
           return (
             <button
@@ -635,6 +655,7 @@ function ProfileMatchupSection({
   anchorDeckId?: string
   playerDeckIds?: Set<string>
 }) {
+  const { t } = useI18n()
   const sorted = [...matchups].sort((left, right) => right.total - left.total)
 
   const resolveAnchor = (matchup: MatchupStat) => {
@@ -648,7 +669,7 @@ function ProfileMatchupSection({
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <EmptyState>暫時未有可分析對位。</EmptyState>
+        <EmptyState>{t('stats.matchup.none')}</EmptyState>
       </section>
     )
   }
@@ -658,7 +679,7 @@ function ProfileMatchupSection({
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{title}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          {sorted.length} 組
+          {t('stats.matchup.pairCount').replace('{n}', String(sorted.length))}
         </span>
       </div>
       <div className="space-y-2">
@@ -726,11 +747,12 @@ function MiniLeaderboard({
 }
 
 function InsightsSection({ insights }: { insights: InsightMessage[] }) {
+  const { t } = useI18n()
   if (!insights.length) return null
 
   return (
     <section className="rounded-2xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
-      <h2 className="text-lg font-semibold">今晚 Insights</h2>
+      <h2 className="text-lg font-semibold">{t('stats.insights.title')}</h2>
       <div className="mt-3 space-y-2">
         {insights.map((insight) => (
           <p key={insight.id} className="rounded-xl bg-surface/70 p-3 text-sm text-text-primary">
@@ -743,8 +765,9 @@ function InsightsSection({ insights }: { insights: InsightMessage[] }) {
 }
 
 function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
-  const first = stats.find((stat) => stat.label === '先攻')
-  const second = stats.find((stat) => stat.label === '後攻')
+  const { t } = useI18n()
+  const first = stats.find((stat) => stat.label === 'first')
+  const second = stats.find((stat) => stat.label === 'second')
   const firstWinRate = getDisplayWinRate(first?.wins ?? 0, first?.total ?? 0)
   const secondWinRate = getDisplayWinRate(second?.wins ?? 0, second?.total ?? 0)
   const firstPercent = firstWinRate ? firstWinRate * 100 : 0
@@ -752,17 +775,17 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold">先後攻拆分</h2>
+      <h2 className="text-lg font-semibold">{t('stats.firstSecond.title')}</h2>
       <article className={[uiCard, 'p-4'].join(' ')}>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-text-secondary">先攻勝率</span>
+          <span className="text-text-secondary">{t('stats.firstWinRate')}</span>
           <strong>{formatPercent(firstWinRate)}</strong>
         </div>
         <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
           <div className="h-full rounded-full bg-brand-500" style={{ width: `${firstPercent}%` }} />
         </div>
         <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-text-secondary">後攻勝率</span>
+          <span className="text-text-secondary">{t('stats.secondWinRate')}</span>
           <strong>{formatPercent(secondWinRate)}</strong>
         </div>
         <div className="mt-2 h-4 overflow-hidden rounded-full bg-surface-muted">
@@ -774,7 +797,7 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
           const displayWinRate = getDisplayWinRate(stat.wins, stat.total)
           return (
             <article key={stat.label} className={[uiCard, 'p-4'].join(' ')}>
-              <p className="text-sm text-text-secondary">{stat.label}</p>
+              <p className="text-sm text-text-secondary">{firstSecondLabel(stat.label, t)}</p>
               <p className="mt-2 text-3xl font-bold">{formatPercent(displayWinRate)}</p>
               <p className="mt-1 text-sm text-text-secondary">
                 {stat.wins}W · {getSampleLabel(stat.total)}
@@ -788,12 +811,13 @@ function FirstSecondSection({ stats }: { stats: FirstSecondStat[] }) {
 }
 
 function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: Deck[] }) {
+  const { t } = useI18n()
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">玩家 × 牌組</h2>
+        <h2 className="text-lg font-semibold">{t('stats.playerDeckMatrix')}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-          {stats.length} 組
+          {t('stats.matchup.pairCount').replace('{n}', String(stats.length))}
         </span>
       </div>
       {stats.slice(0, 24).map((stat) => (
@@ -816,7 +840,7 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
       ))}
       {!stats.length ? (
         <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
-          完成對局後會顯示每位玩家使用不同牌組的表現。
+          {t('stats.playerDeckEmpty')}
         </div>
       ) : null}
     </section>
@@ -824,12 +848,13 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
 }
 
 function RecentFormSection({ recentForm }: { recentForm: RecentFormStat[] }) {
+  const { t } = useI18n()
   const visibleForms = recentForm.filter((form) => form.total > 0 && form.winRate !== null)
   if (!visibleForms.length) return null
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold">近期形態</h2>
+      <h2 className="text-lg font-semibold">{t('stats.recentForm.title')}</h2>
       <article className={[uiCard, 'p-4'].join(' ')}>
         <div className="space-y-3">
           {visibleForms.map((form) => {
@@ -838,7 +863,9 @@ function RecentFormSection({ recentForm }: { recentForm: RecentFormStat[] }) {
             return (
               <div key={form.label}>
                 <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-text-secondary">{form.label.replace(' 場', '')}</span>
+                  <span className="text-text-secondary">
+                    {t('stats.recentForm.window').replace('{n}', form.label)}
+                  </span>
                   <strong>{formatPercent(form.winRate)}</strong>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-surface-muted">
@@ -889,15 +916,20 @@ function ProfileHeader({
 }
 
 function MiniStatGrid({ stat }: { stat: RecordStat | null }) {
+  const { t } = useI18n()
   return (
     <section className="grid grid-cols-3 gap-3">
       <SummaryCard
-        label="勝率"
+        label={t('stats.winRate')}
         value={formatPercent(getDisplayWinRate(stat?.wins ?? 0, stat?.total ?? 0))}
         detail={getSampleLabel(stat?.total ?? 0)}
       />
-      <SummaryCard label="勝場" value={String(stat?.wins ?? 0)} />
-      <SummaryCard label="場數" value={String(stat?.total ?? 0)} detail={getSampleLabel(stat?.total ?? 0)} />
+      <SummaryCard label={t('stats.wins')} value={String(stat?.wins ?? 0)} />
+      <SummaryCard
+        label={t('stats.matchCount')}
+        value={String(stat?.total ?? 0)}
+        detail={getSampleLabel(stat?.total ?? 0)}
+      />
     </section>
   )
 }
@@ -925,6 +957,7 @@ function PlayerProfileView({
   onOpenDeck: (deckId: string) => void
   onOpenPlayer: (playerId: string) => void
 }) {
+  const { t } = useI18n()
   const [shareOpen, setShareOpen] = useState(false)
   const deckStats = buildPlayerDeckStats(players, decks, allMatches, language).filter(
     (item) => item.playerId === player.id,
@@ -950,7 +983,7 @@ function PlayerProfileView({
         renderFirstSecond={(scopeMatches) => <FirstSecondSection stats={buildFirstSecondStats(scopeMatches)} />}
         renderMatchups={
           <ProfileMatchupSection
-            title="對位分析"
+            title={t('stats.matchup.analysis')}
             matchups={relevantMatchups}
             decks={decks}
             playerDeckIds={playerDeckIds}
@@ -1001,6 +1034,7 @@ function DeckProfileView({
   backLabel?: string
   onOpenPlayer: (playerId: string) => void
 }) {
+  const { t } = useI18n()
   const deckMatches = getCompletedMatches(matches).filter(
     (match) => match.deck1Id === deck.id || match.deck2Id === deck.id,
   )
@@ -1016,14 +1050,14 @@ function DeckProfileView({
     <div className="space-y-4">
       <ProfileHeader
         title={<DeckLabel deck={deck} showCode className="inline-flex" />}
-        subtitle={`${deckMatches.length} 次出場`}
+        subtitle={t('stats.deckAppearances').replace('{n}', String(deckMatches.length))}
         onBack={onBack}
         backLabel={backLabel}
       />
       <MiniStatGrid stat={stat} />
       <FirstSecondSection stats={buildFirstSecondStats(deckMatches)} />
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">使用者表現</h2>
+        <h2 className="text-lg font-semibold">{t('stats.pilotPerformance')}</h2>
         {pilotStats.length ? (
           pilotStats.map((item) => (
             <button
@@ -1036,11 +1070,11 @@ function DeckProfileView({
             </button>
           ))
         ) : (
-          <EmptyState>此牌組暫時未有玩家使用數據。</EmptyState>
+          <EmptyState>{t('stats.pilotEmpty')}</EmptyState>
         )}
       </section>
       <ProfileMatchupSection
-        title="對位分析"
+        title={t('stats.matchup.analysis')}
         matchups={relevantMatchups}
         decks={decks}
         anchorDeckId={deck.id}
@@ -1244,17 +1278,17 @@ export function StatsPage() {
       {activeSection === 'overview' ? (
         <>
           <section className="grid grid-cols-3 gap-2">
-            <SummaryCard label="總場數" value={String(dashboard.totalMatches)} />
+            <SummaryCard label={t('stats.totalMatches')} value={String(dashboard.totalMatches)} />
             {averageMatchDurationMs !== null ? (
               <SummaryCard
-                label="均局時長"
+                label={t('stats.avgMatchDuration')}
                 value={formatMatchDuration(averageMatchDurationMs)}
-                detail="含計時對局"
+                detail={t('stats.avgMatchDurationDetail')}
               />
             ) : null}
             {dashboard.firstPlayerSample > 0 ? (
               <SummaryCard
-                label="先攻勝率"
+                label={t('stats.firstWinRate')}
                 value={formatPercent(
                   getDisplayWinRateFromRaw(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
                 )}
@@ -1263,7 +1297,7 @@ export function StatsPage() {
             ) : null}
             {dashboard.topPlayer ? (
               <SummaryCard
-                label="MVP"
+                label={t('stats.mvp')}
                 value={dashboard.topPlayer.name}
                 detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
               />
@@ -1282,12 +1316,12 @@ export function StatsPage() {
           <RecentFormSection recentForm={globalRecentForm} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MiniLeaderboard
-              title="玩家 Top 5"
+              title={t('stats.playersTop5')}
               stats={playerStats}
               onSelect={(stat) => openProfile({ type: 'player', id: stat.id })}
             />
             <MiniLeaderboard
-              title="牌組 Top 5（勝率）"
+              title={t('stats.decksTop5')}
               stats={sortStatsByWeightedWinRate(deckStats)}
               decks={decks}
               variant="deck"
@@ -1301,8 +1335,8 @@ export function StatsPage() {
               className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
               onClick={() => changeSection('players')}
             >
-              <p className="text-sm text-text-secondary">深入查看</p>
-              <h2 className="mt-1 text-lg font-bold">玩家檔案</h2>
+              <p className="text-sm text-text-secondary">{t('stats.diveIn')}</p>
+              <h2 className="mt-1 text-lg font-bold">{t('stats.playerProfiles')}</h2>
               <div className="mt-3 h-2 rounded-full bg-brand-500/70" />
             </button>
             <button
@@ -1310,8 +1344,8 @@ export function StatsPage() {
               className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
               onClick={() => changeSection('decks')}
             >
-              <p className="text-sm text-text-secondary">深入查看</p>
-              <h2 className="mt-1 text-lg font-bold">牌組檔案</h2>
+              <p className="text-sm text-text-secondary">{t('stats.diveIn')}</p>
+              <h2 className="mt-1 text-lg font-bold">{t('stats.deckProfiles')}</h2>
               <div className="mt-3 h-2 rounded-full bg-emerald-500/70" />
             </button>
           </section>
@@ -1322,7 +1356,7 @@ export function StatsPage() {
         <>
           <PlayerMatchupHeatmap matchups={playerMatchupStats} />
           <StatSection
-            title="玩家列表"
+            title={t('stats.playerList')}
             stats={playerStats}
             onSelect={(stat) => openProfile({ type: 'player', id: stat.id })}
           />
@@ -1332,7 +1366,7 @@ export function StatsPage() {
 
       {activeSection === 'decks' ? (
         <>
-          <MatchupHeatmap matchups={matchupStats} decks={decks} title="牌組對位表" />
+          <MatchupHeatmap matchups={matchupStats} decks={decks} title={t('stats.matchup.deckMatrix')} />
           <DeckListSection
             stats={deckStats}
             decks={decks}

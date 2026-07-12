@@ -167,7 +167,7 @@ describe('operationHistory', () => {
       reason: 'manual_edit',
     }
     const lines = summarizeRevisionDiff(revision)
-    expect(lines).toContain('Winner changed')
-    expect(lines).toContain('Notes changed')
+    expect(lines).toContain('winnerChanged')
+    expect(lines).toContain('notesChanged')
   })
 })

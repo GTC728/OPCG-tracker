@@ -1,3 +1,4 @@
+import { summarizePartialMatchDiffCodes, type EntityDiffCode } from '@/lib/entityDiff'
 import type { ActiveMatch, AuditEntry, AuditKind, Match, MatchRevision } from '@/types'
 
 export interface OperationHistoryInput {
@@ -70,23 +71,6 @@ export function buildOperationHistory(input: OperationHistoryInput, limit = 40):
   })
 }
 
-export function summarizeRevisionDiff(revision: MatchRevision): string[] {
-  const lines: string[] = []
-  const { before, after } = revision
-  if (before.winnerPlayerId !== after.winnerPlayerId) {
-    lines.push('Winner changed')
-  }
-  if (before.player1Id !== after.player1Id || before.player2Id !== after.player2Id) {
-    lines.push('Players changed')
-  }
-  if (before.deck1Id !== after.deck1Id || before.deck2Id !== after.deck2Id) {
-    lines.push('Decks changed')
-  }
-  if (before.firstPlayerId !== after.firstPlayerId) {
-    lines.push('Turn order changed')
-  }
-  if (before.notes !== after.notes) {
-    lines.push('Notes changed')
-  }
-  return lines.length ? lines : ['Fields updated']
+export function summarizeRevisionDiff(revision: MatchRevision): EntityDiffCode[] {
+  return summarizePartialMatchDiffCodes(revision.before, revision.after)
 }

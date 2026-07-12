@@ -1,3 +1,10 @@
+import type { EntityDiffCode } from '@/lib/entityDiff'
+import {
+  summarizeActiveDiffCodes,
+  summarizeMatchDiffCodes,
+  summarizePlayerDiffCodes,
+  summarizeSessionDiffCodes,
+} from '@/lib/entityDiff'
 import type { GroupScopedSnapshot } from '@/lib/groupScope'
 import { createId, nowIso } from '@/lib/utils'
 import type {
@@ -94,50 +101,20 @@ export function activeEntitiesDiffer(left: ActiveMatch, right: ActiveMatch): boo
   )
 }
 
-export function summarizeMatchEntityDiff(left: Match, right: Match): string[] {
-  const lines: string[] = []
-  if (left.winnerPlayerId !== right.winnerPlayerId) lines.push('Winner changed')
-  if (left.player1Id !== right.player1Id || left.player2Id !== right.player2Id) {
-    lines.push('Players changed')
-  }
-  if (left.deck1Id !== right.deck1Id || left.deck2Id !== right.deck2Id) lines.push('Decks changed')
-  if (left.firstPlayerId !== right.firstPlayerId) lines.push('Turn order changed')
-  if (left.finishedAt !== right.finishedAt) lines.push('Finish time changed')
-  if (left.notes !== right.notes) lines.push('Notes changed')
-  if (left.deletedAt !== right.deletedAt) lines.push('Delete state changed')
-  return lines.length ? lines : ['Fields updated']
+export function summarizeMatchEntityDiff(left: Match, right: Match): EntityDiffCode[] {
+  return summarizeMatchDiffCodes(left, right)
 }
 
-export function summarizePlayerEntityDiff(left: Player, right: Player): string[] {
-  const lines: string[] = []
-  if (left.name !== right.name) lines.push('Name changed')
-  if (left.archived !== right.archived) lines.push('Archive state changed')
-  if (left.deletedAt !== right.deletedAt) lines.push('Delete state changed')
-  if (left.linkedUserId !== right.linkedUserId) lines.push('Profile link changed')
-  if (left.aliases.join('\u0000') !== right.aliases.join('\u0000')) lines.push('Aliases changed')
-  return lines.length ? lines : ['Fields updated']
+export function summarizePlayerEntityDiff(left: Player, right: Player): EntityDiffCode[] {
+  return summarizePlayerDiffCodes(left, right)
 }
 
-export function summarizeSessionEntityDiff(left: Session, right: Session): string[] {
-  const lines: string[] = []
-  if (left.name !== right.name) lines.push('Name changed')
-  if (left.startedAt !== right.startedAt) lines.push('Start time changed')
-  if (left.endedAt !== right.endedAt) lines.push('End time changed')
-  if (left.archivedAt !== right.archivedAt) lines.push('Archive state changed')
-  if (left.deletedAt !== right.deletedAt) lines.push('Delete state changed')
-  return lines.length ? lines : ['Fields updated']
+export function summarizeSessionEntityDiff(left: Session, right: Session): EntityDiffCode[] {
+  return summarizeSessionDiffCodes(left, right)
 }
 
-export function summarizeActiveEntityDiff(left: ActiveMatch, right: ActiveMatch): string[] {
-  const lines: string[] = []
-  if (left.player1Id !== right.player1Id || left.player2Id !== right.player2Id) {
-    lines.push('Players changed')
-  }
-  if (left.deck1Id !== right.deck1Id || left.deck2Id !== right.deck2Id) lines.push('Decks changed')
-  if (left.tableSlot !== right.tableSlot) lines.push('Table slot changed')
-  if (left.firstPlayerId !== right.firstPlayerId) lines.push('Turn order changed')
-  if (left.notes !== right.notes) lines.push('Notes changed')
-  return lines.length ? lines : ['Fields updated']
+export function summarizeActiveEntityDiff(left: ActiveMatch, right: ActiveMatch): EntityDiffCode[] {
+  return summarizeActiveDiffCodes(left, right)
 }
 
 function buildConflictBase(
@@ -146,7 +123,7 @@ function buildConflictBase(
   entityId: string,
   localLabel: string,
   remoteLabel: string,
-  diffLines: string[],
+  diffCodes: EntityDiffCode[],
   remoteUpdatedAt: string,
   remoteUpdatedBy: string | null,
 ): SyncConflict {
@@ -158,7 +135,7 @@ function buildConflictBase(
     entityId,
     localLabel,
     remoteLabel,
-    diffLines,
+    diffCodes,
     remoteUpdatedAt,
     remoteUpdatedBy,
   }

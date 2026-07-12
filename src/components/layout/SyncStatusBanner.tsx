@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
-import { groupRoleLabel, isBannedFromGroup } from '@/lib/groupPermissions'
+import { groupRoleLabelKey, isBannedFromGroup } from '@/lib/groupPermissions'
 import { uiCalloutWarning } from '@/lib/uiSurface'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
 import { useAppStore } from '@/stores/appStore'
@@ -41,7 +41,7 @@ export function SyncStatusBanner({ onOpenWorkspace }: { onOpenWorkspace?: () => 
   }, [])
 
   const workspacePrefix = groupCode
-    ? `${groupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
+    ? `${groupCode}${groupMemberRole ? ` · ${t(groupRoleLabelKey(groupMemberRole))}` : ''}`
     : ''
 
   if (!groupCode) return null

@@ -25,6 +25,7 @@ const SHIPPED = new Set([
   'midnight_duel', 'lunch_break', 'white_mastery', 'blue_mastery', 'red_mastery', 'green_mastery',
   'purple_mastery', 'weekly_grinder', 'store_regular', 'opening_act', 'closer',
   'profile_linked', 'marathon_mind', 'speed_demon',
+  'conflict_survivor', 'multi_group_tourist',
   // Batch B — already in BACKLOG_BATCH_DEFINITIONS
   'set_sail', 'expansion_regular', 'class_loyalist', 'noted_perfection', 'same_turn_sweep',
   'no_rematch_streak', 'bo3_ready', 'table_flip', 'red_rush', 'green_midrange', 'black_control',

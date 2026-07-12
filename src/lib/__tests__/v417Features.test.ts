@@ -7,6 +7,7 @@ import {
   getWinRateHeatmapColor,
   isReliableSample,
 } from '@/lib/winRateDisplay'
+import { translate } from '@/lib/i18n'
 import { getAverageMatchDurationMs, formatMatchDuration } from '@/lib/matchTimer'
 import type { Match } from '@/types'
 
@@ -23,7 +24,7 @@ describe('winRateDisplay', () => {
   it('marks unreliable samples below MIN_RELIABLE_SAMPLE', () => {
     expect(isReliableSample(2)).toBe(false)
     expect(isReliableSample(3)).toBe(true)
-    expect(getSampleLabel(2)).toContain('資料不足')
+    expect(getSampleLabel(2)).toContain('樣本不足')
     expect(getSampleLabel(5)).toContain('初步')
   })
 
@@ -35,7 +36,8 @@ describe('winRateDisplay', () => {
   })
 
   it('includes smoothed and raw rates in tooltip for small samples', () => {
-    const tooltip = formatWinRateTooltip(1, 1, 2, 0.5)
+    const t = (key: Parameters<typeof translate>[1]) => translate('zh-Hant', key)
+    const tooltip = formatWinRateTooltip(1, 1, 2, 0.5, t)
     expect(tooltip).toContain('平滑')
     expect(tooltip).toContain('實際')
     expect(tooltip).toContain('1W-1L')

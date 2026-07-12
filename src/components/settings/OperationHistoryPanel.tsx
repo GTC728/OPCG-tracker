@@ -7,6 +7,7 @@ import {
   type OperationHistoryItem,
 } from '@/lib/operationHistory'
 import { useI18n } from '@/lib/i18n'
+import { formatEntityDiffCodes } from '@/lib/entityDiffI18n'
 import { uiCard } from '@/lib/uiSurface'
 import type { AuditKind } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -56,8 +57,8 @@ function HistoryRow({
           ) : null}
           {expanded && item.revision ? (
             <ul className="mt-1 list-inside list-disc text-[10px] text-text-secondary">
-              {summarizeRevisionDiff(item.revision).map((line) => (
-                <li key={line}>{line}</li>
+              {summarizeRevisionDiff(item.revision).map((code) => (
+                <li key={code}>{formatEntityDiffCodes([code], t)[0]}</li>
               ))}
             </ul>
           ) : null}

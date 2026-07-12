@@ -86,6 +86,7 @@ export function PlayerShareCard({
   language?: Language
   achievementUnlocks?: AchievementUnlock[]
 }) {
+  const { t } = useI18n()
   const playerMatches = getCompletedMatches(matches).filter(
     (match) => match.player1Id === player.id || match.player2Id === player.id,
   )
@@ -98,7 +99,7 @@ export function PlayerShareCard({
   )
   const topDeck = deckStats[0]
   const firstSecond = buildFirstSecondStats(playerMatches)
-  const recent5 = buildRecentForm(matches, player.id).find((item) => item.label.includes('5'))
+  const recent5 = buildRecentForm(matches, player.id).find((item) => item.label === '5')
   const globalRates = players.length
     ? computeGlobalAchievementRates(players, decks, matches)
     : new Map()
@@ -119,20 +120,20 @@ export function PlayerShareCard({
     >
       <ShareStatGrid
         items={[
-          { label: '勝率', value: formatPercent(stat?.winRate ?? null) },
-          { label: '連勝', value: streak.currentStreak > 0 ? String(streak.currentStreak) : '—' },
-          { label: '最高連勝', value: streak.longestStreak > 0 ? String(streak.longestStreak) : '—' },
+          { label: t('stats.winRate'), value: formatPercent(stat?.winRate ?? null) },
+          { label: t('stats.currentStreak'), value: streak.currentStreak > 0 ? String(streak.currentStreak) : '—' },
+          { label: t('stats.longestStreak'), value: streak.longestStreak > 0 ? String(streak.longestStreak) : '—' },
         ]}
       />
       <ShareStatGrid
         items={[
           {
-            label: '先攻',
-            value: formatPercent(firstSecond.find((item) => item.label === '先攻')?.winRate ?? null),
+            label: t('stats.first'),
+            value: formatPercent(firstSecond.find((item) => item.label === 'first')?.winRate ?? null),
           },
           {
-            label: '後攻',
-            value: formatPercent(firstSecond.find((item) => item.label === '後攻')?.winRate ?? null),
+            label: t('stats.second'),
+            value: formatPercent(firstSecond.find((item) => item.label === 'second')?.winRate ?? null),
           },
           {
             label: '近5場',

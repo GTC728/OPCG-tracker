@@ -264,6 +264,36 @@ export const BACKLOG_BATCH_DEFINITIONS: AchievementDefinition[] = [
     },
     tiers: tierDefs.wins(TIERS.times5),
   },
+  {
+    id: 'conflict_survivor',
+    category: 'milestone',
+    kind: 'special',
+    ease: 70,
+    icon: 'shield',
+    title: { 'zh-Hant': '衝突倖存者', 'zh-Hans': '冲突幸存者', en: 'Conflict Survivor', ja: '競合サバイバー' },
+    description: {
+      'zh-Hant': '解決群組同步衝突的次數。',
+      'zh-Hans': '解决群组同步冲突的次数。',
+      en: 'Group sync conflicts resolved.',
+      ja: 'グループ同期の競合を解決した回数。',
+    },
+    tiers: tierDefs.wins([1, 3, 5, 10, 25]),
+  },
+  {
+    id: 'multi_group_tourist',
+    category: 'social',
+    kind: 'grind',
+    ease: 65,
+    icon: 'compass',
+    title: { 'zh-Hant': '多群遊客', 'zh-Hans': '多群游客', en: 'Multi-Group Tourist', ja: 'マルチグループ旅行者' },
+    description: {
+      'zh-Hant': '加入過的不同群組數量。',
+      'zh-Hans': '加入过的不同群组数量。',
+      en: 'Distinct groups joined.',
+      ja: '参加した異なるグループ数。',
+    },
+    tiers: tierDefs.people([1, 2, 3, 5, 8]),
+  },
 ]
 
 function playerMatches(playerId: string, matches: Match[]): Match[] {

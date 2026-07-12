@@ -341,8 +341,8 @@ Theme: rival narratives, color/set deep cuts, achievement-system meta, collab/sy
 | E34 | `group_download_first` | 首次拉取 | social | 🟢 group download once |
 | E35 | `realtime_witness` | 实时见证 | social | 🟡 collab pull during active match |
 | E36 | `queue_hero` | 队列英雄 | milestone | 🟡 flush 50 queued ops |
-| E37 | `conflict_survivor` | 冲突幸存者 | milestone | 🔴 merge conflict resolved |
-| E38 | `multi_group_tourist` | 多群游客 | social | 🔴 multi-group switch |
+| E37 | `conflict_survivor` | 冲突幸存者 | milestone | 🟢 `conflictsResolvedCount` (V4.21) |
+| E38 | `multi_group_tourist` | 多群游客 | social | 🟢 `groupVisitCodes` (V4.21) |
 | E39 | `event_check_in` | 赛事签到 | milestone | 🔴 V5 check-in |
 | E40 | `event_3_0` | 瑞士三胜 | skill | 🔴 V5 Swiss 3 wins |
 | E41 | `event_top8` | 八强 | skill | 🔴 V5 top 8 |

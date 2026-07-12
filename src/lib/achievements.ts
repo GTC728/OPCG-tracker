@@ -1,9 +1,7 @@
 import { createDefaultAppState } from '@/lib/constants'
 import { BACKLOG_BATCH_DEFINITIONS, evaluateBacklogBatchMetrics } from '@/lib/achievementsBacklogBatch'
-import {
-  REMAINING_ACHIEVEMENT_DEFINITIONS,
-  evaluateRemainingBacklogMetrics,
-} from '@/lib/achievementsBacklogRemainingEval'
+import { evaluateRemainingBacklogMetrics } from '@/lib/achievementsBacklogRemainingEval'
+import { REMAINING_ACHIEVEMENT_DEFINITIONS } from '@/lib/achievementsRemainingDefinitions'
 import type { BacklogExtras } from '@/lib/achievementsBacklogStats'
 import { EXTRA_ACHIEVEMENT_DEFINITIONS, evaluateExtraAchievementMetrics } from '@/lib/achievementsExtra'
 import { tierDefs, TIERS } from '@/lib/achievementTierCurves'
