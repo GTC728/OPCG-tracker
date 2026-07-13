@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { GroupMemberRow } from '@/components/settings/GroupMemberRow'
-import { useToast } from '@/components/ui/Toast'
 import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
 import { isCloudConfigured, getCloudSession } from '@/lib/cloudSync'
 import { resolveMemberDisplayName } from '@/lib/memberDisplay'
@@ -17,12 +16,12 @@ interface GroupMembersPanelProps {
 
 export function GroupMembersPanel({ unlinkedOnly = false, embedded = false }: GroupMembersPanelProps) {
   const { t } = useI18n()
-  const toast = useToast()
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const players = useAppStore((state) => state.players)
   const [members, setMembers] = useState<GroupMemberRecord[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const {
     canManage,
@@ -52,19 +51,22 @@ export function GroupMembersPanel({ unlinkedOnly = false, embedded = false }: Gr
   const refresh = useCallback(async () => {
     if (!groupCode || !configured) return
     setLoading(true)
+    setLoadError(null)
     try {
       const { user } = await getCloudSession()
       if (!user) {
         setMembers([])
+        setLoadError(t('cloud.loginRequired'))
         return
       }
       await reloadMembers()
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : t('members.loadFailed'))
+      setMembers([])
+      setLoadError(caught instanceof Error ? caught.message : t('members.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [configured, groupCode, reloadMembers, t, toast])
+  }, [configured, groupCode, reloadMembers, t])
 
   useEffect(() => {
     void refresh()
@@ -114,6 +116,12 @@ export function GroupMembersPanel({ unlinkedOnly = false, embedded = false }: Gr
       {!canManage ? (
         <p className={embedded ? 'mt-2 rounded-xl bg-surface-muted px-3 py-2 text-xs text-text-secondary' : 'mt-3 rounded-xl bg-surface-muted px-3 py-2 text-xs text-text-secondary'}>
           {t('members.viewOnly')}
+        </p>
+      ) : null}
+
+      {loadError ? (
+        <p className={embedded ? 'mt-2 rounded-xl bg-danger/10 px-3 py-2 text-sm text-red-200' : 'mt-3 rounded-xl bg-danger/10 px-3 py-2 text-sm text-red-200'}>
+          {loadError}
         </p>
       ) : null}
 

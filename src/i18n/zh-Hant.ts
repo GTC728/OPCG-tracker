@@ -330,6 +330,7 @@ export const zhHant = {
   'session.mergeConfirm': '確定將「{source}」合併到「{target}」？對局會移入保留場次，來源場次將刪除。',
   'session.merged': '場次已合併',
   'session.mergeFailed': '合併場次失敗',
+  'session.mergeNeedTwo': '需要至少兩個場次才能合併。',
   'sync.offline': '離線模式 — 變更已儲存本機',
   'sync.pendingCount': '{n} 項待同步',
   'app.credit': '@{handle}',

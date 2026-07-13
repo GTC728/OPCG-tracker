@@ -467,7 +467,11 @@ async function executeSyncOp(op: SyncQueueOp, state: AppState): Promise<void> {
       return
     }
     case 'merge_players': {
+      const source = state.players.find((player) => player.id === op.sourcePlayerId)
       const target = state.players.find((player) => player.id === op.targetPlayerId)
+      if (source) {
+        await pushSyncedPlayers(op.groupCode, [source])
+      }
       if (target) {
         await pushSyncedPlayers(op.groupCode, [target])
       }

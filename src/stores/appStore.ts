@@ -753,15 +753,24 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
 
     const mergedAliases = normalizeUniqueList([target.name, ...target.aliases, source.name, ...source.aliases])
+    const timestamp = nowIso()
     const next = persist({
       ...current,
-      players: current.players
-        .filter((player) => player.id !== sourcePlayerId)
-        .map((player) =>
-          player.id === targetPlayerId
-            ? { ...player, aliases: mergedAliases, updatedAt: nowIso() }
-            : player,
-        ),
+      players: current.players.map((player) => {
+        if (player.id === sourcePlayerId) {
+          return { ...player, deletedAt: timestamp, updatedAt: timestamp }
+        }
+        if (player.id === targetPlayerId) {
+          return { ...player, aliases: mergedAliases, updatedAt: timestamp }
+        }
+        return player
+      }),
+      sessionPlayers: current.sessionPlayers.filter((row) => row.playerId !== sourcePlayerId),
+      settings: {
+        ...current.settings,
+        linkedPlayerId:
+          current.settings.linkedPlayerId === sourcePlayerId ? targetPlayerId : current.settings.linkedPlayerId,
+      },
       playerAliases: [
         ...createPlayerAliasRecords(targetPlayerId, mergedAliases, 'merge'),
         ...current.playerAliases.filter(
@@ -784,6 +793,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
       })),
     })
     set({ ...next })
+    void import('@/lib/groupSync').then(({ reinforceLocalEntityTouch }) => {
+      reinforceLocalEntityTouch('player', sourcePlayerId)
+      reinforceLocalEntityTouch('player', targetPlayerId)
+    })
+    const groupCode = next.settings.lastGroupCode
+    if (groupCode) {
+      void import('@/lib/syncQueue').then(({ enqueueSyncOp }) =>
+        enqueueSyncOp({
+          kind: 'merge_players',
+          groupCode,
+          sourcePlayerId,
+          targetPlayerId,
+        }),
+      )
+    }
   },
 
   setDeckArchived: (id, archived) => {
