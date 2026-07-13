@@ -1,6 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { IconButton } from '@/components/ui/IconButton'
+import {
+  IconAdd,
+  IconDelete,
+  IconEdit,
+  IconLinked,
+  IconManage,
+  IconMerge,
+  IconRefresh,
+  IconSessions,
+  IconUsers,
+} from '@/components/ui/LobbyIcons'
+import { GroupClanSessions } from '@/components/lobby/GroupClanSessions'
+import { PlayerMergeTool } from '@/components/settings/PlayerMergeTool'
 import { MemberActionBar } from '@/components/settings/GroupMemberRow'
 import { useToast } from '@/components/ui/Toast'
 import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
@@ -12,7 +26,7 @@ import { useI18n } from '@/lib/i18n'
 import type { GroupMemberRecord, Player, PlayerInput } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type RosterTab = 'roster' | 'accounts'
+type RosterTab = 'roster' | 'accounts' | 'sessions' | 'merge'
 
 function parseList(value: string): string[] {
   return value
@@ -75,30 +89,31 @@ function CompactPlayerRow({
               </span>
             ) : null}
             {linked ? (
-              <span className="shrink-0 text-[10px] text-brand-300">{t('lobby.linkedBadge')}</span>
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-brand-300" title={t('lobby.linkedBadge')}>
+                <IconLinked />
+              </span>
             ) : null}
           </div>
           {player.aliases.length ? (
             <p className="truncate text-[11px] text-text-secondary">{player.aliases.join(' · ')}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="flex shrink-0 gap-0.5">
           {showMemberManage ? (
-            <Button
-              variant="ghost"
-              className="min-h-8 min-w-8 px-2 text-[11px]"
+            <IconButton
+              label={t('lobby.manage')}
               disabled={memberBusy}
               onClick={() => setManageOpen(true)}
             >
-              {t('lobby.manage')}
-            </Button>
+              <IconManage />
+            </IconButton>
           ) : null}
-          <Button variant="ghost" className="min-h-8 min-w-8 px-2 text-[11px]" onClick={onEdit}>
-            {t('lobby.edit')}
-          </Button>
-          <Button variant="ghost" className="min-h-8 min-w-8 px-2 text-[11px] text-danger" onClick={onDelete}>
-            {t('lobby.delete')}
-          </Button>
+          <IconButton label={t('lobby.edit')} onClick={onEdit}>
+            <IconEdit />
+          </IconButton>
+          <IconButton label={t('lobby.delete')} variant="danger" onClick={onDelete}>
+            <IconDelete />
+          </IconButton>
         </div>
       </article>
 
@@ -176,14 +191,9 @@ function CompactMemberRow({
           </p>
         </div>
         {showActions ? (
-          <Button
-            variant="ghost"
-            className="min-h-8 shrink-0 px-2 text-[11px]"
-            disabled={busy}
-            onClick={() => setManageOpen(true)}
-          >
-            {t('lobby.manage')}
-          </Button>
+          <IconButton label={t('lobby.manage')} disabled={busy} onClick={() => setManageOpen(true)}>
+            <IconManage />
+          </IconButton>
         ) : null}
       </article>
 
@@ -253,7 +263,7 @@ function PlayerQuickForm({
   )
 }
 
-export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
+export function GroupClanRoster() {
   const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
@@ -317,8 +327,8 @@ export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
   }, [configured, groupCode, reloadMembers, t, toast])
 
   useEffect(() => {
-    if (tab === 'accounts') void refreshMembers()
-  }, [tab, refreshMembers])
+    void refreshMembers()
+  }, [refreshMembers])
 
   const sortedPlayers = useMemo(() => {
     const list = players.filter((player) => !isDeletedPlayer(player))
@@ -332,7 +342,7 @@ export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
 
   const tabClass = (value: RosterTab) =>
     [
-      'flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition',
+      'flex h-9 min-w-9 flex-1 items-center justify-center rounded-lg transition',
       tab === value ? 'bg-brand-500 text-white' : 'bg-surface text-text-secondary ring-1 ring-surface-muted',
     ].join(' ')
 
@@ -340,41 +350,29 @@ export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-1 gap-1.5">
-          <button type="button" className={tabClass('roster')} onClick={() => setTab('roster')}>
-            {t('members.tabRoster')}
-          </button>
-          <button type="button" className={tabClass('accounts')} onClick={() => setTab('accounts')}>
-            {t('members.tabAuth')}
-          </button>
-        </div>
-        {tab === 'roster' ? (
-          <Button className="min-h-8 shrink-0 px-2.5 text-xs" onClick={() => setEditor('new')}>
-            +
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            className="min-h-8 shrink-0 px-2 text-xs"
-            disabled={loadingMembers}
-            onClick={() => void refreshMembers()}
-          >
-            ↻
-          </Button>
-        )}
-      </div>
-
-      {onSession ? (
-        <button
-          type="button"
-          className="w-full rounded-lg bg-surface-elevated px-3 py-2 text-left text-xs ring-1 ring-surface-muted"
-          onClick={onSession}
-        >
-          <span className="font-semibold">{t('settings.session')}</span>
-          <span className="mt-0.5 block text-[10px] text-text-secondary">{t('lobby.sessionHint')}</span>
+      <div className="flex items-center gap-1.5">
+        <button type="button" className={tabClass('roster')} title={t('members.tabRoster')} onClick={() => setTab('roster')}>
+          <IconUsers />
         </button>
-      ) : null}
+        <button type="button" className={tabClass('accounts')} title={t('members.tabAuth')} onClick={() => setTab('accounts')}>
+          <IconLinked />
+        </button>
+        <button type="button" className={tabClass('sessions')} title={t('settings.session')} onClick={() => setTab('sessions')}>
+          <IconSessions />
+        </button>
+        <button type="button" className={tabClass('merge')} title={t('data.mergePlayers')} onClick={() => setTab('merge')}>
+          <IconMerge />
+        </button>
+        {tab === 'roster' ? (
+          <IconButton label={t('lobby.addPlayer')} variant="brand" onClick={() => setEditor('new')}>
+            <IconAdd />
+          </IconButton>
+        ) : tab === 'accounts' ? (
+          <IconButton label={t('members.refresh')} disabled={loadingMembers} onClick={() => void refreshMembers()}>
+            <IconRefresh />
+          </IconButton>
+        ) : null}
+      </div>
 
       {tab === 'roster' ? (
         <ul className="space-y-1.5">
@@ -418,7 +416,7 @@ export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
             </li>
           )}
         </ul>
-      ) : (
+      ) : tab === 'accounts' ? (
         <ul className="space-y-1.5">
           {members.length ? (
             members.map((member) => (
@@ -448,6 +446,10 @@ export function GroupClanRoster({ onSession }: { onSession?: () => void }) {
             </li>
           )}
         </ul>
+      ) : tab === 'sessions' ? (
+        <GroupClanSessions />
+      ) : (
+        <PlayerMergeTool compact />
       )}
 
       <BottomSheet

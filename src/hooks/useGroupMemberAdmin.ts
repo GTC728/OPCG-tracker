@@ -13,7 +13,6 @@ import {
   removeGroupMember,
   setGroupMemberBan,
   updateGroupMemberRole,
-  updateOwnMemberDisplayName,
 } from '@/lib/cloudSync'
 import { useI18n } from '@/lib/i18n'
 import type { GroupMemberRecord } from '@/types'
@@ -25,25 +24,16 @@ export function useGroupMemberAdmin(onMembersChange?: (members: GroupMemberRecor
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const role = useAppStore((state) => state.settings.groupMemberRole)
   const bannedAt = useAppStore((state) => state.settings.groupMemberBannedAt)
-  const profileDisplayName = useAppStore((state) => state.settings.profileDisplayName)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
 
   const canManage = Boolean(groupCode) && canManageMembers(role, isBannedFromGroup(bannedAt))
 
   const reloadMembers = useCallback(async () => {
     if (!groupCode) return []
-    const ownName = profileDisplayName?.trim()
-    if (ownName) {
-      try {
-        await updateOwnMemberDisplayName(groupCode, ownName)
-      } catch {
-        // offline or legacy schema
-      }
-    }
     const rows = await listGroupMembers(groupCode)
     onMembersChange?.(rows)
     return rows
-  }, [groupCode, onMembersChange, profileDisplayName])
+  }, [groupCode, onMembersChange])
 
   const handleRoleChange = useCallback(
     async (userId: string, nextRole: GroupMemberRole) => {

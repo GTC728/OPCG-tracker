@@ -4,9 +4,11 @@ import { backlogExtrasFromState } from '@/lib/achievements'
 import { createDefaultAppState } from '@/lib/constants'
 import { groupStorageKey } from '@/lib/appStateLayers'
 import { createPersonalProfile, hasPersonalProfile } from '@/lib/personalProfile'
+import { unlinkProfile } from '@/lib/profileClaim'
 import {
   finalizeProfileLink,
   finalizeGroupProfileSession,
+  suppressGroupAutoRelink,
   tryAutoRelinkGroupProfile,
 } from '@/lib/profileGroupLink'
 import {
@@ -52,6 +54,17 @@ describe('個人檔 GTC 與群組 Bobby 分離', () => {
     state = tryAutoRelinkGroupProfile(state)
     expect(state.settings.linkedPlayerId).toBe('bobby-id')
     expect(state.settings.profileDisplayName).toBe('GTC')
+  })
+})
+
+describe('unlinkGroupProfile 不自動重連', () => {
+  it('suppress 後 tryAutoRelink 不恢復連結', () => {
+    let state = baseLinkedState({ lastGroupCode: 'CLUB-A', profileDisplayName: 'GTC' })
+    state = unlinkProfile(state)
+    state = suppressGroupAutoRelink(state, 'CLUB-A')
+    expect(state.settings.linkedPlayerId).toBeNull()
+    state = tryAutoRelinkGroupProfile(state)
+    expect(state.settings.linkedPlayerId).toBeNull()
   })
 })
 

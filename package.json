@@ -1,7 +1,7 @@
 {
   "name": "opcg-tracker",
   "private": true,
-  "version": "5.0.2",
+  "version": "5.1.0",
   "homepage": "https://opcg-tracker-v2.pages.dev",
   "type": "module",
   "scripts": {

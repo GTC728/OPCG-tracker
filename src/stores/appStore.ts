@@ -61,7 +61,7 @@ import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
 import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
-import { finalizeProfileLink, bookmarkCurrentGroupProfile, tryAutoRelinkGroupProfile } from '@/lib/profileGroupLink'
+import { finalizeProfileLink, bookmarkCurrentGroupProfile, tryAutoRelinkGroupProfile, suppressGroupAutoRelink } from '@/lib/profileGroupLink'
 import {
   createPersonalProfile as applyCreatePersonalProfile,
   hasPersonalProfile,
@@ -1911,7 +1911,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   unlinkGroupProfile: () => {
     const current = getAppState()
-    const persisted = persist(unlinkProfileState(current))
+    const unlinked = unlinkProfileState(current)
+    const suppressed = suppressGroupAutoRelink(unlinked)
+    const persisted = persist(suppressed)
     set({ ...persisted })
   },
 

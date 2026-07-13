@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { IconButton } from '@/components/ui/IconButton'
+import {
+  IconLocal,
+  IconSearch,
+  IconSettings,
+  IconSwitch,
+} from '@/components/ui/LobbyIcons'
 import { GroupClanRoster } from '@/components/lobby/GroupClanRoster'
 import { GroupLobbyPanel } from '@/components/settings/GroupLobbyPanel'
 import { useToast } from '@/components/ui/Toast'
@@ -50,9 +57,17 @@ function formatSyncTime(iso: string | null): string {
 function GroupClanInfoCard({
   activeGroup,
   onOpenSettings,
+  onOpenSwitch,
+  onOpenSearch,
+  onSwitchLocal,
+  switchBusy,
 }: {
   activeGroup: WorkspaceDescriptor
   onOpenSettings: () => void
+  onOpenSwitch?: () => void
+  onOpenSearch?: () => void
+  onSwitchLocal?: () => void
+  switchBusy?: boolean
 }) {
   const { t } = useI18n()
   const settings = useAppStore((state) => state.settings)
@@ -103,9 +118,26 @@ function GroupClanInfoCard({
             <p className="mt-1 font-mono text-[11px] text-brand-300">@{activeGroup.inviteSlug}</p>
           ) : null}
         </div>
-        <Button variant="secondary" className="min-h-9 shrink-0 px-3 text-xs" onClick={onOpenSettings}>
-          {t('lobby.settings')}
-        </Button>
+        <div className="flex shrink-0 gap-0.5">
+          <IconButton label={t('lobby.settings')} variant="brand" onClick={onOpenSettings}>
+            <IconSettings />
+          </IconButton>
+          {onOpenSwitch ? (
+            <IconButton label={t('lobby.switchGroup')} disabled={switchBusy} onClick={onOpenSwitch}>
+              <IconSwitch />
+            </IconButton>
+          ) : null}
+          {onOpenSearch ? (
+            <IconButton label={t('lobby.tabSearch')} onClick={onOpenSearch}>
+              <IconSearch />
+            </IconButton>
+          ) : null}
+          {onSwitchLocal ? (
+            <IconButton label={t('workspace.local')} disabled={switchBusy} onClick={onSwitchLocal}>
+              <IconLocal />
+            </IconButton>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -301,7 +333,7 @@ function GroupDetailView({
   )
 }
 
-export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHubProps) {
+export function GroupLobbyHub({ onClose, initialTab }: GroupLobbyHubProps) {
   const { t } = useI18n()
   const toast = useToast()
 
@@ -322,6 +354,7 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searchFetched, setSearchFetched] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [switchOpen, setSwitchOpen] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [switchBusyId, setSwitchBusyId] = useState<string | null>(null)
   const searchRequestRef = useRef(0)
@@ -503,7 +536,17 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
         ) : null}
 
         {activeGroup ? (
-          <GroupClanInfoCard activeGroup={activeGroup} onOpenSettings={() => setSettingsOpen(true)} />
+          <GroupClanInfoCard
+            activeGroup={activeGroup}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenSwitch={() => setSwitchOpen(true)}
+            onOpenSearch={() => setTab('search')}
+            onSwitchLocal={() => {
+              const local = workspaceItems.find((item) => item.kind === 'local')
+              if (local) void handleSwitch(local)
+            }}
+            switchBusy={switchBusyId !== null}
+          />
         ) : (
           <section className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
             <p className="text-sm text-text-secondary">{t('lobby.noActiveClan')}</p>
@@ -513,67 +556,47 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
           </section>
         )}
 
-        {lastGroupCode ? (
-          <GroupClanRoster onSession={onNavigate ? () => onNavigate('session') : undefined} />
-        ) : null}
+        {lastGroupCode ? <GroupClanRoster /> : null}
 
-        <BottomSheet open={settingsOpen} title={t('lobby.settings')} onClose={() => setSettingsOpen(false)} manageScroll>
-          <GroupLobbyPanel settingsOnly />
+        <BottomSheet open={settingsOpen} title={t('lobby.settings')} onClose={() => setSettingsOpen(false)}>
+          <div className="scrollbar-subtle max-h-[min(70dvh,560px)] overflow-y-auto pb-6">
+            <GroupLobbyPanel settingsOnly />
+          </div>
         </BottomSheet>
 
-        {myGroups.length > 1 ? (
-          <section className="space-y-1.5">
-            <p className="text-xs font-semibold text-text-secondary">{t('lobby.switchGroup')}</p>
-            <ul className="space-y-1.5">
-              {myGroups.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    disabled={switchBusyId !== null || item.isActive}
-                    className={[
-                      'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition',
-                      item.isActive
-                        ? 'bg-surface-muted ring-1 ring-brand-500/40'
-                        : 'bg-surface-elevated ring-1 ring-surface-muted hover:bg-surface-muted',
-                    ].join(' ')}
-                    onClick={() => void handleSwitch(item)}
-                  >
-                    <span>
-                      <span className="font-semibold">{workspaceLabel(item, t)}</span>
-                      {item.role ? (
-                        <span className="mt-0.5 block text-xs text-text-secondary">{groupRoleLabel(item.role)}</span>
-                      ) : null}
-                    </span>
-                    {item.isActive ? (
-                      <span className="text-xs text-brand-400">{t('workspace.active')}</span>
-                    ) : switchBusyId === item.id ? (
-                      <span className="text-xs text-text-secondary">…</span>
-                    ) : (
-                      <span className="text-xs text-text-secondary">›</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <Button variant="secondary" fullWidth onClick={() => setTab('search')}>
-          {t('lobby.openSearch')}
-        </Button>
-
-        <button
-          type="button"
-          className="w-full rounded-xl bg-surface-elevated px-3 py-2.5 text-left text-sm ring-1 ring-surface-muted"
-          disabled={switchBusyId !== null}
-          onClick={() => {
-            const local = workspaceItems.find((item) => item.kind === 'local')
-            if (local) void handleSwitch(local)
-          }}
-        >
-          <span className="font-semibold">{t('workspace.local')}</span>
-          <span className="mt-0.5 block text-xs text-text-secondary">{t('workspace.localDataNote')}</span>
-        </button>
+        <BottomSheet open={switchOpen} title={t('lobby.switchGroup')} onClose={() => setSwitchOpen(false)}>
+          <ul className="space-y-1.5 pb-4">
+            {myGroups.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  disabled={switchBusyId !== null || item.isActive}
+                  className={[
+                    'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition',
+                    item.isActive
+                      ? 'bg-surface-muted ring-1 ring-brand-500/40'
+                      : 'bg-surface-elevated ring-1 ring-surface-muted hover:bg-surface-muted',
+                  ].join(' ')}
+                  onClick={() => {
+                    void handleSwitch(item).then(() => setSwitchOpen(false))
+                  }}
+                >
+                  <span>
+                    <span className="font-semibold">{workspaceLabel(item, t)}</span>
+                    {item.role ? (
+                      <span className="mt-0.5 block text-xs text-text-secondary">{groupRoleLabel(item.role)}</span>
+                    ) : null}
+                  </span>
+                  {item.isActive ? (
+                    <span className="text-xs text-brand-400">{t('workspace.active')}</span>
+                  ) : (
+                    <span className="text-xs text-text-secondary">›</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </BottomSheet>
       </div>
     )
   }

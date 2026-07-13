@@ -1,15 +1,28 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
+import { IconEdit, IconUsers } from '@/components/ui/LobbyIcons'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
+import { useToast } from '@/components/ui/Toast'
 import { getLinkedPlayer, validateProfileLink } from '@/lib/profileClaim'
 import { getGroupProfileBookmark } from '@/lib/profileGroupLink'
 import { getPersonalProfileName, hasPersonalProfile } from '@/lib/personalProfile'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
+import { Link2, Unlink } from 'lucide-react'
+
+function IconLinkGroup() {
+  return <Link2 className="h-4 w-4" aria-hidden />
+}
+
+function IconUnlinkGroup() {
+  return <Unlink className="h-4 w-4" aria-hidden />
+}
 
 export function ProfileSettings() {
   const { t } = useI18n()
+  const toast = useToast()
   const state = useAppStore()
   const unlinkGroupProfile = useAppStore((store) => store.unlinkGroupProfile)
   const updatePersonalProfileName = useAppStore((store) => store.updatePersonalProfileName)
@@ -39,28 +52,32 @@ export function ProfileSettings() {
                     value={nameDraft}
                     onChange={(event) => setNameDraft(event.target.value)}
                   />
-                  <Button
-                    variant="secondary"
+                  <IconButton
+                    label={t('common.save')}
+                    variant="brand"
                     onClick={() => {
-                      if (nameDraft.trim()) updatePersonalProfileName(nameDraft.trim())
+                      const trimmed = nameDraft.trim()
+                      if (!trimmed) return
+                      updatePersonalProfileName(trimmed)
                       setEditingName(false)
+                      toast.success(t('profile.nameUpdated'))
                     }}
                   >
-                    {t('common.save')}
-                  </Button>
+                    <IconEdit />
+                  </IconButton>
                 </div>
               ) : (
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <p className="text-xl font-bold">{personalName}</p>
-                  <Button
-                    variant="ghost"
+                  <IconButton
+                    label={t('common.edit')}
                     onClick={() => {
                       setNameDraft(personalName ?? '')
                       setEditingName(true)
                     }}
                   >
-                    {t('common.edit')}
-                  </Button>
+                    <IconEdit />
+                  </IconButton>
                 </div>
               )}
               <p className="mt-2 text-sm text-text-secondary">{t('profile.personalProfileDesc')}</p>
@@ -71,7 +88,10 @@ export function ProfileSettings() {
                 <p className="text-xs text-text-secondary">{t('profile.groupIdentityLabel')}</p>
                 {linkedPlayer ? (
                   <>
-                    <p className="text-lg font-semibold">{linkedPlayer.name}</p>
+                    <div className="flex items-center gap-2">
+                      <IconUsers />
+                      <p className="text-lg font-semibold">{linkedPlayer.name}</p>
+                    </div>
                     {validationIssue ? (
                       <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning ring-1 ring-warning/25">
                         {t(`profile.issue.${validationIssue}` as 'profile.issue.linked_player_missing')}
@@ -79,13 +99,19 @@ export function ProfileSettings() {
                     ) : (
                       <p className="text-sm text-text-secondary">{t('profile.groupLinkedDesc')}</p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="secondary" onClick={() => setSheetOpen(true)}>
-                        {t('profile.changeGroupLink')}
-                      </Button>
-                      <Button variant="ghost" onClick={() => unlinkGroupProfile()}>
-                        {t('profile.unlinkGroupOnly')}
-                      </Button>
+                    <div className="flex gap-2">
+                      <IconButton label={t('profile.changeGroupLink')} variant="brand" onClick={() => setSheetOpen(true)}>
+                        <IconLinkGroup />
+                      </IconButton>
+                      <IconButton
+                        label={t('profile.unlinkGroupOnly')}
+                        onClick={() => {
+                          unlinkGroupProfile()
+                          toast.success(t('profile.unlinked'))
+                        }}
+                      >
+                        <IconUnlinkGroup />
+                      </IconButton>
                     </div>
                   </>
                 ) : (
