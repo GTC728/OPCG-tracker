@@ -144,7 +144,7 @@ interface AppStore extends AppState {
   createAndClaimProfile: (input: PlayerInput) => Player | null
   createPersonalProfile: (displayName: string) => void
   updatePersonalProfileName: (displayName: string) => void
-  linkProfileToPlayer: (playerId: string, nameConfirmation: string, forceReclaim?: boolean) => void
+  linkProfileToPlayer: (playerId: string, nameConfirmation?: string, forceReclaim?: boolean) => void
   unlinkProfile: () => void
   unlinkGroupProfile: () => void
   clearPendingAchievementToasts: () => void
@@ -1924,7 +1924,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const current = getAppState()
     const player = current.players.find((item) => item.id === playerId)
     if (!player) throw new ProfileClaimError('player_not_found', '找不到玩家。')
-    assertNameConfirmation(player, nameConfirmation)
+    if (nameConfirmation?.trim()) {
+      assertNameConfirmation(player, nameConfirmation)
+    }
     const claimed = applyProfileClaim(current, playerId, { forceReclaim })
     const finalized = finalizeProfileLink(claimed)
     const persisted = persist(finalized)

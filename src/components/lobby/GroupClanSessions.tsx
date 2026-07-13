@@ -18,6 +18,7 @@ function CompactSessionRow({
   session,
   isCurrent,
   matchCount,
+  canManage,
   onSwitch,
   onArchive,
   onUnarchive,
@@ -27,6 +28,7 @@ function CompactSessionRow({
   session: Session
   isCurrent: boolean
   matchCount: number
+  canManage?: boolean
   onSwitch: () => void
   onArchive?: () => void
   onUnarchive?: () => void
@@ -52,30 +54,32 @@ function CompactSessionRow({
         </p>
       </button>
       <div className="flex shrink-0 gap-0.5">
-        {isCurrent ? (
+        {canManage && isCurrent ? (
           <IconButton label={t('settings.renameSession')} onClick={onRename}>
             <IconEdit />
           </IconButton>
         ) : null}
-        {onArchive ? (
+        {canManage && onArchive ? (
           <IconButton label={t('session.archive')} onClick={onArchive}>
             <span className="text-[10px] font-bold">A</span>
           </IconButton>
         ) : null}
-        {onUnarchive ? (
+        {canManage && onUnarchive ? (
           <IconButton label={t('session.unarchive')} onClick={onUnarchive}>
             <span className="text-[10px] font-bold">U</span>
           </IconButton>
         ) : null}
-        <IconButton label={t('common.delete')} variant="danger" onClick={onDelete}>
-          <IconDelete />
-        </IconButton>
+        {canManage ? (
+          <IconButton label={t('common.delete')} variant="danger" onClick={onDelete}>
+            <IconDelete />
+          </IconButton>
+        ) : null}
       </div>
     </article>
   )
 }
 
-export function GroupClanSessions() {
+export function GroupClanSessions({ canManage = true }: { canManage?: boolean }) {
   const { t } = useI18n()
   const toast = useToast()
   const sessions = useAppStore((state) => state.sessions)
@@ -110,50 +114,54 @@ export function GroupClanSessions() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <input
-          className="min-h-9 flex-1 rounded-lg border border-surface-muted bg-surface px-3 text-sm"
-          disabled={!currentSession}
-          value={renameDraft}
-          onChange={(event) => setRenameDraft(event.target.value)}
-          placeholder={t('settings.sessionName')}
-        />
-        <IconButton
-          label={t('settings.newSession')}
-          variant="brand"
-          onClick={() => {
-            const session = createNewSession()
-            setRenameDraft(session.name)
-            toast.success(t('settings.sessionCreated'))
-          }}
-        >
-          <IconAdd />
-        </IconButton>
-      </div>
+      {canManage ? (
+        <>
+          <div className="flex items-center gap-2">
+            <input
+              className="min-h-9 flex-1 rounded-lg border border-surface-muted bg-surface px-3 text-sm"
+              disabled={!currentSession}
+              value={renameDraft}
+              onChange={(event) => setRenameDraft(event.target.value)}
+              placeholder={t('settings.sessionName')}
+            />
+            <IconButton
+              label={t('settings.newSession')}
+              variant="brand"
+              onClick={() => {
+                const session = createNewSession()
+                setRenameDraft(session.name)
+                toast.success(t('settings.sessionCreated'))
+              }}
+            >
+              <IconAdd />
+            </IconButton>
+          </div>
 
-      {currentSession ? (
-        <div className="flex gap-2">
-          <Button
-            className="min-h-9 flex-1 text-xs"
-            disabled={!renameDraft.trim()}
-            onClick={() => {
-              try {
-                updateSessionName(currentSession.id, renameDraft)
-                toast.success(t('settings.sessionRenamed'))
-              } catch (caught) {
-                toast.error(caught instanceof Error ? caught.message : t('settings.renameSessionFailed'))
-              }
-            }}
-          >
-            {t('settings.renameSession')}
-          </Button>
-          <Button className="min-h-9 flex-1 text-xs" variant="secondary" onClick={() => {
-            endCurrentSession()
-            toast.success(t('settings.sessionEnded'))
-          }}>
-            {t('settings.endCurrent')}
-          </Button>
-        </div>
+          {currentSession ? (
+            <div className="flex gap-2">
+              <Button
+                className="min-h-9 flex-1 text-xs"
+                disabled={!renameDraft.trim()}
+                onClick={() => {
+                  try {
+                    updateSessionName(currentSession.id, renameDraft)
+                    toast.success(t('settings.sessionRenamed'))
+                  } catch (caught) {
+                    toast.error(caught instanceof Error ? caught.message : t('settings.renameSessionFailed'))
+                  }
+                }}
+              >
+                {t('settings.renameSession')}
+              </Button>
+              <Button className="min-h-9 flex-1 text-xs" variant="secondary" onClick={() => {
+                endCurrentSession()
+                toast.success(t('settings.sessionEnded'))
+              }}>
+                {t('settings.endCurrent')}
+              </Button>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       <ul className="space-y-1.5">
@@ -163,6 +171,7 @@ export function GroupClanSessions() {
               session={session}
               isCurrent={session.id === currentSessionId}
               matchCount={countSessionMatches(session.id, matches, activeMatches)}
+              canManage={canManage}
               onSwitch={() => {
                 try {
                   switchSession(session.id)
@@ -209,6 +218,7 @@ export function GroupClanSessions() {
                 session={session}
                 isCurrent={session.id === currentSessionId}
                 matchCount={countSessionMatches(session.id, matchState.matches, matchState.activeMatches)}
+                canManage={canManage}
                 onSwitch={() => {
                   try {
                     switchSession(session.id)

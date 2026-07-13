@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { IconButton, TabIconButton } from '@/components/ui/IconButton'
+import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import {
   IconAdd,
   IconDelete,
@@ -22,7 +23,7 @@ import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
 import { isCloudConfigured, getCloudSession } from '@/lib/cloudSync'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { resolveMemberDisplayName } from '@/lib/memberDisplay'
-import { isDeletedPlayer } from '@/lib/entityVisibility'
+import { isDeletedPlayer, countVisibleMatchesForPlayer } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
 import type { GroupMemberRecord, Player, PlayerInput } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -40,6 +41,7 @@ function CompactPlayerRow({
   player,
   member,
   canManageMember,
+  canManageRoster,
   canTransfer,
   memberBusy,
   onEdit,
@@ -52,6 +54,7 @@ function CompactPlayerRow({
   player: Player
   member?: GroupMemberRecord | null
   canManageMember?: boolean
+  canManageRoster?: boolean
   canTransfer?: boolean
   memberBusy?: boolean
   onEdit: () => void
@@ -109,12 +112,16 @@ function CompactPlayerRow({
               <IconManage />
             </IconButton>
           ) : null}
-          <IconButton label={t('lobby.edit')} onClick={onEdit}>
-            <IconEdit />
-          </IconButton>
-          <IconButton label={t('lobby.delete')} variant="danger" onClick={onDelete}>
-            <IconDelete />
-          </IconButton>
+          {canManageRoster ? (
+            <>
+              <IconButton label={t('lobby.edit')} onClick={onEdit}>
+                <IconEdit />
+              </IconButton>
+              <IconButton label={t('lobby.delete')} variant="danger" onClick={onDelete}>
+                <IconDelete />
+              </IconButton>
+            </>
+          ) : null}
         </div>
       </article>
 
@@ -268,6 +275,8 @@ export function GroupClanRoster() {
   const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
+  const matches = useAppStore((state) => state.matches)
+  const activeMatches = useAppStore((state) => state.activeMatches)
   const sessions = useAppStore((state) => state.sessions)
   const mergeSessions = useAppStore((state) => state.mergeSessions)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
@@ -283,6 +292,7 @@ export function GroupClanRoster() {
   const [membersError, setMembersError] = useState<string | null>(null)
   const [playerMergeOpen, setPlayerMergeOpen] = useState(false)
   const [sessionMergeOpen, setSessionMergeOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Player | null>(null)
 
   const {
     canManage,
@@ -351,8 +361,18 @@ export function GroupClanRoster() {
 
   if (!groupCode) return null
 
+  const matchState = { matches, activeMatches }
+  const deleteMatchCount = deleteTarget
+    ? countVisibleMatchesForPlayer(matchState, deleteTarget.id)
+    : 0
+
   return (
     <section className="space-y-2">
+      {!canManage && tab === 'roster' ? (
+        <p className="rounded-xl bg-surface-muted px-3 py-2 text-xs text-text-secondary">
+          {t('members.rosterViewOnly')}
+        </p>
+      ) : null}
       <div className="flex items-center gap-1.5">
         <TabIconButton label={t('members.tabRoster')} active={tab === 'roster'} onClick={() => setTab('roster')}>
           <IconUsers />
@@ -363,7 +383,7 @@ export function GroupClanRoster() {
         <TabIconButton label={t('settings.session')} active={tab === 'sessions'} onClick={() => setTab('sessions')}>
           <IconSessions />
         </TabIconButton>
-        {tab === 'roster' ? (
+        {tab === 'roster' && canManage ? (
           <>
             <IconButton label={t('data.mergePlayers')} onClick={() => setPlayerMergeOpen(true)}>
               <IconMerge />
@@ -376,11 +396,11 @@ export function GroupClanRoster() {
           <IconButton label={t('members.refresh')} disabled={loadingMembers} onClick={() => void refreshMembers()}>
             <IconRefresh />
           </IconButton>
-        ) : (
+        ) : tab === 'sessions' && canManage ? (
           <IconButton label={t('session.mergeTitle')} onClick={() => setSessionMergeOpen(true)}>
             <IconMerge />
           </IconButton>
-        )}
+        ) : null}
       </div>
 
       {tab === 'roster' ? (
@@ -396,17 +416,11 @@ export function GroupClanRoster() {
                       player={player}
                       member={member}
                       canManageMember={canManage && !isSelf}
+                      canManageRoster={canManage}
                       canTransfer={canTransfer && !isSelf}
                       memberBusy={member ? busyUserId === member.userId : false}
                       onEdit={() => setEditor(player)}
-                      onDelete={() => {
-                        try {
-                          deletePlayer(player.id)
-                          toast.success(t('delete.playerDone'))
-                        } catch (caught) {
-                          toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
-                        }
-                      }}
+                      onDelete={() => setDeleteTarget(player)}
                       onMemberRoleChange={handleRoleChange}
                       onMemberBanToggle={handleBanToggle}
                       onMemberRemove={(target) => handleRemove(target, player.name)}
@@ -473,8 +487,29 @@ export function GroupClanRoster() {
         </ul>
         </>
       ) : (
-        <GroupClanSessions />
+        <GroupClanSessions canManage={canManage} />
       )}
+
+      <PermanentDeletePrompt
+        open={deleteTarget !== null}
+        title={t('delete.playerTitle')}
+        description={
+          deleteMatchCount > 0
+            ? t('delete.playerDescWithMatches').replace('{n}', String(deleteMatchCount))
+            : t('delete.playerDesc')
+        }
+        detail={deleteTarget?.name}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          try {
+            deletePlayer(deleteTarget.id)
+            toast.success(t('delete.playerDone'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
+          }
+        }}
+      />
 
       <BottomSheet
         open={playerMergeOpen}

@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/Toast'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { resolveMemberDisplayName } from '@/lib/memberDisplay'
 import { useI18n } from '@/lib/i18n'
-import { isDeletedPlayer } from '@/lib/entityVisibility'
+import { isDeletedPlayer, countVisibleMatchesForPlayer } from '@/lib/entityVisibility'
 import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, GroupMemberRecord, Player, PlayerInput } from '@/types'
@@ -243,6 +243,7 @@ function PlayerCard({
   member,
   linkedAccountLabel,
   canManageMember,
+  canManageRoster,
   canTransfer,
   memberBusy,
   onMemberRoleChange,
@@ -256,6 +257,7 @@ function PlayerCard({
   member?: GroupMemberRecord | null
   linkedAccountLabel?: string | null
   canManageMember?: boolean
+  canManageRoster?: boolean
   canTransfer?: boolean
   memberBusy?: boolean
   onMemberRoleChange?: (userId: string, role: import('@/lib/groupPermissions').GroupMemberRole) => Promise<void>
@@ -313,12 +315,16 @@ function PlayerCard({
               <IconManage />
             </IconButton>
           ) : null}
-          <IconButton label={t('lobby.edit')} onClick={onEdit}>
-            <IconEdit />
-          </IconButton>
-          <IconButton label={t('lobby.delete')} variant="danger" onClick={onDelete}>
-            <IconDelete />
-          </IconButton>
+          {canManageRoster ? (
+            <>
+              <IconButton label={t('lobby.edit')} onClick={onEdit}>
+                <IconEdit />
+              </IconButton>
+              <IconButton label={t('lobby.delete')} variant="danger" onClick={onDelete}>
+                <IconDelete />
+              </IconButton>
+            </>
+          ) : null}
         </div>
       </article>
 
@@ -376,6 +382,8 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
+  const matches = useAppStore((state) => state.matches)
+  const activeMatches = useAppStore((state) => state.activeMatches)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const decks = useAppStore((state) => state.decks)
@@ -442,6 +450,11 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
     return map
   }, [members, players])
 
+  const canManageRoster = !groupCode || canManage
+  const purgeMatchCount = purgePlayer
+    ? countVisibleMatchesForPlayer({ matches, activeMatches }, purgePlayer.id)
+    : 0
+
   return (
     <>
       {mode !== 'leaders' ? (
@@ -451,10 +464,18 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
             <h2 className="text-base font-semibold">{t('members.rosterTitle')}</h2>
             <p className="mt-0.5 text-xs text-text-secondary">{t('members.rosterDesc')}</p>
           </div>
-          <Button className="min-h-8 shrink-0 px-2.5 text-xs" onClick={() => setEditor({ kind: 'player' })}>
-            +
-          </Button>
+          {canManageRoster ? (
+            <Button className="min-h-8 shrink-0 px-2.5 text-xs" onClick={() => setEditor({ kind: 'player' })}>
+              +
+            </Button>
+          ) : null}
         </div>
+
+        {groupCode && !canManage ? (
+          <p className="mt-2 rounded-xl bg-surface-muted px-3 py-2 text-xs text-text-secondary">
+            {t('members.rosterViewOnly')}
+          </p>
+        ) : null}
 
         <div className="mt-3 space-y-1.5">
           {sortedPlayers.length ? (
@@ -470,6 +491,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                   player.linkedUserId ? linkedAccountByUserId.get(player.linkedUserId) : null
                 }
                 canManageMember={canManage && !isSelf}
+                canManageRoster={canManageRoster}
                 canTransfer={canTransfer && !isSelf}
                 memberBusy={member ? busyUserId === member.userId : false}
                 onMemberRoleChange={handleRoleChange}
@@ -496,7 +518,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
       </section>
       ) : null}
 
-      {mode !== 'leaders' ? <PlayerMergeTool /> : null}
+      {mode !== 'leaders' && canManageRoster ? <PlayerMergeTool /> : null}
 
       {mode !== 'players' ? (
       <section className="rounded-2xl bg-surface-elevated p-4">
@@ -568,7 +590,11 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
       <PermanentDeletePrompt
         open={purgePlayer !== null}
         title={t('delete.playerTitle')}
-        description={t('delete.playerDesc')}
+        description={
+          purgeMatchCount > 0
+            ? t('delete.playerDescWithMatches').replace('{n}', String(purgeMatchCount))
+            : t('delete.playerDesc')
+        }
         detail={purgePlayer?.name}
         onClose={() => setPurgePlayer(null)}
         onBackup={() => {
