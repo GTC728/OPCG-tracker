@@ -21,6 +21,8 @@ import {
   applyRemoteConflictResolution,
 } from '@/lib/conflictResolver'
 import {
+  bumpGroupSyncEpoch,
+  clearAllLocalEntityTouches,
   clearLocalEntityTouch,
   flushGroupCollabSyncNowAsync,
   pauseGroupCollabNotify,
@@ -1608,6 +1610,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (targetCode === currentCode) return
 
     stopGroupCollabRealtime()
+    bumpGroupSyncEpoch()
+    clearAllLocalEntityTouches()
     pauseGroupCollabNotify()
     try {
       const outgoingSnapshot = captureGroupScopedSnapshot(current)

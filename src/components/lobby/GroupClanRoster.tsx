@@ -8,11 +8,13 @@ import {
   IconEdit,
   IconLinked,
   IconManage,
+  IconMerge,
   IconRefresh,
   IconSessions,
   IconUsers,
 } from '@/components/ui/LobbyIcons'
 import { GroupClanSessions } from '@/components/lobby/GroupClanSessions'
+import { SessionMergeTool } from '@/components/session/SessionMergeTool'
 import { PlayerMergeTool } from '@/components/settings/PlayerMergeTool'
 import { MemberActionBar } from '@/components/settings/GroupMemberRow'
 import { useToast } from '@/components/ui/Toast'
@@ -266,6 +268,8 @@ export function GroupClanRoster() {
   const { t } = useI18n()
   const toast = useToast()
   const players = useAppStore((state) => state.players)
+  const sessions = useAppStore((state) => state.sessions)
+  const mergeSessions = useAppStore((state) => state.mergeSessions)
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const addPlayer = useAppStore((state) => state.addPlayer)
@@ -277,6 +281,8 @@ export function GroupClanRoster() {
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [editor, setEditor] = useState<Player | 'new' | null>(null)
   const [membersError, setMembersError] = useState<string | null>(null)
+  const [playerMergeOpen, setPlayerMergeOpen] = useState(false)
+  const [sessionMergeOpen, setSessionMergeOpen] = useState(false)
 
   const {
     canManage,
@@ -358,14 +364,23 @@ export function GroupClanRoster() {
           <IconSessions />
         </TabIconButton>
         {tab === 'roster' ? (
-          <IconButton label={t('lobby.addPlayer')} variant="brand" onClick={() => setEditor('new')}>
-            <IconAdd />
-          </IconButton>
+          <>
+            <IconButton label={t('data.mergePlayers')} onClick={() => setPlayerMergeOpen(true)}>
+              <IconMerge />
+            </IconButton>
+            <IconButton label={t('lobby.addPlayer')} variant="brand" onClick={() => setEditor('new')}>
+              <IconAdd />
+            </IconButton>
+          </>
         ) : tab === 'accounts' ? (
           <IconButton label={t('members.refresh')} disabled={loadingMembers} onClick={() => void refreshMembers()}>
             <IconRefresh />
           </IconButton>
-        ) : null}
+        ) : (
+          <IconButton label={t('session.mergeTitle')} onClick={() => setSessionMergeOpen(true)}>
+            <IconMerge />
+          </IconButton>
+        )}
       </div>
 
       {tab === 'roster' ? (
@@ -411,10 +426,6 @@ export function GroupClanRoster() {
               </li>
             )}
           </ul>
-          <div className="mt-3 border-t border-surface-muted pt-3">
-            <p className="mb-2 text-xs font-semibold text-text-secondary">{t('data.mergePlayers')}</p>
-            <PlayerMergeTool compact />
-          </div>
         </>
       ) : tab === 'accounts' ? (
         <>
@@ -464,6 +475,28 @@ export function GroupClanRoster() {
       ) : (
         <GroupClanSessions />
       )}
+
+      <BottomSheet
+        open={playerMergeOpen}
+        title={t('data.mergePlayers')}
+        onClose={() => setPlayerMergeOpen(false)}
+      >
+        <PlayerMergeTool compact />
+      </BottomSheet>
+
+      <BottomSheet
+        open={sessionMergeOpen}
+        title={t('session.mergeTitle')}
+        onClose={() => setSessionMergeOpen(false)}
+      >
+        <SessionMergeTool
+          compact
+          sessions={sessions}
+          onMerge={(sourceId, targetId) => {
+            mergeSessions(sourceId, targetId)
+          }}
+        />
+      </BottomSheet>
 
       <BottomSheet
         open={editor !== null}

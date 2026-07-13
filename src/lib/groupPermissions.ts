@@ -69,7 +69,7 @@ export function groupRoleLabelKey(role: GroupMemberRole): import('@/lib/i18n').T
 export function groupRoleLabel(role: GroupMemberRole): string {
   switch (role) {
     case 'owner':
-      return '團長'
+      return '群主'
     case 'admin':
       return '管理員'
     case 'member':

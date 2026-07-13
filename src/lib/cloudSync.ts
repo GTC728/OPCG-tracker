@@ -313,7 +313,7 @@ export async function updateGroupMemberRole(
   const supabase = await requireClient()
   const self = await requireUser()
   if (userId === self.id) throw new Error('無法變更自己的角色')
-  if (role === 'owner') throw new Error('無法透過此介面轉移團長')
+  if (role === 'owner') throw new Error('無法透過此介面轉移群主')
   const groupKey = await createGroupKey(groupCode)
   const { error } = await supabase
     .from('group_members')
