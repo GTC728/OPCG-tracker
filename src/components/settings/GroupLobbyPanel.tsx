@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
-import { listGroupMembers } from '@/lib/cloudSync'
 import {
   canManageGroup,
-  canTransferOwnership,
-  groupRoleLabel,
 } from '@/lib/groupPermissions'
 import {
   createGroupInviteLink,
@@ -14,7 +11,6 @@ import {
   refreshGroupStatsSnapshot,
   resolveGroupLookup,
   reviewJoinRequest,
-  transferGroupOwnership,
   updateGroupLobbySettings,
   visibilityLabelKey,
   type GroupJoinPolicy,
@@ -31,7 +27,6 @@ export function GroupLobbyPanel() {
   const toast = useToast()
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
   const role = useAppStore((state) => state.settings.groupMemberRole)
-  const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const players = useAppStore((state) => state.players)
   const matches = useAppStore((state) => state.matches)
   const sessions = useAppStore((state) => state.sessions)
@@ -45,7 +40,6 @@ export function GroupLobbyPanel() {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const canManage = canManageGroup(role)
-  const canTransfer = canTransferOwnership(role)
 
   const lobbyStats = useMemo(() => {
     const completed = getCompletedMatches(matches)
@@ -136,19 +130,6 @@ export function GroupLobbyPanel() {
       toast.success(t('lobby.inviteLinkCreated'))
     } catch (caught) {
       toast.error(caught instanceof Error ? caught.message : t('lobby.inviteLinkFailed'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleTransfer = async (userId: string) => {
-    if (!canTransfer) return
-    setBusy(true)
-    try {
-      await transferGroupOwnership(groupCode, userId)
-      toast.success(t('lobby.ownershipTransferred'))
-    } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : t('lobby.transferFailed'))
     } finally {
       setBusy(false)
     }
@@ -308,70 +289,6 @@ export function GroupLobbyPanel() {
           </ul>
         </div>
       ) : null}
-
-      {canTransfer ? (
-        <TransferOwnershipSection
-          groupCode={groupCode}
-          cloudUserId={cloudUserId}
-          busy={busy}
-          onTransfer={handleTransfer}
-        />
-      ) : null}
     </section>
-  )
-}
-
-function TransferOwnershipSection({
-  groupCode,
-  cloudUserId,
-  busy,
-  onTransfer,
-}: {
-  groupCode: string
-  cloudUserId: string | null
-  busy: boolean
-  onTransfer: (userId: string) => Promise<void>
-}) {
-  const { t } = useI18n()
-  const [members, setMembers] = useState<Array<{ userId: string; displayName: string; role: string }>>([])
-
-  useEffect(() => {
-    void listGroupMembers(groupCode).then((rows) => {
-      setMembers(
-        rows
-          .filter((row) => row.userId !== cloudUserId && row.role !== 'owner')
-          .map((row) => ({
-            userId: row.userId,
-            displayName: row.displayName ?? row.userId.slice(0, 8),
-            role: groupRoleLabel(row.role),
-          })),
-      )
-    })
-  }, [cloudUserId, groupCode])
-
-  if (!members.length) return null
-
-  return (
-    <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
-      <h4 className="text-sm font-semibold">{t('lobby.transferOwnership')}</h4>
-      <p className="mt-1 text-xs text-text-secondary">{t('lobby.transferDesc')}</p>
-      <ul className="mt-2 space-y-1.5">
-        {members.map((member) => (
-          <li key={member.userId} className="flex items-center justify-between gap-2 rounded-lg bg-surface p-2">
-            <span className="text-sm">
-              {member.displayName} <span className="text-xs text-text-secondary">({member.role})</span>
-            </span>
-            <Button
-              variant="secondary"
-              className="min-h-8 px-2 text-xs"
-              disabled={busy}
-              onClick={() => void onTransfer(member.userId)}
-            >
-              {t('lobby.makeOwner')}
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }

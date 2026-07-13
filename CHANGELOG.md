@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.0.1 - 2026-07-13
+
+### Fixed
+
+- **Group lobby refresh loop**: Stabilized `GroupLobbyHub` effect dependencies; debounced public search (450ms) so the lobby no longer flashes and spams「載入大廳失敗」.
+- **Missing joined groups**: Home and search tabs now list memberships via `list_my_group_memberships` / workspace list so existing groups appear under「已加入的群組」.
+
+### Changed
+
+- **Workspace → lobby**: Single `GroupLobbyHub` replaces separate workspace entry; bottom sheet and settings route through the lobby hub.
+- **Clash Royale–style tabs**:「使用中群組」(home) when joined,「搜尋群組」(search) when not; switch between active group, other memberships, and browse.
+- **Transfer ownership**: Moved from group settings into player management (`MemberActionBar` on roster cards and member list).
+- Settings: legacy `workspace-*` sections redirect to lobby; session / players / sync open as lobby sub-sections.
+
 ## V5.0.0 - 2026-07-13
 
 ### New

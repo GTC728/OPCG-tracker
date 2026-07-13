@@ -364,10 +364,12 @@ function PlayerCard({
   member,
   linkedAccountLabel,
   canManageMember,
+  canTransfer,
   memberBusy,
   onMemberRoleChange,
   onMemberBanToggle,
   onMemberRemove,
+  onTransferOwnership,
   onEdit,
   onDelete,
 }: {
@@ -375,10 +377,12 @@ function PlayerCard({
   member?: GroupMemberRecord | null
   linkedAccountLabel?: string | null
   canManageMember?: boolean
+  canTransfer?: boolean
   memberBusy?: boolean
   onMemberRoleChange?: (userId: string, role: import('@/lib/groupPermissions').GroupMemberRole) => Promise<void>
   onMemberBanToggle?: (member: GroupMemberRecord) => Promise<void>
   onMemberRemove?: (member: GroupMemberRecord) => Promise<void>
+  onTransferOwnership?: (member: GroupMemberRecord) => Promise<void>
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -428,9 +432,11 @@ function PlayerCard({
           <MemberActionBar
             member={member}
             busy={Boolean(memberBusy)}
+            canTransfer={canTransfer}
             onRoleChange={onMemberRoleChange!}
             onBanToggle={onMemberBanToggle!}
             onRemove={onMemberRemove!}
+            onTransferOwnership={onTransferOwnership}
           />
         </div>
       ) : null}
@@ -490,10 +496,12 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const [members, setMembers] = useState<GroupMemberRecord[]>([])
   const {
     canManage,
+    canTransfer,
     busyUserId,
     handleRoleChange,
     handleBanToggle,
     handleRemove,
+    handleTransferOwnership,
     reloadMembers,
   } = useGroupMemberAdmin(setMembers)
 
@@ -562,10 +570,17 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                   player.linkedUserId ? linkedAccountByUserId.get(player.linkedUserId) : null
                 }
                 canManageMember={canManage && !isSelf}
+                canTransfer={canTransfer && !isSelf}
                 memberBusy={member ? busyUserId === member.userId : false}
                 onMemberRoleChange={handleRoleChange}
                 onMemberBanToggle={handleBanToggle}
                 onMemberRemove={(target) => handleRemove(target, player.name)}
+                onTransferOwnership={async (target) => {
+                  await handleTransferOwnership(
+                    target.userId,
+                    linkedAccountByUserId.get(target.userId) ?? target.userId.slice(0, 8),
+                  )
+                }}
                 onEdit={() => setEditor({ kind: 'player', item: player })}
                 onDelete={() => setPurgePlayer(player)}
               />

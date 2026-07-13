@@ -4,6 +4,7 @@ import { GroupMemberRow } from '@/components/settings/GroupMemberRow'
 import { useToast } from '@/components/ui/Toast'
 import { useGroupMemberAdmin } from '@/hooks/useGroupMemberAdmin'
 import { isCloudConfigured, getCloudSession } from '@/lib/cloudSync'
+import { resolveMemberDisplayName } from '@/lib/memberDisplay'
 import { useI18n } from '@/lib/i18n'
 import type { GroupMemberRecord } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -25,10 +26,12 @@ export function GroupMembersPanel({ unlinkedOnly = false, embedded = false }: Gr
 
   const {
     canManage,
+    canTransfer,
     busyUserId,
     handleRoleChange,
     handleBanToggle,
     handleRemove,
+    handleTransferOwnership,
     reloadMembers,
   } = useGroupMemberAdmin(setMembers)
 
@@ -123,11 +126,18 @@ export function GroupMembersPanel({ unlinkedOnly = false, embedded = false }: Gr
                 linkedPlayerName={linkedPlayerByUserId.get(member.userId)}
                 isSelf={member.userId === cloudUserId}
                 canManage={canManage}
+                canTransfer={canTransfer && member.userId !== cloudUserId}
                 busy={busyUserId === member.userId}
                 compact={embedded}
                 onRoleChange={handleRoleChange}
                 onBanToggle={handleBanToggle}
                 onRemove={(target) => handleRemove(target, linkedPlayerByUserId.get(target.userId))}
+                onTransferOwnership={async (target) => {
+                  await handleTransferOwnership(
+                    target.userId,
+                    resolveMemberDisplayName(target, linkedPlayerByUserId.get(target.userId)),
+                  )
+                }}
               />
             </li>
           ))
