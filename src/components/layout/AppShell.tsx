@@ -3,7 +3,7 @@ import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
 import { AppBrandCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
 import { BottomSheet } from '@/components/ui/BottomSheet'
-import { WorkspaceHub } from '@/components/workspace/WorkspaceHub'
+import { GroupLobbyHub } from '@/components/lobby/GroupLobbyHub'
 import { uiBottomNav, uiHeaderBar } from '@/lib/uiSurface'
 import { playInteractionSound, uiPressable } from '@/lib/motion'
 import { useI18n } from '@/lib/i18n'
@@ -130,9 +130,8 @@ export function AppShell({
         </main>
       </div>
 
-      <BottomSheet open={workspaceOpen} title={t('workspace.sectionTitle')} onClose={() => setWorkspaceOpen(false)}>
-        <WorkspaceHub
-          compact
+      <BottomSheet open={workspaceOpen} title={t('lobby.title')} onClose={() => setWorkspaceOpen(false)}>
+        <GroupLobbyHub
           onClose={() => setWorkspaceOpen(false)}
           onNavigate={() => {
             setWorkspaceOpen(false)

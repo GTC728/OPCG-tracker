@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
+import { transferGroupOwnership } from '@/lib/groupLobby'
 import {
   canManageMembers,
+  canTransferOwnership,
   isBannedFromGroup,
   type GroupMemberRole,
 } from '@/lib/groupPermissions'
@@ -96,12 +98,32 @@ export function useGroupMemberAdmin(onMembersChange?: (members: GroupMemberRecor
     [groupCode, reloadMembers, t, toast],
   )
 
+  const handleTransferOwnership = useCallback(
+    async (userId: string, label: string) => {
+      if (!groupCode || !canTransferOwnership(role)) return
+      if (!window.confirm(t('lobby.transferConfirm').replace('{name}', label))) return
+      setBusyUserId(userId)
+      try {
+        await transferGroupOwnership(groupCode, userId)
+        toast.success(t('lobby.ownershipTransferred'))
+        await reloadMembers()
+      } catch (caught) {
+        toast.error(caught instanceof Error ? caught.message : t('lobby.transferFailed'))
+      } finally {
+        setBusyUserId(null)
+      }
+    },
+    [groupCode, reloadMembers, role, t, toast],
+  )
+
   return {
     canManage,
+    canTransfer: canTransferOwnership(role),
     busyUserId,
     handleRoleChange,
     handleBanToggle,
     handleRemove,
+    handleTransferOwnership,
     reloadMembers,
   }
 }

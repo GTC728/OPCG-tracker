@@ -12,15 +12,19 @@ import type { GroupMemberRecord } from '@/types'
 export function MemberActionBar({
   member,
   busy,
+  canTransfer,
   onRoleChange,
   onBanToggle,
   onRemove,
+  onTransferOwnership,
 }: {
   member: GroupMemberRecord
   busy: boolean
+  canTransfer?: boolean
   onRoleChange: (userId: string, role: GroupMemberRole) => Promise<void>
   onBanToggle: (member: GroupMemberRecord) => Promise<void>
   onRemove: (member: GroupMemberRecord) => Promise<void>
+  onTransferOwnership?: (member: GroupMemberRecord) => Promise<void>
 }) {
   const { t } = useI18n()
   const [rolePickerOpen, setRolePickerOpen] = useState(false)
@@ -56,6 +60,16 @@ export function MemberActionBar({
         >
           {t('members.kick')}
         </Button>
+        {canTransfer && member.role !== 'owner' && onTransferOwnership ? (
+          <Button
+            variant="secondary"
+            className="min-h-8 px-2.5 py-1 text-[11px]"
+            disabled={busy}
+            onClick={() => void onTransferOwnership(member)}
+          >
+            {t('lobby.makeOwner')}
+          </Button>
+        ) : null}
       </div>
 
       <OptionPickerSheet
@@ -84,10 +98,12 @@ interface GroupMemberRowProps {
   linkedPlayerName?: string | null
   isSelf: boolean
   canManage: boolean
+  canTransfer?: boolean
   busy: boolean
   onRoleChange: (userId: string, role: GroupMemberRole) => Promise<void>
   onBanToggle: (member: GroupMemberRecord) => Promise<void>
   onRemove: (member: GroupMemberRecord) => Promise<void>
+  onTransferOwnership?: (member: GroupMemberRecord) => Promise<void>
   compact?: boolean
 }
 
@@ -96,10 +112,12 @@ export function GroupMemberRow({
   linkedPlayerName,
   isSelf,
   canManage,
+  canTransfer = false,
   busy,
   onRoleChange,
   onBanToggle,
   onRemove,
+  onTransferOwnership,
   compact = false,
 }: GroupMemberRowProps) {
   const { t } = useI18n()
@@ -152,9 +170,11 @@ export function GroupMemberRow({
             <MemberActionBar
               member={member}
               busy={busy}
+              canTransfer={canTransfer}
               onRoleChange={onRoleChange}
               onBanToggle={onBanToggle}
               onRemove={onRemove}
+              onTransferOwnership={onTransferOwnership}
             />
           </div>
         ) : null}

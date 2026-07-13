@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GroupLobbyHub } from '@/components/lobby/GroupLobbyHub'
+import { GroupLobbyHub, type LobbyNavigateTarget } from '@/components/lobby/GroupLobbyHub'
 import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
@@ -9,7 +9,6 @@ import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
 import { ProfileSettings } from '@/components/settings/ProfileSettings'
 import { SystemStatusPanel } from '@/components/settings/SystemStatusPanel'
 import { SessionManager } from '@/components/session/SessionManager'
-import { WorkspaceHub } from '@/components/workspace/WorkspaceHub'
 import { Button } from '@/components/ui/Button'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import { AppCredit } from '@/components/layout/AppCredit'
@@ -32,6 +31,9 @@ type SettingsSection =
   | 'workspace-sync'
   | 'workspace-join'
   | 'lobby-browse'
+  | 'lobby-session'
+  | 'lobby-players'
+  | 'lobby-sync'
   | 'account'
   | 'profile'
   | 'appearance'
@@ -93,16 +95,8 @@ export function SettingsPage() {
     ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
     : t('workspace.local')
 
-  const navigateWorkspace = (target: 'session' | 'players' | 'members' | 'sync' | 'join' | 'lobby') => {
-    if (target === 'lobby') {
-      setSection('lobby-browse')
-      return
-    }
-    if (target === 'members') {
-      setSection('workspace-players')
-      return
-    }
-    setSection(`workspace-${target}` as SettingsSection)
+  const navigateLobby = (target: LobbyNavigateTarget) => {
+    setSection(`lobby-${target}` as SettingsSection)
   }
 
   return (
@@ -137,14 +131,9 @@ export function SettingsPage() {
             </p>
             <SettingsRow
               title={t('lobby.title')}
-              description={t('lobby.homeDesc')}
-              onClick={() => setSection('lobby-browse')}
-            />
-            <SettingsRow
-              title={t('workspace.sectionTitle')}
-              description={t('workspace.sectionDesc')}
+              description={t('lobby.homeDescV501')}
               meta={workspaceMeta}
-              onClick={() => setSection('workspace')}
+              onClick={() => setSection('lobby-browse')}
             />
           </section>
 
@@ -204,51 +193,65 @@ export function SettingsPage() {
         </>
       ) : null}
 
+      {section === 'lobby-browse' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <GroupLobbyHub onNavigate={navigateLobby} />
+        </>
+      ) : null}
+
+      {section === 'lobby-session' ? (
+        <>
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
+          <SessionManager onBackup={() => setSection('account')} />
+        </>
+      ) : null}
+
+      {section === 'lobby-players' ? (
+        <>
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
+          <DataManagers mode="players" />
+        </>
+      ) : null}
+
+      {section === 'lobby-sync' ? (
+        <>
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
+          <GroupSyncSection />
+        </>
+      ) : null}
+
       {section === 'workspace' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <WorkspaceHub onNavigate={navigateWorkspace} />
+          <GroupLobbyHub onNavigate={navigateLobby} />
         </>
       ) : null}
 
       {section === 'workspace-session' ? (
         <>
-          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
           <SessionManager onBackup={() => setSection('account')} />
         </>
       ) : null}
 
       {section === 'workspace-players' ? (
         <>
-          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
-          <DataManagers mode="players" />
-        </>
-      ) : null}
-
-      {section === 'workspace-members' ? (
-        <>
-          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
           <DataManagers mode="players" />
         </>
       ) : null}
 
       {section === 'workspace-sync' ? (
         <>
-          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
           <GroupSyncSection />
-        </>
-      ) : null}
-
-      {section === 'lobby-browse' ? (
-        <>
-          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
-          <GroupLobbyHub onClose={() => setSection('workspace')} />
         </>
       ) : null}
 
       {section === 'workspace-join' ? (
         <>
-          <BackButton label={t('workspace.sectionTitle')} onClick={() => setSection('workspace')} />
+          <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
           <GroupMembershipPanel />
         </>
       ) : null}
