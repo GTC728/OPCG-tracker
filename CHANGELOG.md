@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.0.2 - 2026-07-13
+
+### Fixed
+
+- **Public browse flash**: Removed unstable `workspaceItems` / `pendingCount` deps from public search; inline error state instead of toast loop; friendly empty hint when no other public groups exist.
+
+### Changed
+
+- **Clan home redesign**: Group info card with stats + sync status; settings open in bottom sheet; roster tabs (名單 / 帳號) with linked players first.
+- **Player management**: Compact list rows; member actions in manage sheet; settings players page points to lobby.
+
 ## V5.0.1 - 2026-07-13
 
 ### Fixed

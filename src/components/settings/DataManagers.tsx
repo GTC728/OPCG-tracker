@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
-import { GroupMembersPanel } from '@/components/settings/GroupMembersPanel'
 import { MemberActionBar } from '@/components/settings/GroupMemberRow'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -387,6 +386,8 @@ function PlayerCard({
   onDelete: () => void
 }) {
   const { t } = useI18n()
+  const [manageOpen, setManageOpen] = useState(false)
+  const linked = Boolean(player.linkedUserId)
   const showMemberActions =
     Boolean(member) &&
     canManageMember &&
@@ -394,41 +395,55 @@ function PlayerCard({
     Boolean(onMemberRoleChange && onMemberBanToggle && onMemberRemove)
 
   return (
-    <article className="rounded-xl bg-surface p-3 ring-1 ring-surface-muted">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className="text-sm font-semibold">{player.name}</h3>
+    <>
+      <article className="flex items-center gap-2 rounded-xl bg-surface px-2.5 py-2 ring-1 ring-surface-muted">
+        <span
+          className={[
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+            linked ? 'bg-brand-500/20 text-brand-200' : 'bg-surface-muted text-text-secondary',
+          ].join(' ')}
+        >
+          {player.name.slice(0, 1).toUpperCase()}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-sm font-semibold">{player.name}</p>
             {member ? (
-              <span className="rounded-md bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-secondary">
+              <span className="shrink-0 rounded px-1 py-0.5 text-[10px] font-medium text-text-secondary ring-1 ring-surface-muted">
                 {groupRoleLabel(member.role)}
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-xs text-text-secondary">
-            {player.aliases.length ? `別名：${formatList(player.aliases)}` : '未設定別名'}
+          <p className="truncate text-[11px] text-text-secondary">
+            {player.aliases.length
+              ? player.aliases.join(' · ')
+              : linkedAccountLabel
+                ? t('members.accountLabel').replace('{name}', linkedAccountLabel)
+                : t('members.noAliases')}
           </p>
-          {linkedAccountLabel ? (
-            <p className="mt-1 text-[11px] text-text-secondary">
-              {t('members.accountLabel').replace('{name}', linkedAccountLabel)}
-            </p>
-          ) : player.profileClaimDeviceId ? (
-            <p className="mt-1 text-[11px] text-text-secondary">{t('members.deviceLinked')}</p>
-          ) : member ? (
-            <p className="mt-1 text-[11px] text-text-secondary">{t('members.noAccountName')}</p>
-          ) : null}
         </div>
-      </div>
-      <div className="mt-2.5 flex gap-1.5">
-        <Button variant="secondary" className="min-h-8 flex-1 px-2 py-1 text-xs" onClick={onEdit}>
-          編輯
-        </Button>
-        <Button variant="danger" className="min-h-8 flex-1 px-2 py-1 text-xs" onClick={onDelete}>
-          刪除
-        </Button>
-      </div>
+        <div className="flex shrink-0 gap-1">
+          {showMemberActions && member ? (
+            <Button
+              variant="ghost"
+              className="min-h-8 min-w-8 px-2 text-[11px]"
+              disabled={memberBusy}
+              onClick={() => setManageOpen(true)}
+            >
+              {t('lobby.manage')}
+            </Button>
+          ) : null}
+          <Button variant="ghost" className="min-h-8 min-w-8 px-2 text-[11px]" onClick={onEdit}>
+            {t('lobby.edit')}
+          </Button>
+          <Button variant="ghost" className="min-h-8 min-w-8 px-2 text-[11px] text-danger" onClick={onDelete}>
+            {t('lobby.delete')}
+          </Button>
+        </div>
+      </article>
+
       {showMemberActions && member ? (
-        <div className="mt-2 border-t border-surface-muted pt-2">
+        <BottomSheet open={manageOpen} title={player.name} onClose={() => setManageOpen(false)}>
           <MemberActionBar
             member={member}
             busy={Boolean(memberBusy)}
@@ -438,9 +453,9 @@ function PlayerCard({
             onRemove={onMemberRemove!}
             onTransferOwnership={onTransferOwnership}
           />
-        </div>
+        </BottomSheet>
       ) : null}
-    </article>
+    </>
   )
 }
 
@@ -515,7 +530,12 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
 
   const sortedPlayers = [...players]
     .filter((player) => !isDeletedPlayer(player))
-    .sort((left, right) => left.name.localeCompare(right.name, 'zh-Hant'))
+    .sort((left, right) => {
+      const leftLinked = Boolean(left.linkedUserId)
+      const rightLinked = Boolean(right.linkedUserId)
+      if (leftLinked !== rightLinked) return leftLinked ? -1 : 1
+      return left.name.localeCompare(right.name, 'zh-Hant')
+    })
   const sortedDecks = [...decks].sort((left, right) =>
     left.displayName.localeCompare(right.displayName, 'zh-Hant'),
   )
@@ -545,18 +565,18 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   return (
     <>
       {mode !== 'leaders' ? (
-      <section className="rounded-2xl bg-surface-elevated p-4">
+      <section className="rounded-2xl bg-surface-elevated p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">{t('members.rosterTitle')}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{t('members.rosterDesc')}</p>
+            <h2 className="text-base font-semibold">{t('members.rosterTitle')}</h2>
+            <p className="mt-0.5 text-xs text-text-secondary">{t('members.rosterDesc')}</p>
           </div>
-          <Button className="shrink-0 text-xs" onClick={() => setEditor({ kind: 'player' })}>
-            新增
+          <Button className="min-h-8 shrink-0 px-2.5 text-xs" onClick={() => setEditor({ kind: 'player' })}>
+            +
           </Button>
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-1.5">
           {sortedPlayers.length ? (
             sortedPlayers.map((player) => {
               const member = player.linkedUserId ? memberByUserId.get(player.linkedUserId) : null
@@ -591,10 +611,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
         </div>
 
         {groupCode ? (
-          <div className="mt-5 border-t border-surface-muted pt-4">
-            <h3 className="text-sm font-semibold">{t('members.unlinkedTitle')}</h3>
-            <GroupMembersPanel unlinkedOnly embedded />
-          </div>
+          <p className="mt-3 text-center text-[11px] text-text-secondary">{t('lobby.rosterInLobbyHint')}</p>
         ) : null}
       </section>
       ) : null}

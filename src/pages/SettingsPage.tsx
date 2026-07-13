@@ -210,7 +210,7 @@ export function SettingsPage() {
       {section === 'lobby-players' ? (
         <>
           <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
-          <DataManagers mode="players" />
+          <p className="rounded-xl bg-surface-elevated p-4 text-sm text-text-secondary">{t('lobby.rosterInLobbyHint')}</p>
         </>
       ) : null}
 

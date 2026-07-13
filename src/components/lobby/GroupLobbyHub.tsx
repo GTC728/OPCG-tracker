@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { BottomSheet } from '@/components/ui/BottomSheet'
+import { GroupClanRoster } from '@/components/lobby/GroupClanRoster'
 import { GroupLobbyPanel } from '@/components/settings/GroupLobbyPanel'
-import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
 import { useToast } from '@/components/ui/Toast'
+import { flushGroupCollabSyncNow } from '@/lib/groupSync'
 import { getCloudSession, isCloudConfigured } from '@/lib/cloudSync'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { listMyGroupMemberships } from '@/lib/groupRegistry'
@@ -15,6 +17,7 @@ import {
   type PublicGroupCard,
 } from '@/lib/groupLobby'
 import { useI18n } from '@/lib/i18n'
+import { getCompletedMatches } from '@/lib/stats'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
 import { buildWorkspaceList, type WorkspaceDescriptor } from '@/lib/workspace'
 import { formatDateTime } from '@/lib/utils'
@@ -30,6 +33,110 @@ interface GroupLobbyHubProps {
   onNavigate?: (target: LobbyNavigateTarget) => void
   /** Force search tab (e.g. from empty state CTA). */
   initialTab?: LobbyTab
+}
+
+function formatSyncTime(iso: string | null): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString(undefined, {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function GroupClanInfoCard({
+  activeGroup,
+  onOpenSettings,
+}: {
+  activeGroup: WorkspaceDescriptor
+  onOpenSettings: () => void
+}) {
+  const { t } = useI18n()
+  const settings = useAppStore((state) => state.settings)
+  const players = useAppStore((state) => state.players)
+  const matches = useAppStore((state) => state.matches)
+  const sessions = useAppStore((state) => state.sessions)
+  const pendingCount = getCachedSyncPendingCount()
+  const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+
+  const stats = useMemo(() => {
+    const completed = getCompletedMatches(matches)
+    const activePlayers = players.filter((player) => !player.archived && !player.deletedAt).length
+    return {
+      matches: completed.length,
+      players: activePlayers,
+      sessions: sessions.filter((session) => !session.deletedAt).length,
+    }
+  }, [matches, players, sessions])
+
+  const syncLine = useMemo(() => {
+    if (settings.groupSyncPaused) return t('systemStatus.syncPaused')
+    if (!online) return t('sync.offline')
+    if (settings.lastGroupSyncError) return settings.lastGroupSyncError
+    if (pendingCount > 0) return t('sync.pendingCount').replace('{n}', String(pendingCount))
+    if (settings.lastGroupSyncAt) {
+      return t('systemStatus.syncedAt').replace('{time}', formatSyncTime(settings.lastGroupSyncAt))
+    }
+    return t('systemStatus.syncReady')
+  }, [
+    online,
+    pendingCount,
+    settings.groupSyncPaused,
+    settings.lastGroupSyncAt,
+    settings.lastGroupSyncError,
+    t,
+  ])
+
+  return (
+    <section className="rounded-xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-brand-100">{t('lobby.currentClan')}</p>
+          <p className="mt-1 truncate text-lg font-bold">{activeGroup.displayName}</p>
+          {activeGroup.role ? (
+            <p className="mt-0.5 text-xs text-text-secondary">{groupRoleLabel(activeGroup.role)}</p>
+          ) : null}
+          {activeGroup.inviteSlug ? (
+            <p className="mt-1 font-mono text-[11px] text-brand-300">@{activeGroup.inviteSlug}</p>
+          ) : null}
+        </div>
+        <Button variant="secondary" className="min-h-9 shrink-0 px-3 text-xs" onClick={onOpenSettings}>
+          {t('lobby.settings')}
+        </Button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-lg bg-surface/60 p-2">
+          <p className="text-[10px] text-text-secondary">{t('groupLobby.statPlayers')}</p>
+          <p className="text-lg font-bold tabular-nums">{stats.players}</p>
+        </div>
+        <div className="rounded-lg bg-surface/60 p-2">
+          <p className="text-[10px] text-text-secondary">{t('groupLobby.statMatches')}</p>
+          <p className="text-lg font-bold tabular-nums">{stats.matches}</p>
+        </div>
+        <div className="rounded-lg bg-surface/60 p-2">
+          <p className="text-[10px] text-text-secondary">{t('groupLobby.statSessions')}</p>
+          <p className="text-lg font-bold tabular-nums">{stats.sessions}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-surface/50 px-2.5 py-2">
+        <p className="min-w-0 truncate text-[11px] text-text-secondary">{syncLine}</p>
+        {pendingCount > 0 || settings.lastGroupSyncError ? (
+          <Button
+            variant="ghost"
+            className="min-h-7 shrink-0 px-2 text-[10px]"
+            onClick={() => settings.lastGroupCode && flushGroupCollabSyncNow(settings.lastGroupCode)}
+          >
+            {t('systemStatus.retrySync')}
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  )
 }
 
 function workspaceLabel(item: WorkspaceDescriptor, t: (key: import('@/lib/i18n').TranslationKey) => string) {
@@ -197,8 +304,6 @@ function GroupDetailView({
 export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHubProps) {
   const { t } = useI18n()
   const toast = useToast()
-  const toastRef = useRef(toast)
-  toastRef.current = toast
 
   const lastGroupCode = useAppStore((state) => state.settings.lastGroupCode)
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
@@ -214,13 +319,20 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
   const [selected, setSelected] = useState<PublicGroupCard | null>(null)
   const [loadingHome, setLoadingHome] = useState(false)
   const [loadingSearch, setLoadingSearch] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchFetched, setSearchFetched] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [switchBusyId, setSwitchBusyId] = useState<string | null>(null)
-  const [pendingCount, setPendingCount] = useState(getCachedSyncPendingCount())
+  const searchRequestRef = useRef(0)
 
   const configured = isCloudConfigured()
 
-  useEffect(() => subscribeSyncPendingCount(setPendingCount), [])
+  useEffect(() => subscribeSyncPendingCount((count) => {
+    setWorkspaceItems((items) =>
+      items.map((item) => (item.isActive ? { ...item, pendingCount: count } : item)),
+    )
+  }), [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 450)
@@ -242,14 +354,18 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
         return
       }
       const memberships = await listMyGroupMemberships().catch(() => [])
-      const items = await buildWorkspaceList(getAppState().settings, pendingCount, memberships)
+      const items = await buildWorkspaceList(
+        getAppState().settings,
+        getCachedSyncPendingCount(),
+        memberships,
+      )
       setWorkspaceItems(items)
       const hasGroups = items.some((item) => item.kind === 'group')
       setTab((current) => (current === 'home' && !hasGroups ? 'search' : current))
     } finally {
       setLoadingHome(false)
     }
-  }, [configured, pendingCount, lastGroupCode, cloudUserId])
+  }, [configured, lastGroupCode, cloudUserId])
 
   useEffect(() => {
     void loadHome()
@@ -257,31 +373,39 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
 
   const loadPublic = useCallback(async () => {
     if (!configured || !loggedIn) return
+    const requestId = ++searchRequestRef.current
     setLoadingSearch(true)
+    setSearchError(null)
     try {
       if (debouncedQuery) {
         const resolved = await resolveGroupLookup(debouncedQuery)
+        if (requestId !== searchRequestRef.current) return
         if (resolved) {
           setPublicGroups([resolved])
+          setSearchFetched(true)
           return
         }
       }
       const rows = await searchPublicGroups({ query: debouncedQuery, sort, limit: 32 })
+      if (requestId !== searchRequestRef.current) return
       setPublicGroups(rows)
+      setSearchFetched(true)
     } catch (caught) {
+      if (requestId !== searchRequestRef.current) return
       setPublicGroups([])
-      if (!workspaceItems.some((item) => item.kind === 'group')) {
-        toastRef.current.error(caught instanceof Error ? caught.message : t('lobby.loadFailed'))
-      }
+      setSearchError(caught instanceof Error ? caught.message : t('lobby.loadFailed'))
+      setSearchFetched(true)
     } finally {
-      setLoadingSearch(false)
+      if (requestId === searchRequestRef.current) {
+        setLoadingSearch(false)
+      }
     }
-  }, [configured, debouncedQuery, loggedIn, sort, t, workspaceItems])
+  }, [configured, debouncedQuery, loggedIn, sort, t])
 
   useEffect(() => {
     if (tab !== 'search' || !loggedIn) return
     void loadPublic()
-  }, [tab, loggedIn, loadPublic])
+  }, [tab, loggedIn, debouncedQuery, sort, loadPublic])
 
   const activeGroup = useMemo(
     () => workspaceItems.find((item) => item.isActive && item.kind === 'group') ?? null,
@@ -290,10 +414,6 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
   const myGroups = useMemo(
     () => workspaceItems.filter((item) => item.kind === 'group'),
     [workspaceItems],
-  )
-  const otherGroups = useMemo(
-    () => myGroups.filter((item) => !item.isActive),
-    [myGroups],
   )
 
   const sortOptions = useMemo(
@@ -383,17 +503,7 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
         ) : null}
 
         {activeGroup ? (
-          <section className="rounded-xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
-            <p className="text-xs font-semibold text-brand-100">{t('lobby.currentClan')}</p>
-            <p className="mt-1 text-lg font-bold">{workspaceLabel(activeGroup, t)}</p>
-            {activeGroup.role ? (
-              <p className="mt-0.5 text-xs text-text-secondary">{groupRoleLabel(activeGroup.role)}</p>
-            ) : null}
-            {activeGroup.inviteSlug ? (
-              <p className="mt-1 font-mono text-[11px] text-brand-300">@{activeGroup.inviteSlug}</p>
-            ) : null}
-            <p className="mt-2 text-[11px] text-text-secondary">{t('workspace.groupDataNote')}</p>
-          </section>
+          <GroupClanInfoCard activeGroup={activeGroup} onOpenSettings={() => setSettingsOpen(true)} />
         ) : (
           <section className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
             <p className="text-sm text-text-secondary">{t('lobby.noActiveClan')}</p>
@@ -403,27 +513,17 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
           </section>
         )}
 
-        {onNavigate && lastGroupCode ? (
-          <section className="space-y-1.5">
-            <p className="text-xs font-semibold text-text-secondary">{t('workspace.manage')}</p>
-            <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('session')}>
-              {t('settings.session')}
-            </Button>
-            <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('players')}>
-              {t('settings.players')}
-            </Button>
-            <Button variant="secondary" fullWidth className="min-h-10 justify-start text-sm" onClick={() => onNavigate('sync')}>
-              {t('workspace.syncStatus')}
-            </Button>
-          </section>
+        {lastGroupCode ? (
+          <GroupClanRoster onSession={onNavigate ? () => onNavigate('session') : undefined} />
         ) : null}
 
-        {lastGroupCode ? <GroupSyncSection compact /> : null}
-        {lastGroupCode ? <GroupLobbyPanel /> : null}
+        <BottomSheet open={settingsOpen} title={t('lobby.settings')} onClose={() => setSettingsOpen(false)} manageScroll>
+          <GroupLobbyPanel settingsOnly />
+        </BottomSheet>
 
-        {myGroups.length > 0 ? (
+        {myGroups.length > 1 ? (
           <section className="space-y-1.5">
-            <p className="text-xs font-semibold text-text-secondary">{t('lobby.myGroups')}</p>
+            <p className="text-xs font-semibold text-text-secondary">{t('lobby.switchGroup')}</p>
             <ul className="space-y-1.5">
               {myGroups.map((item) => (
                 <li key={item.id}>
@@ -458,11 +558,9 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
           </section>
         ) : null}
 
-        {otherGroups.length === 0 && myGroups.length > 0 ? null : (
-          <Button variant="secondary" fullWidth onClick={() => setTab('search')}>
-            {t('lobby.openSearch')}
-          </Button>
-        )}
+        <Button variant="secondary" fullWidth onClick={() => setTab('search')}>
+          {t('lobby.openSearch')}
+        </Button>
 
         <button
           type="button"
@@ -539,8 +637,13 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
 
       <p className="text-xs font-semibold text-text-secondary">{t('lobby.publicBrowse')}</p>
 
-      {loadingSearch && !publicGroups.length ? (
+      {loadingSearch && !searchFetched ? (
         <p className="text-sm text-text-secondary">{t('lobby.loading')}</p>
+      ) : searchError ? (
+        <div className="rounded-xl bg-danger/10 p-4 text-sm text-red-200">
+          <p>{searchError}</p>
+          <p className="mt-2 text-xs text-text-secondary">{t('lobby.emptyPublicHint')}</p>
+        </div>
       ) : publicGroups.length ? (
         <ul className="space-y-2">
           {publicGroups.map((group) => (
@@ -550,7 +653,9 @@ export function GroupLobbyHub({ onClose, onNavigate, initialTab }: GroupLobbyHub
           ))}
         </ul>
       ) : (
-        <p className="rounded-xl bg-surface-elevated p-4 text-sm text-text-secondary">{t('lobby.empty')}</p>
+        <p className="rounded-xl bg-surface-elevated p-4 text-sm text-text-secondary">
+          {searchFetched ? t('lobby.emptyPublicHint') : t('lobby.empty')}
+        </p>
       )}
     </div>
   )
