@@ -21,7 +21,6 @@ import {
   applyGroupScopedSnapshot,
   captureGroupScopedSnapshot,
   hasGroupScopedData,
-  stripGroupScopedEntities,
 } from '@/lib/groupScope'
 import { finalizeGroupProfileSession } from '@/lib/profileGroupLink'
 import { resolveIntegrityGrantIdForMatch, ensureHistoricalGrantsForState } from '@/lib/serverIntegrity'
@@ -87,6 +86,37 @@ const localMatchTouch = new Map<string, number>()
 const localPlayerTouch = new Map<string, number>()
 /** Local edit timestamp per session id. */
 const localSessionTouch = new Map<string, number>()
+
+/** Bumped on workspace switch — stale async sync must not mutate state. */
+let activeGroupSyncEpoch = 0
+let realtimeBoundGroupCode: string | null = null
+
+export function bumpGroupSyncEpoch(): number {
+  activeGroupSyncEpoch += 1
+  return activeGroupSyncEpoch
+}
+
+export function getGroupSyncEpoch(): number {
+  return activeGroupSyncEpoch
+}
+
+export function clearAllLocalEntityTouches(): void {
+  localActiveTouch.clear()
+  localMatchTouch.clear()
+  localPlayerTouch.clear()
+  localSessionTouch.clear()
+}
+
+export function isGroupSyncStillActive(groupCode: string, epoch: number): boolean {
+  const state = getAppState()
+  return epoch === activeGroupSyncEpoch && state.settings.lastGroupCode === groupCode
+}
+
+function isRealtimeGroupActive(groupCode: string | null): boolean {
+  if (!groupCode) return false
+  const state = getAppState()
+  return state.settings.lastGroupCode === groupCode && realtimeBoundGroupCode === groupCode
+}
 
 function touchLocalActive(ids: Iterable<string>): void {
   const now = Date.now()
@@ -979,17 +1009,24 @@ export async function remoteGroupHasData(groupCode: string): Promise<boolean> {
  * Keeps UX automatic — no join-mode picker.
  */
 export async function initializeGroupCollab(groupCode: string): Promise<void> {
+  const epoch = activeGroupSyncEpoch
+  if (!isGroupSyncStillActive(groupCode, epoch)) return
+
   const current = getAppState()
   const incomingSnapshot = captureGroupScopedSnapshot(current)
   const hadLocalData = hasGroupScopedData(current)
 
   pauseGroupCollabNotify()
   try {
-    updateAppState((state) => stripGroupScopedEntities(state))
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
 
     const hasRemote = await remoteGroupHasData(groupCode)
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
+
     if (hasRemote) {
       const remote = await fetchRemoteGroupEntities(groupCode)
+      if (!isGroupSyncStillActive(groupCode, epoch)) return
+
       const joinCtx: JoinConflictContext = {
         cloudUserId: current.settings.cloudUserId ?? null,
         bookmarkPlayerId:
@@ -998,26 +1035,46 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
       const joinConflicts = hadLocalData ? detectJoinConflicts(incomingSnapshot, remote, joinCtx) : []
 
       if (hadLocalData) {
-        updateAppState((state) => applyJoinMerge(state, incomingSnapshot, remote, joinConflicts, joinCtx))
+        updateAppState((state) =>
+          isGroupSyncStillActive(groupCode, epoch)
+            ? applyJoinMerge(state, incomingSnapshot, remote, joinConflicts, joinCtx)
+            : state,
+        )
       } else {
-        await pullGroupCollabState(groupCode, remote)
+        await pullGroupCollabState(groupCode, remote, epoch)
       }
+
+      if (!isGroupSyncStillActive(groupCode, epoch)) return
 
       if (joinConflicts.length) {
-        updateAppState((state) => ({
-          ...state,
-          syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], joinConflicts),
-        }))
+        updateAppState((state) =>
+          isGroupSyncStillActive(groupCode, epoch)
+            ? {
+                ...state,
+                syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], joinConflicts),
+              }
+            : state,
+        )
       }
 
-      updateAppState((state) => finalizeGroupProfileSession(state))
+      updateAppState((state) =>
+        isGroupSyncStillActive(groupCode, epoch) ? finalizeGroupProfileSession(state) : state,
+      )
       return
     }
 
     if (hadLocalData) {
-      updateAppState((state) => applyGroupScopedSnapshot(state, incomingSnapshot))
+      if (!isGroupSyncStillActive(groupCode, epoch)) return
+      updateAppState((state) =>
+        isGroupSyncStillActive(groupCode, epoch)
+          ? applyGroupScopedSnapshot(state, incomingSnapshot)
+          : state,
+      )
       await bootstrapGroupCollab(groupCode, getAppState())
-      updateAppState((state) => finalizeGroupProfileSession(state))
+      if (!isGroupSyncStillActive(groupCode, epoch)) return
+      updateAppState((state) =>
+        isGroupSyncStillActive(groupCode, epoch) ? finalizeGroupProfileSession(state) : state,
+      )
     }
   } finally {
     resumeGroupCollabNotify()
@@ -1157,14 +1214,19 @@ export async function pushFullGroupState(groupCode: string, state: AppState): Pr
 export async function pullGroupCollabState(
   groupCode: string,
   prefetched?: RemoteGroupEntities,
+  epoch: number = activeGroupSyncEpoch,
 ): Promise<void> {
+  if (!isGroupSyncStillActive(groupCode, epoch)) return
+
   const remote = prefetched ?? (await fetchRemoteGroupEntities(groupCode))
+  if (!isGroupSyncStillActive(groupCode, epoch)) return
 
   let remoteMatchUpdates = 0
   let remoteUpdaterId: string | null = null
   const pullConflicts: SyncConflict[] = []
 
   updateAppState((current) => {
+    if (!isGroupSyncStillActive(groupCode, epoch)) return current
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
     const remoteActiveIds = new Set(remote.activeMatches.map((item) => item.id))
 
@@ -1260,6 +1322,14 @@ export async function pullGroupCollabState(
       }
     }
 
+    const remotePlayerIds = new Set(remote.players.map((player) => player.id))
+    for (const [id] of playersById) {
+      if (!remotePlayerIds.has(id)) {
+        const localTouch = localPlayerTouch.get(id) ?? 0
+        if (!localTouch) playersById.delete(id)
+      }
+    }
+
     const sessionsById = new Map(current.sessions.map((session) => [session.id, session]))
     for (const remoteSession of remote.sessions) {
       const existing = sessionsById.get(remoteSession.id)
@@ -1285,6 +1355,14 @@ export async function pullGroupCollabState(
       }
     }
 
+    const remoteSessionIds = new Set(remote.sessions.map((session) => session.id))
+    for (const [id] of sessionsById) {
+      if (!remoteSessionIds.has(id)) {
+        const localTouch = localSessionTouch.get(id) ?? 0
+        if (!localTouch) sessionsById.delete(id)
+      }
+    }
+
     return {
       ...current,
       activeMatches: [...activeById.values()],
@@ -1298,26 +1376,39 @@ export async function pullGroupCollabState(
     }
   })
 
+  if (!isGroupSyncStillActive(groupCode, epoch)) return
+
   if (pullConflicts.length) {
-    updateAppState((state) => ({
-      ...state,
-      syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], pullConflicts),
-    }))
+    updateAppState((state) =>
+      isGroupSyncStillActive(groupCode, epoch)
+        ? {
+            ...state,
+            syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], pullConflicts),
+          }
+        : state,
+    )
   }
+
+  if (!isGroupSyncStillActive(groupCode, epoch)) return
 
   if (remoteMatchUpdates > 0 && remoteUpdaterId) {
     const updaterId = remoteUpdaterId
     updateAppState((state) =>
-      appendAuditEntry(state, 'sync', `Group pull: ${remoteMatchUpdates} match update(s)`, {
-        actor: remoteAuditActor(updaterId),
-        meta: { updated_by: updaterId },
-      }),
+      isGroupSyncStillActive(groupCode, epoch)
+        ? appendAuditEntry(state, 'sync', `Group pull: ${remoteMatchUpdates} match update(s)`, {
+            actor: remoteAuditActor(updaterId),
+            meta: { updated_by: updaterId },
+          })
+        : state,
     )
   }
-  updateAppState((state) => finalizeGroupProfileSession(state))
+  updateAppState((state) =>
+    isGroupSyncStillActive(groupCode, epoch) ? finalizeGroupProfileSession(state) : state,
+  )
 }
 
 function applyRemoteActiveRow(row: SyncActiveRow): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   if (!shouldApplyRemoteActive(row)) return
   const match = rowToActiveMatch(row)
   updateAppState((current) => {
@@ -1327,6 +1418,7 @@ function applyRemoteActiveRow(row: SyncActiveRow): void {
 }
 
 function removeRemoteActiveMatch(matchId: string): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   const localTouch = localActiveTouch.get(matchId) ?? 0
   if (Date.now() - localTouch < 500) return
   updateAppState((current) => ({
@@ -1336,6 +1428,7 @@ function removeRemoteActiveMatch(matchId: string): void {
 }
 
 function applyRemotePlayerRow(row: RemotePlayerRow): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   updateAppState((current) => {
     const existing = current.players.find((player) => player.id === row.id)
     if (!shouldApplyRemotePlayer(existing, row)) return current
@@ -1360,6 +1453,7 @@ function applyRemoteSessionRow(row: {
   deleted_at?: string | null
   updated_at: string
 }): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   updateAppState((current) => {
     const existing = current.sessions.find((session) => session.id === row.id)
     if (existing && !shouldApplyRemoteSession(existing, row)) return current
@@ -1406,6 +1500,7 @@ function scheduleReconcileAfterRemoteMatches(): void {
 }
 
 function applyRemoteMatchRow(row: SyncMatchRow): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   const remote = rowToMatch(row)
   updateAppState((current) => {
     const existing = current.matches.find((item) => item.id === remote.id)
@@ -1422,6 +1517,7 @@ function applyRemoteMatchRow(row: SyncMatchRow): void {
 }
 
 function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow | null; old: { id?: string } | null }): void {
+  if (!isRealtimeGroupActive(realtimeBoundGroupCode)) return
   if (payload.eventType === 'DELETE') {
     const matchId = payload.old?.id
     if (!matchId) return
@@ -1442,10 +1538,13 @@ function handleRemoteMatchChange(payload: { eventType: string; new: SyncMatchRow
 
 export async function startGroupCollabRealtime(groupCode: string): Promise<void> {
   stopGroupCollabRealtime()
+  if (getAppState().settings.lastGroupCode !== groupCode) return
   const supabase = await getSupabaseClient()
   if (!supabase) return
   await getCloudSession()
+  if (getAppState().settings.lastGroupCode !== groupCode) return
   const groupKey = await resolveGroupKey(groupCode)
+  realtimeBoundGroupCode = groupCode
 
   const channel = supabase
     .channel(`group-sync-${groupKey}`)
@@ -1517,6 +1616,7 @@ export async function startGroupCollabRealtime(groupCode: string): Promise<void>
 }
 
 export function stopGroupCollabRealtime(): void {
+  realtimeBoundGroupCode = null
   if (realtimeUnsubscribe) {
     realtimeUnsubscribe()
     realtimeUnsubscribe = null

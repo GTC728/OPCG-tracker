@@ -1,6 +1,8 @@
 import {
   flushGroupCollabSyncNow,
+  getGroupSyncEpoch,
   isGroupCollabActive,
+  isGroupSyncStillActive,
   pullGroupCollabState,
 } from '@/lib/groupSync'
 import { getAppState, updateAppState } from '@/stores/appStore'
@@ -26,9 +28,12 @@ export async function runGroupForegroundSync(
   if (!groupCode || !isGroupCollabActive(getAppState())) return
   if (syncInFlight && trigger !== 'manual') return
 
+  const epoch = getGroupSyncEpoch()
   syncInFlight = true
   const now = Date.now()
   try {
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
+
     const force = trigger === 'manual' || trigger === 'init'
     const shouldFlush = force || now - lastFlushAt >= MIN_FLUSH_INTERVAL_MS
     if (shouldFlush) {
@@ -36,10 +41,14 @@ export async function runGroupForegroundSync(
       lastFlushAt = Date.now()
     }
 
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
+
     const shouldPull = force || now - lastPullAt >= MIN_PULL_INTERVAL_MS
     if (!shouldPull) return
 
-    await pullGroupCollabState(groupCode)
+    await pullGroupCollabState(groupCode, undefined, epoch)
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
+
     lastPullAt = Date.now()
     const pulledAt = new Date().toISOString()
     updateAppState((state) => ({
@@ -52,6 +61,7 @@ export async function runGroupForegroundSync(
       },
     }))
   } catch (error) {
+    if (!isGroupSyncStillActive(groupCode, epoch)) return
     const message = error instanceof Error ? error.message : 'Group sync failed'
     updateAppState((state) => ({
       ...state,

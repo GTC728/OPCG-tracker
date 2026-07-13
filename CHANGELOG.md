@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.1.2 - 2026-07-13
+
+### Fixed
+
+- **Cross-group player leak**: Switching groups no longer lets stale async sync inject another group's players into the active roster. Added sync epoch guards on pull/init/realtime, clear local touch maps on switch, and prune orphan players/sessions not in remote.
+
+### Changed
+
+- **Merge UI**: Player and session merge moved to side icon buttons that open bottom sheets (not inline at page top/bottom).
+- **Role label**:「團長」renamed to「群主」.
+
 ## V5.1.1 - 2026-07-13
 
 ### Fixed
