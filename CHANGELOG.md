@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.1.1 - 2026-07-13
+
+### Fixed
+
+- **Personal profile name**: Read-only display with edit button; explicit 儲存 / 取消 so keyboard no longer blocks saving.
+- **Member list toast spam**: Members load only on 帳號 tab; inline error + retry instead of red toast on roster tab.
+- **Member list schema**: `listGroupMembers` falls back when `role`, `display_name`, or `banned_at` columns are missing.
+- **Merged players reappearing**: Soft-delete source player (`deletedAt`), sync tombstone to group, reinforce local touch.
+
+### Changed
+
+- **Icon buttons**: Long-press tooltip labels and press feedback (`uiPressable` + tap sound) on lobby icon buttons.
+- **Player merge location**: Removed from tab row; lives at bottom of 名單 (player management) tab and settings players page.
+- **Session merge restored**: Compact session merge tool at bottom of 場次 tab.
+
 ## V5.1.0 - 2026-07-13
 
 ### Fixed

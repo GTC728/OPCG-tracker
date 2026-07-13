@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 import { IconAdd, IconDelete, IconEdit, IconSessions } from '@/components/ui/LobbyIcons'
+import { SessionMergeTool } from '@/components/session/SessionMergeTool'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { useToast } from '@/components/ui/Toast'
 import {
@@ -89,6 +90,7 @@ export function GroupClanSessions() {
   const archiveSession = useAppStore((state) => state.archiveSession)
   const unarchiveSession = useAppStore((state) => state.unarchiveSession)
   const deleteSession = useAppStore((state) => state.deleteSession)
+  const mergeSessions = useAppStore((state) => state.mergeSessions)
 
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const listedSessions = activeListedSessions(sessions).sort(
@@ -233,6 +235,21 @@ export function GroupClanSessions() {
           ))}
         </ul>
       ) : null}
+
+      <div className="mt-3 border-t border-surface-muted pt-3">
+        <p className="mb-2 text-xs font-semibold text-text-secondary">{t('session.mergeTitle')}</p>
+        <SessionMergeTool
+          compact
+          sessions={sessions}
+          onMerge={(sourceId, targetId) => {
+            mergeSessions(sourceId, targetId)
+            if (currentSessionId === sourceId) {
+              const target = sessions.find((session) => session.id === targetId)
+              if (target) setRenameDraft(target.name)
+            }
+          }}
+        />
+      </div>
 
       <PermanentDeletePrompt
         open={deleteTarget !== null}

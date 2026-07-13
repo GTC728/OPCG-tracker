@@ -46,31 +46,54 @@ export function ProfileSettings() {
             <div>
               <p className="text-xs text-text-secondary">{t('profile.personalProfileLabel')}</p>
               {editingName ? (
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 space-y-2">
                   <input
-                    className="min-h-10 flex-1 rounded-lg border border-surface-muted bg-surface px-3 text-text-primary"
+                    className="min-h-11 w-full rounded-lg border border-brand-500/50 bg-surface px-3 text-base text-text-primary outline-none"
                     value={nameDraft}
                     onChange={(event) => setNameDraft(event.target.value)}
-                  />
-                  <IconButton
-                    label={t('common.save')}
-                    variant="brand"
-                    onClick={() => {
-                      const trimmed = nameDraft.trim()
-                      if (!trimmed) return
-                      updatePersonalProfileName(trimmed)
-                      setEditingName(false)
-                      toast.success(t('profile.nameUpdated'))
+                    autoFocus
+                    enterKeyHint="done"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        const trimmed = nameDraft.trim()
+                        if (!trimmed) return
+                        updatePersonalProfileName(trimmed)
+                        setEditingName(false)
+                        toast.success(t('profile.nameUpdated'))
+                      }
                     }}
-                  >
-                    <IconEdit />
-                  </IconButton>
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      className="min-h-10 flex-1"
+                      onClick={() => {
+                        const trimmed = nameDraft.trim()
+                        if (!trimmed) return
+                        updatePersonalProfileName(trimmed)
+                        setEditingName(false)
+                        toast.success(t('profile.nameUpdated'))
+                      }}
+                    >
+                      {t('common.save')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="min-h-10 flex-1"
+                      onClick={() => {
+                        setEditingName(false)
+                        setNameDraft(personalName ?? '')
+                      }}
+                    >
+                      {t('lobby.cancel')}
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <p className="text-xl font-bold">{personalName}</p>
+                <div className="mt-1 flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2.5 ring-1 ring-surface-muted">
+                  <p className="text-xl font-bold">{personalName ?? '—'}</p>
                   <IconButton
                     label={t('common.edit')}
+                    variant="brand"
                     onClick={() => {
                       setNameDraft(personalName ?? '')
                       setEditingName(true)

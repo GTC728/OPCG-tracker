@@ -330,6 +330,7 @@ export const ja = {
   'session.mergeConfirm': '「{source}」を「{target}」に統合しますか？対戦は残す側へ移り、ソースは削除されます。',
   'session.merged': 'セッションを統合しました',
   'session.mergeFailed': '統合に失敗しました',
+  'session.mergeNeedTwo': '統合には2つ以上のセッションが必要です。',
   'sync.offline': 'オフライン — 変更は端末に保存済み',
   'sync.pendingCount': '同期待ち {n} 件',
   'app.credit': '@{handle}',

@@ -248,22 +248,61 @@ export async function fetchGroupMemberRole(groupCode: string): Promise<GroupMemb
 export async function listGroupMembers(groupCode: string): Promise<GroupMemberRecord[]> {
   const supabase = await requireClient()
   const groupKey = await createGroupKey(groupCode)
-  const { data, error } = await supabase
+
+  const mapRows = (
+    rows: Record<string, unknown>[],
+    options?: { includeRole?: boolean; includeDisplayName?: boolean; includeBannedAt?: boolean },
+  ): GroupMemberRecord[] =>
+    rows.map((row) => ({
+      userId: row.user_id as string,
+      role: (options?.includeRole === false
+        ? 'member'
+        : row.role === 'owner' || row.role === 'admin' || row.role === 'member' || row.role === 'reader'
+          ? row.role
+          : 'member') as GroupMemberRole,
+      displayName:
+        options?.includeDisplayName === false ? null : ((row.display_name as string | null) ?? null),
+      joinedAt: (row.joined_at as string) ?? new Date().toISOString(),
+      bannedAt:
+        options?.includeBannedAt === false ? null : ((row.banned_at as string | null) ?? null),
+    }))
+
+  const full = await supabase
     .from('group_members')
     .select('user_id, role, display_name, joined_at, banned_at')
     .eq('group_key', groupKey)
     .order('joined_at', { ascending: true })
 
-  if (error) throw error
-  return (data ?? []).map((row) => ({
-    userId: row.user_id as string,
-    role: (row.role === 'owner' || row.role === 'admin' || row.role === 'member' || row.role === 'reader'
-      ? row.role
-      : 'member') as GroupMemberRole,
-    displayName: (row.display_name as string | null) ?? null,
-    joinedAt: (row.joined_at as string) ?? new Date().toISOString(),
-    bannedAt: (row.banned_at as string | null) ?? null,
-  }))
+  if (!full.error) {
+    return mapRows((full.data ?? []) as Record<string, unknown>[])
+  }
+
+  if (full.error.code === '42703') {
+    const legacy = await supabase
+      .from('group_members')
+      .select('user_id, display_name, joined_at, banned_at')
+      .eq('group_key', groupKey)
+      .order('joined_at', { ascending: true })
+    if (!legacy.error) {
+      return mapRows((legacy.data ?? []) as Record<string, unknown>[], { includeRole: false })
+    }
+    if (legacy.error.code === '42703') {
+      const minimal = await supabase
+        .from('group_members')
+        .select('user_id, joined_at')
+        .eq('group_key', groupKey)
+        .order('joined_at', { ascending: true })
+      if (minimal.error) throw minimal.error
+      return mapRows((minimal.data ?? []) as Record<string, unknown>[], {
+        includeRole: false,
+        includeDisplayName: false,
+        includeBannedAt: false,
+      })
+    }
+    throw legacy.error
+  }
+
+  throw full.error
 }
 
 export async function updateGroupMemberRole(

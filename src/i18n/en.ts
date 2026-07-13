@@ -330,6 +330,7 @@ export const en = {
   'session.mergeConfirm': 'Merge "{source}" into "{target}"? Matches move to the kept session and the source is deleted.',
   'session.merged': 'Sessions merged',
   'session.mergeFailed': 'Could not merge sessions',
+  'session.mergeNeedTwo': 'Need at least two sessions to merge.',
   'sync.offline': 'Offline — changes saved locally',
   'sync.pendingCount': '{n} pending sync',
   'app.credit': '@{handle}',

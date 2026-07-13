@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
-import { IconButton } from '@/components/ui/IconButton'
+import { IconButton, TabIconButton } from '@/components/ui/IconButton'
 import {
   IconAdd,
   IconDelete,
   IconEdit,
   IconLinked,
   IconManage,
-  IconMerge,
   IconRefresh,
   IconSessions,
   IconUsers,
@@ -26,7 +25,7 @@ import { useI18n } from '@/lib/i18n'
 import type { GroupMemberRecord, Player, PlayerInput } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
-type RosterTab = 'roster' | 'accounts' | 'sessions' | 'merge'
+type RosterTab = 'roster' | 'accounts' | 'sessions'
 
 function parseList(value: string): string[] {
   return value
@@ -277,6 +276,7 @@ export function GroupClanRoster() {
   const [members, setMembers] = useState<GroupMemberRecord[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [editor, setEditor] = useState<Player | 'new' | null>(null)
+  const [membersError, setMembersError] = useState<string | null>(null)
 
   const {
     canManage,
@@ -310,25 +310,28 @@ export function GroupClanRoster() {
   }, [members])
 
   const refreshMembers = useCallback(async () => {
-    if (!groupCode || !configured) return
+    if (!groupCode || !configured || tab !== 'accounts') return
     setLoadingMembers(true)
+    setMembersError(null)
     try {
       const { user } = await getCloudSession()
       if (!user) {
         setMembers([])
+        setMembersError(t('cloud.loginRequired'))
         return
       }
       await reloadMembers()
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : t('members.loadFailed'))
+      setMembers([])
+      setMembersError(caught instanceof Error ? caught.message : t('members.loadFailed'))
     } finally {
       setLoadingMembers(false)
     }
-  }, [configured, groupCode, reloadMembers, t, toast])
+  }, [configured, groupCode, reloadMembers, tab, t])
 
   useEffect(() => {
-    void refreshMembers()
-  }, [refreshMembers])
+    if (tab === 'accounts') void refreshMembers()
+  }, [tab, refreshMembers])
 
   const sortedPlayers = useMemo(() => {
     const list = players.filter((player) => !isDeletedPlayer(player))
@@ -340,29 +343,20 @@ export function GroupClanRoster() {
     })
   }, [players])
 
-  const tabClass = (value: RosterTab) =>
-    [
-      'flex h-9 min-w-9 flex-1 items-center justify-center rounded-lg transition',
-      tab === value ? 'bg-brand-500 text-white' : 'bg-surface text-text-secondary ring-1 ring-surface-muted',
-    ].join(' ')
-
   if (!groupCode) return null
 
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <button type="button" className={tabClass('roster')} title={t('members.tabRoster')} onClick={() => setTab('roster')}>
+        <TabIconButton label={t('members.tabRoster')} active={tab === 'roster'} onClick={() => setTab('roster')}>
           <IconUsers />
-        </button>
-        <button type="button" className={tabClass('accounts')} title={t('members.tabAuth')} onClick={() => setTab('accounts')}>
+        </TabIconButton>
+        <TabIconButton label={t('members.tabAuth')} active={tab === 'accounts'} onClick={() => setTab('accounts')}>
           <IconLinked />
-        </button>
-        <button type="button" className={tabClass('sessions')} title={t('settings.session')} onClick={() => setTab('sessions')}>
+        </TabIconButton>
+        <TabIconButton label={t('settings.session')} active={tab === 'sessions'} onClick={() => setTab('sessions')}>
           <IconSessions />
-        </button>
-        <button type="button" className={tabClass('merge')} title={t('data.mergePlayers')} onClick={() => setTab('merge')}>
-          <IconMerge />
-        </button>
+        </TabIconButton>
         {tab === 'roster' ? (
           <IconButton label={t('lobby.addPlayer')} variant="brand" onClick={() => setEditor('new')}>
             <IconAdd />
@@ -375,49 +369,69 @@ export function GroupClanRoster() {
       </div>
 
       {tab === 'roster' ? (
-        <ul className="space-y-1.5">
-          {sortedPlayers.length ? (
-            sortedPlayers.map((player) => {
-              const member = player.linkedUserId ? memberByUserId.get(player.linkedUserId) : null
-              const isSelf = member?.userId === cloudUserId
-              return (
-                <li key={player.id}>
-                  <CompactPlayerRow
-                    player={player}
-                    member={member}
-                    canManageMember={canManage && !isSelf}
-                    canTransfer={canTransfer && !isSelf}
-                    memberBusy={member ? busyUserId === member.userId : false}
-                    onEdit={() => setEditor(player)}
-                    onDelete={() => {
-                      try {
-                        deletePlayer(player.id)
-                        toast.success(t('delete.playerDone'))
-                      } catch (caught) {
-                        toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
-                      }
-                    }}
-                    onMemberRoleChange={handleRoleChange}
-                    onMemberBanToggle={handleBanToggle}
-                    onMemberRemove={(target) => handleRemove(target, player.name)}
-                    onTransferOwnership={async (target) => {
-                      await handleTransferOwnership(
-                        target.userId,
-                        resolveMemberDisplayName(target, player.name),
-                      )
-                    }}
-                  />
-                </li>
-              )
-            })
-          ) : (
-            <li className="rounded-xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
-              {t('lobby.rosterEmpty')}
-            </li>
-          )}
-        </ul>
+        <>
+          <ul className="space-y-1.5">
+            {sortedPlayers.length ? (
+              sortedPlayers.map((player) => {
+                const member = player.linkedUserId ? memberByUserId.get(player.linkedUserId) : null
+                const isSelf = member?.userId === cloudUserId
+                return (
+                  <li key={player.id}>
+                    <CompactPlayerRow
+                      player={player}
+                      member={member}
+                      canManageMember={canManage && !isSelf}
+                      canTransfer={canTransfer && !isSelf}
+                      memberBusy={member ? busyUserId === member.userId : false}
+                      onEdit={() => setEditor(player)}
+                      onDelete={() => {
+                        try {
+                          deletePlayer(player.id)
+                          toast.success(t('delete.playerDone'))
+                        } catch (caught) {
+                          toast.error(caught instanceof Error ? caught.message : t('delete.failed'))
+                        }
+                      }}
+                      onMemberRoleChange={handleRoleChange}
+                      onMemberBanToggle={handleBanToggle}
+                      onMemberRemove={(target) => handleRemove(target, player.name)}
+                      onTransferOwnership={async (target) => {
+                        await handleTransferOwnership(
+                          target.userId,
+                          resolveMemberDisplayName(target, player.name),
+                        )
+                      }}
+                    />
+                  </li>
+                )
+              })
+            ) : (
+              <li className="rounded-xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
+                {t('lobby.rosterEmpty')}
+              </li>
+            )}
+          </ul>
+          <div className="mt-3 border-t border-surface-muted pt-3">
+            <p className="mb-2 text-xs font-semibold text-text-secondary">{t('data.mergePlayers')}</p>
+            <PlayerMergeTool compact />
+          </div>
+        </>
       ) : tab === 'accounts' ? (
-        <ul className="space-y-1.5">
+        <>
+          {membersError ? (
+            <div className="flex items-center gap-2 rounded-xl bg-danger/10 px-3 py-2">
+              <p className="min-w-0 flex-1 text-sm text-red-200">{membersError}</p>
+              <Button
+                variant="ghost"
+                className="min-h-8 shrink-0 px-2 text-xs"
+                disabled={loadingMembers}
+                onClick={() => void refreshMembers()}
+              >
+                {t('members.refresh')}
+              </Button>
+            </div>
+          ) : null}
+          <ul className="space-y-1.5">
           {members.length ? (
             members.map((member) => (
               <li key={member.userId}>
@@ -446,10 +460,9 @@ export function GroupClanRoster() {
             </li>
           )}
         </ul>
-      ) : tab === 'sessions' ? (
-        <GroupClanSessions />
+        </>
       ) : (
-        <PlayerMergeTool compact />
+        <GroupClanSessions />
       )}
 
       <BottomSheet
