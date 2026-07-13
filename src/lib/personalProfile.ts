@@ -32,5 +32,15 @@ export function ensurePersonalProfileFromLogin(state: AppState, email: string | 
 }
 
 export function updatePersonalProfileName(state: AppState, displayName: string): AppState {
-  return createPersonalProfile(state, displayName)
+  const name = displayName.trim()
+  if (!name) throw new Error('個人檔案名稱不能留空')
+  const next = ensureProfileIdentityId(state)
+  return {
+    ...next,
+    settings: {
+      ...next.settings,
+      profileDisplayName: name,
+      profileSetupCompleted: true,
+    },
+  }
 }

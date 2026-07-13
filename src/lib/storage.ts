@@ -269,6 +269,7 @@ const migrations: Record<number, Migration> = {
               )?.name ?? null
             : null),
         groupProfileLinks: links,
+        groupLinkSuppressedKeys: settings.groupLinkSuppressedKeys ?? [],
       },
     }
   },

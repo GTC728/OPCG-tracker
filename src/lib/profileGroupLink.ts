@@ -28,13 +28,37 @@ export function saveGroupProfileBookmark(
     playerName: playerName.trim(),
     linkedAt: new Date().toISOString(),
   }
+  const suppressed = (state.settings.groupLinkSuppressedKeys ?? []).filter((key) => key !== groupKey)
   return {
     ...state,
     settings: {
       ...state.settings,
       groupProfileLinks: links,
+      groupLinkSuppressedKeys: suppressed,
     },
   }
+}
+
+export function suppressGroupAutoRelink(state: AppState, groupCode?: string | null): AppState {
+  const code = groupCode ?? state.settings.lastGroupCode
+  if (!code) return state
+  const groupKey = groupStorageKey(code)
+  const links = { ...(state.settings.groupProfileLinks ?? {}) }
+  delete links[groupKey]
+  const suppressed = new Set(state.settings.groupLinkSuppressedKeys ?? [])
+  suppressed.add(groupKey)
+  return {
+    ...state,
+    settings: {
+      ...state.settings,
+      groupProfileLinks: links,
+      groupLinkSuppressedKeys: [...suppressed],
+    },
+  }
+}
+
+function isGroupAutoRelinkSuppressed(state: AppState, groupCode: string): boolean {
+  return (state.settings.groupLinkSuppressedKeys ?? []).includes(groupStorageKey(groupCode))
 }
 
 function findPlayerForBookmark(state: AppState, bookmark: GroupProfileBookmark): Player | null {
@@ -76,6 +100,7 @@ export function tryAutoRelinkGroupProfile(state: AppState): AppState {
   if (state.settings.linkedPlayerId) return state
   if (!state.settings.profileIdentityId || !state.settings.profileSetupCompleted) return state
   if (!state.settings.lastGroupCode) return state
+  if (isGroupAutoRelinkSuppressed(state, state.settings.lastGroupCode)) return state
 
   const bookmark = state.settings.groupProfileLinks?.[groupStorageKey(state.settings.lastGroupCode)]
   if (bookmark) {

@@ -372,6 +372,8 @@ export interface AppSettings {
   profileDisplayName: string | null
   /** Per-group player UUID bookmarks (personal layer) */
   groupProfileLinks: Record<string, GroupProfileBookmark>
+  /** Group keys where explicit unlink suppressed auto-relink until user links again */
+  groupLinkSuppressedKeys?: string[]
   /** Cached from Supabase group_members.role */
   groupMemberRole: GroupMemberRole | null
   /** Cached from Supabase group_members.banned_at */

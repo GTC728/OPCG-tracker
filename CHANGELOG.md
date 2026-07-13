@@ -9,6 +9,22 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.1.0 - 2026-07-13
+
+### Fixed
+
+- **Personal name overwrite**: `updatePersonalProfileName` no longer reuses `createPersonalProfile`; member list reload no longer pushes display name on every refresh.
+- **Unlink refresh loop**: `unlinkGroupProfile` clears bookmark and suppresses `tryAutoRelinkGroupProfile` until user links again.
+- **Settings sheet scroll**: Group settings bottom sheet scrolls correctly (removed broken `manageScroll`).
+
+### Changed
+
+- **Icon-first lobby UI**: Settings, switch group, search, local, edit/delete/manage use icon buttons with tooltips.
+- **Group toolbar**: Switch group / search / local moved next to active group settings (removed bottom stack).
+- **Roster tabs**: 名單 / 帳號 / 場次 / 合併 in one icon tab row; player merge moved from session area to merge tab.
+- **Linked indicator**: Link icon beside linked roster players.
+- **Compact sessions**: Session list matches player list style in clan home.
+
 ## V5.0.2 - 2026-07-13
 
 ### Fixed
