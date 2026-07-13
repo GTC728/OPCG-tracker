@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.1.3 - 2026-07-13
+
+### Fixed
+
+- **Player delete without confirmation**: Lobby roster delete now opens `PermanentDeletePrompt` with match count warning when the player has recorded matches.
+- **Roster permissions**: In groups, only group owners and admins can add, edit, delete, or merge players and manage sessions.
+
+### Changed
+
+- **Profile group link**: Binding to an existing roster player no longer requires typing the full name; reclaiming a player linked on another device still uses a checkbox confirm.
+
 ## V5.1.2 - 2026-07-13
 
 ### Fixed

@@ -29,7 +29,6 @@ export function ProfileLinkSheet({
   const [mode, setMode] = useState<ProfileLinkMode>('create')
   const [name, setName] = useState('')
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
-  const [confirmation, setConfirmation] = useState('')
   const [forceConfirm, setForceConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -48,7 +47,6 @@ export function ProfileLinkSheet({
 
   const reset = () => {
     setError(null)
-    setConfirmation('')
     setForceConfirm(false)
   }
 
@@ -83,7 +81,11 @@ export function ProfileLinkSheet({
             setError(t('profile.selectPlayer'))
             return
           }
-          linkProfileToPlayer(selectedPlayer.id, confirmation, needsForceConfirm && forceConfirm)
+          if (needsForceConfirm && !forceConfirm) {
+            setError(t('profile.forceClaimRequired'))
+            return
+          }
+          linkProfileToPlayer(selectedPlayer.id, undefined, needsForceConfirm && forceConfirm)
         }
       }
 
@@ -184,31 +186,16 @@ export function ProfileLinkSheet({
                   </select>
                 </label>
 
-                {selectedPlayer ? (
-                  <>
-                    <label className="block">
-                      <span className="text-sm font-medium text-text-secondary">
-                        {t('profile.confirmIdentityPrefix')} {selectedPlayer.name}
-                      </span>
-                      <input
-                        className="mt-2 min-h-11 w-full rounded-lg border border-surface-muted bg-surface px-3 text-text-primary"
-                        value={confirmation}
-                        onChange={(event) => setConfirmation(event.target.value)}
-                        placeholder={selectedPlayer.name}
-                      />
-                    </label>
-                    {needsForceConfirm ? (
-                      <label className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm ring-1 ring-warning/25">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={forceConfirm}
-                          onChange={(event) => setForceConfirm(event.target.checked)}
-                        />
-                        <span>{t('profile.forceClaimConfirm')}</span>
-                      </label>
-                    ) : null}
-                  </>
+                {selectedPlayer && needsForceConfirm ? (
+                  <label className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm ring-1 ring-warning/25">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={forceConfirm}
+                      onChange={(event) => setForceConfirm(event.target.checked)}
+                    />
+                    <span>{t('profile.forceClaimConfirm')}</span>
+                  </label>
                 ) : null}
               </div>
             )}
