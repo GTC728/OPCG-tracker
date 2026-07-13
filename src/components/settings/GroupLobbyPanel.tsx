@@ -22,7 +22,7 @@ import { getCompletedMatches } from '@/lib/stats'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
 
-export function GroupLobbyPanel() {
+export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boolean }) {
   const { t } = useI18n()
   const toast = useToast()
   const groupCode = useAppStore((state) => state.settings.lastGroupCode)
@@ -139,6 +139,7 @@ export function GroupLobbyPanel() {
 
   return (
     <section className="space-y-4">
+      {!settingsOnly ? (
       <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
         <h3 className="text-sm font-semibold">{t('groupLobby.title')}</h3>
         <p className="mt-1 text-xs text-text-secondary">{t('groupLobby.descV5')}</p>
@@ -165,6 +166,7 @@ export function GroupLobbyPanel() {
           {t(visibilityLabelKey(visibility))} · {t(joinPolicyLabelKey(joinPolicy))}
         </p>
       </div>
+      ) : null}
 
       {canManage ? (
         <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted space-y-3">
