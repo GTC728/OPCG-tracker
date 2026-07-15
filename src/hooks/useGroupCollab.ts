@@ -7,7 +7,7 @@ import {
 } from '@/lib/groupSync'
 import { useAppStore } from '@/stores/appStore'
 
-const FOREGROUND_POLL_MS = 12_000
+const FOREGROUND_POLL_MS = 5_000
 
 export function useGroupCollab() {
   const hydrated = useAppStore((state) => state.hydrated)

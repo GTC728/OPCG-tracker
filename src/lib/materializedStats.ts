@@ -1,7 +1,6 @@
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
 import {
   getWinRate,
-  getWeightedWinRate,
   MIN_RELIABLE_SAMPLE,
   sortStatsByWeightedWinRate,
   type DashboardStats,
@@ -288,8 +287,8 @@ export function materializedPlayerStats(players: Player[], scope: MaterializedSc
     .filter((p) => !p.deletedAt && agg.players.has(p.id))
     .map((p) => toRecordStat(p.id, p.name, agg.players.get(p.id)!))
     .sort((a, b) => {
-      const left = getWeightedWinRate(a.wins, a.total)
-      const right = getWeightedWinRate(b.wins, b.total)
+      const left = getWinRate(a.wins, a.total) ?? -1
+      const right = getWinRate(b.wins, b.total) ?? -1
       if (right !== left) return right - left
       return b.total - a.total
     })
@@ -301,8 +300,8 @@ export function materializedDeckStats(decks: Deck[], scope: MaterializedScope, l
     .filter((d) => !d.archived && agg.decks.has(d.id))
     .map((d) => toRecordStat(d.id, getDeckDisplayName(d, language), agg.decks.get(d.id)!))
     .sort((a, b) => {
-      const left = getWeightedWinRate(a.wins, a.total)
-      const right = getWeightedWinRate(b.wins, b.total)
+      const left = getWinRate(a.wins, a.total) ?? -1
+      const right = getWinRate(b.wins, b.total) ?? -1
       if (right !== left) return right - left
       return b.total - a.total
     })

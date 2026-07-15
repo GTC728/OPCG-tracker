@@ -1,18 +1,8 @@
 import { appendAuditEntry, remoteAuditActor } from '@/lib/auditLog'
 import { groupStorageKey } from '@/lib/appStateLayers'
 import {
-  activeEntitiesDiffer,
-  buildActiveConflict,
-  buildMatchConflict,
-  buildPlayerConflict,
-  buildSessionConflict,
-  detectJoinConflicts,
   isConflictEntity,
-  matchEntitiesDiffer,
   mergeBenignJoinedPlayer,
-  mergeUniqueConflicts,
-  playerEntitiesDiffer,
-  sessionEntitiesDiffer,
   type JoinConflictContext,
   type RemoteGroupEntities,
 } from '@/lib/conflictResolver'
@@ -392,7 +382,14 @@ function sessionPayloadChanged(before: Session, after: Session): boolean {
   )
 }
 
+function isCompletedLocally(matchId: string): boolean {
+  const state = getAppState()
+  return state.matches.some((match) => match.id === matchId && !match.deletedAt)
+}
+
 function shouldApplyRemoteActive(row: SyncActiveRow): boolean {
+  // Completed matches must never reappear as active tables.
+  if (isCompletedLocally(row.id)) return false
   const localTouch = localActiveTouch.get(row.id) ?? 0
   const remoteAt = new Date(row.updated_at).getTime()
   return remoteAt >= localTouch
@@ -879,8 +876,10 @@ export function notifyGroupCollabChange(prev: AppState | null, next: AppState): 
       void queueOp({ kind: 'delete_active', groupCode, matchId: match.id })
     }
   }
+  // Always stamp local touch on deletes — otherwise pull/realtime restores the table
+  // before delete_active reaches the server (W-to-complete race).
+  if (touchedActive.size) touchLocalActive(touchedActive)
   if (changedActive.length) {
-    touchLocalActive(touchedActive)
     void queueOp({ kind: 'upsert_active', groupCode, matchIds: changedActive.map((match) => match.id) })
   }
 
@@ -1032,12 +1031,12 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
         bookmarkPlayerId:
           current.settings.groupProfileLinks?.[groupStorageKey(groupCode)]?.playerId ?? null,
       }
-      const joinConflicts = hadLocalData ? detectJoinConflicts(incomingSnapshot, remote, joinCtx) : []
 
       if (hadLocalData) {
+        // LWW merge — no parked conflicts (manual resolve UI removed in v5.2).
         updateAppState((state) =>
           isGroupSyncStillActive(groupCode, epoch)
-            ? applyJoinMerge(state, incomingSnapshot, remote, joinConflicts, joinCtx)
+            ? { ...applyJoinMerge(state, incomingSnapshot, remote, [], joinCtx), syncConflicts: [] }
             : state,
         )
       } else {
@@ -1045,17 +1044,6 @@ export async function initializeGroupCollab(groupCode: string): Promise<void> {
       }
 
       if (!isGroupSyncStillActive(groupCode, epoch)) return
-
-      if (joinConflicts.length) {
-        updateAppState((state) =>
-          isGroupSyncStillActive(groupCode, epoch)
-            ? {
-                ...state,
-                syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], joinConflicts),
-              }
-            : state,
-        )
-      }
 
       updateAppState((state) =>
         isGroupSyncStillActive(groupCode, epoch) ? finalizeGroupProfileSession(state) : state,
@@ -1223,38 +1211,37 @@ export async function pullGroupCollabState(
 
   let remoteMatchUpdates = 0
   let remoteUpdaterId: string | null = null
-  const pullConflicts: SyncConflict[] = []
 
   updateAppState((current) => {
     if (!isGroupSyncStillActive(groupCode, epoch)) return current
+    const completedIds = new Set(
+      current.matches.filter((match) => !match.deletedAt).map((match) => match.id),
+    )
     const activeById = new Map(current.activeMatches.map((match) => [match.id, match]))
     const remoteActiveIds = new Set(remote.activeMatches.map((item) => item.id))
 
     for (const remoteActive of remote.activeMatches) {
+      // Never resurrect a completed match as an active table.
+      if (completedIds.has(remoteActive.id)) {
+        activeById.delete(remoteActive.id)
+        continue
+      }
       const existing = activeById.get(remoteActive.id)
       const updatedAt = remote.meta.activeUpdatedAt.get(remoteActive.id) ?? ''
       const localTouch = localActiveTouch.get(remoteActive.id) ?? 0
       const remoteAt = new Date(updatedAt).getTime()
 
-      if (existing && localTouch > 0 && remoteAt >= localTouch && activeEntitiesDiffer(existing, remoteActive)) {
-        pullConflicts.push(
-          buildActiveConflict(
-            'pull',
-            existing,
-            remoteActive,
-            updatedAt,
-            remote.meta.activeUpdatedBy.get(remoteActive.id) ?? null,
-          ),
-        )
-        continue
-      }
-
+      // Pure LWW with local-touch grace — no conflict parking (avoids frozen sync).
       if (!existing || remoteAt >= localTouch) {
         activeById.set(remoteActive.id, remoteActive)
       }
     }
 
     for (const [id] of activeById) {
+      if (completedIds.has(id)) {
+        activeById.delete(id)
+        continue
+      }
       if (!remoteActiveIds.has(id)) {
         const localTouch = localActiveTouch.get(id) ?? 0
         if (!localTouch) activeById.delete(id)
@@ -1267,19 +1254,6 @@ export async function pullGroupCollabState(
       const updatedAt = remote.meta.matchUpdatedAt.get(remoteMatch.id) ?? ''
       const localTouch = localMatchTouch.get(remoteMatch.id) ?? 0
       const remoteAt = new Date(updatedAt).getTime()
-
-      if (existing && localTouch > 0 && remoteAt >= localTouch && matchEntitiesDiffer(existing, remoteMatch)) {
-        pullConflicts.push(
-          buildMatchConflict(
-            'pull',
-            existing,
-            remoteMatch,
-            updatedAt,
-            remote.meta.matchUpdatedBy.get(remoteMatch.id) ?? null,
-          ),
-        )
-        continue
-      }
 
       if (!existing || remoteAt >= localTouch) {
         const updatedBy = remote.meta.matchUpdatedBy.get(remoteMatch.id)
@@ -1304,19 +1278,6 @@ export async function pullGroupCollabState(
       const localTouch = localPlayerTouch.get(remotePlayer.id) ?? 0
       const remoteAt = new Date(updatedAt).getTime()
 
-      if (existing && localTouch > 0 && remoteAt >= localTouch && playerEntitiesDiffer(existing, remotePlayer)) {
-        pullConflicts.push(
-          buildPlayerConflict(
-            'pull',
-            existing,
-            remotePlayer,
-            updatedAt,
-            remote.meta.playerUpdatedBy.get(remotePlayer.id) ?? null,
-          ),
-        )
-        continue
-      }
-
       if (!existing || remoteAt >= localTouch) {
         playersById.set(remotePlayer.id, remotePlayer)
       }
@@ -1336,19 +1297,6 @@ export async function pullGroupCollabState(
       const updatedAt = remote.meta.sessionUpdatedAt.get(remoteSession.id) ?? ''
       const localTouch = localSessionTouch.get(remoteSession.id) ?? 0
       const remoteAt = new Date(updatedAt).getTime()
-
-      if (existing && localTouch > 0 && remoteAt >= localTouch && sessionEntitiesDiffer(existing, remoteSession)) {
-        pullConflicts.push(
-          buildSessionConflict(
-            'pull',
-            existing,
-            remoteSession,
-            updatedAt,
-            remote.meta.sessionUpdatedBy.get(remoteSession.id) ?? null,
-          ),
-        )
-        continue
-      }
 
       if (!existing || remoteAt >= localTouch) {
         sessionsById.set(remoteSession.id, remoteSession)
@@ -1373,21 +1321,10 @@ export async function pullGroupCollabState(
       sessions: [...sessionsById.values()].sort(
         (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
       ),
+      // Clear any legacy parked conflicts — LWW + local-touch replaces manual resolve UI.
+      syncConflicts: [],
     }
   })
-
-  if (!isGroupSyncStillActive(groupCode, epoch)) return
-
-  if (pullConflicts.length) {
-    updateAppState((state) =>
-      isGroupSyncStillActive(groupCode, epoch)
-        ? {
-            ...state,
-            syncConflicts: mergeUniqueConflicts(state.syncConflicts ?? [], pullConflicts),
-          }
-        : state,
-    )
-  }
 
   if (!isGroupSyncStillActive(groupCode, epoch)) return
 

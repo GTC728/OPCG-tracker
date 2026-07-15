@@ -9,9 +9,10 @@ import {
   archivedSessions,
   countSessionMatches,
 } from '@/lib/entityVisibility'
+import { exportSessionExcel } from '@/lib/excelExport'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
-import { useAppStore } from '@/stores/appStore'
+import { getAppState, useAppStore } from '@/stores/appStore'
 import type { Session } from '@/types'
 
 function CompactSessionRow({
@@ -24,6 +25,7 @@ function CompactSessionRow({
   onUnarchive,
   onDelete,
   onRename,
+  onExportExcel,
 }: {
   session: Session
   isCurrent: boolean
@@ -34,6 +36,7 @@ function CompactSessionRow({
   onUnarchive?: () => void
   onDelete: () => void
   onRename: () => void
+  onExportExcel: () => void
 }) {
   const { t } = useI18n()
 
@@ -54,6 +57,9 @@ function CompactSessionRow({
         </p>
       </button>
       <div className="flex shrink-0 gap-0.5">
+        <IconButton label={t('session.exportExcel')} onClick={onExportExcel}>
+          <span className="text-[10px] font-bold">X</span>
+        </IconButton>
         {canManage && isCurrent ? (
           <IconButton label={t('settings.renameSession')} onClick={onRename}>
             <IconEdit />
@@ -111,6 +117,15 @@ export function GroupClanSessions({ canManage = true }: { canManage?: boolean })
   }, [currentSession?.id, currentSession?.name])
 
   const matchState = { matches, activeMatches }
+
+  const handleExportSession = async (sessionId: string) => {
+    try {
+      await exportSessionExcel(getAppState(), sessionId)
+      toast.success(t('session.exportExcelSuccess'))
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : t('session.exportExcelFailed'))
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -195,6 +210,9 @@ export function GroupClanSessions({ canManage = true }: { canManage?: boolean })
               }
               onDelete={() => setDeleteTarget(session)}
               onRename={() => setRenameDraft(session.name)}
+              onExportExcel={() => {
+                void handleExportSession(session.id)
+              }}
             />
           </li>
         ))}
@@ -238,6 +256,9 @@ export function GroupClanSessions({ canManage = true }: { canManage?: boolean })
                 }}
                 onDelete={() => setDeleteTarget(session)}
                 onRename={() => setRenameDraft(session.name)}
+                onExportExcel={() => {
+                  void handleExportSession(session.id)
+                }}
               />
             </li>
           ))}

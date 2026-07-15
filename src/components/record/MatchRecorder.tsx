@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { MatchListItem } from '@/components/match/MatchResultRow'
+import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { TableBoard } from '@/components/record/TableBoard'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
@@ -183,6 +184,7 @@ export function MatchRecorder() {
   const setMatchNotes = useAppStore((state) => state.setMatchNotes)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
+  const [pendingRematch, setPendingRematch] = useState<ActiveMatchInput | null>(null)
 
   const placeRematch = (input: ActiveMatchInput) => {
     try {
@@ -263,7 +265,7 @@ export function MatchRecorder() {
               decks={decks}
               sessionId={currentSessionId}
               onRematch={() =>
-                placeRematch({
+                setPendingRematch({
                   player1Id: combo.player1Id,
                   deck1Id: combo.deck1Id,
                   player2Id: combo.player2Id,
@@ -276,6 +278,16 @@ export function MatchRecorder() {
           ))}
         </section>
       ) : null}
+
+      <RematchConfirmSheet
+        open={pendingRematch !== null}
+        input={pendingRematch}
+        players={players}
+        decks={decks}
+        confirmLabel={t('rematch.confirmPlace')}
+        onClose={() => setPendingRematch(null)}
+        onConfirm={placeRematch}
+      />
 
       <PostMatchSheet
         key={pendingNotesMatch?.id}

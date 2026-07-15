@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DeckSearchField } from '@/components/deck/DeckSearchField'
 import { MatchResultRow } from '@/components/match/MatchResultRow'
+import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
@@ -260,7 +261,7 @@ function HistoryMatchCard({
               {t('common.edit')}
             </Button>
             <Button variant="secondary" className="min-h-9 py-1.5 text-xs" onClick={onCopy}>
-              複製重開
+              {t('history.copyRematch')}
             </Button>
           </div>
           <div className="mt-2">
@@ -296,6 +297,7 @@ export function HistoryPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Match | null>(null)
+  const [rematchMatch, setRematchMatch] = useState<Match | null>(null)
 
   const sessionOptions = useMemo(() => activeListedSessions(sessions), [sessions])
   const listedPlayers = useMemo(() => getListedPlayers(appState), [appState])
@@ -332,25 +334,6 @@ export function HistoryPage() {
     { value: 'week' as const, label: t('history.dateWeek') },
     { value: 'custom' as const, label: t('history.dateCustom') },
   ]
-
-  const copyAsNewMatch = (match: Match) => {
-    try {
-      createActiveMatch({
-        player1Id: match.player1Id,
-        deck1Id: match.deck1Id,
-        player2Id: match.player2Id,
-        deck2Id: match.deck2Id,
-        firstPlayerId: match.firstPlayerId,
-        notes: match.notes,
-      })
-      setActiveTab('record')
-      toast.success('已複製到進行中對局')
-    } catch (error) {
-      const nextMessage = error instanceof Error ? error.message : '複製對局失敗'
-      setMessage(nextMessage)
-      toast.error(nextMessage)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -445,7 +428,7 @@ export function HistoryPage() {
               players={allPlayers}
               decks={decks}
               onEdit={() => setEditingMatch(match)}
-              onCopy={() => copyAsNewMatch(match)}
+              onCopy={() => setRematchMatch(match)}
               onDelete={() => setDeleteTarget(match)}
             />
           ))
@@ -455,6 +438,36 @@ export function HistoryPage() {
           </div>
         )}
       </section>
+
+      <RematchConfirmSheet
+        open={rematchMatch !== null}
+        input={
+          rematchMatch
+            ? {
+                player1Id: rematchMatch.player1Id,
+                deck1Id: rematchMatch.deck1Id,
+                player2Id: rematchMatch.player2Id,
+                deck2Id: rematchMatch.deck2Id,
+                firstPlayerId: rematchMatch.firstPlayerId,
+                notes: rematchMatch.notes,
+              }
+            : null
+        }
+        players={allPlayers}
+        decks={decks}
+        onClose={() => setRematchMatch(null)}
+        onConfirm={(input) => {
+          try {
+            createActiveMatch(input)
+            setActiveTab('record')
+            toast.success(t('history.copyRematchSuccess'))
+          } catch (error) {
+            const nextMessage = error instanceof Error ? error.message : t('history.copyRematchFailed')
+            setMessage(nextMessage)
+            toast.error(nextMessage)
+          }
+        }}
+      />
 
       <BottomSheet open={editingMatch !== null} title="編輯完成對局" onClose={() => setEditingMatch(null)}>
         {editingMatch ? (

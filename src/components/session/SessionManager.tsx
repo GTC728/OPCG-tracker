@@ -8,28 +8,33 @@ import {
   archivedSessions,
   countSessionMatches,
 } from '@/lib/entityVisibility'
+import { exportSessionExcel } from '@/lib/excelExport'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
 import { SessionMergeTool } from '@/components/session/SessionMergeTool'
-import { useAppStore } from '@/stores/appStore'
+import { getAppState, useAppStore } from '@/stores/appStore'
 import type { Session } from '@/types'
 
 function SessionRow({
   session,
   currentSessionId,
   matchCount,
+  exporting,
   onSwitch,
   onArchive,
   onUnarchive,
   onDelete,
+  onExportExcel,
 }: {
   session: Session
   currentSessionId: string | null
   matchCount: number
+  exporting?: boolean
   onSwitch: () => void
   onArchive?: () => void
   onUnarchive?: () => void
   onDelete: () => void
+  onExportExcel: () => void
 }) {
   const { t } = useI18n()
 
@@ -56,6 +61,14 @@ function SessionRow({
                 ? t('settings.endedLabel')
                 : t('settings.openLabel')}
           </span>
+          <button
+            type="button"
+            className="text-xs underline opacity-80 outline-none"
+            disabled={exporting}
+            onClick={onExportExcel}
+          >
+            {exporting ? t('session.exportingExcel') : t('session.exportExcel')}
+          </button>
           {onArchive ? (
             <button type="button" className="text-xs underline opacity-80 outline-none" onClick={onArchive}>
               {t('session.archive')}
@@ -114,10 +127,23 @@ export function SessionManager({
   const [sessionName, setSessionName] = useState(currentSession?.name ?? '')
   const [deleteTarget, setDeleteTarget] = useState<Session | null>(null)
   const [pastExpanded, setPastExpanded] = useState(false)
+  const [exportingSessionId, setExportingSessionId] = useState<string | null>(null)
 
   useEffect(() => {
     setSessionName(currentSession?.name ?? '')
   }, [currentSession?.id, currentSession?.name])
+
+  const handleExportSession = async (sessionId: string) => {
+    setExportingSessionId(sessionId)
+    try {
+      await exportSessionExcel(getAppState(), sessionId)
+      toast.success(t('session.exportExcelSuccess'))
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : t('session.exportExcelFailed'))
+    } finally {
+      setExportingSessionId(null)
+    }
+  }
 
   const body = (
     <div className="space-y-4">
@@ -188,6 +214,7 @@ export function SessionManager({
               session={session}
               currentSessionId={currentSessionId}
               matchCount={countSessionMatches(session.id, matches, activeMatches)}
+              exporting={exportingSessionId === session.id}
               onSwitch={() => {
                 try {
                   switchSession(session.id)
@@ -205,6 +232,9 @@ export function SessionManager({
                 } catch (caught) {
                   toast.error(caught instanceof Error ? caught.message : t('session.archiveFailed'))
                 }
+              }}
+              onExportExcel={() => {
+                void handleExportSession(session.id)
               }}
               onDelete={() => setDeleteTarget(session)}
             />
@@ -243,6 +273,7 @@ export function SessionManager({
                   session={session}
                   currentSessionId={currentSessionId}
                   matchCount={countSessionMatches(session.id, matches, activeMatches)}
+                  exporting={exportingSessionId === session.id}
                   onSwitch={() => {
                     try {
                       switchSession(session.id)
@@ -260,6 +291,9 @@ export function SessionManager({
                     } catch (caught) {
                       toast.error(caught instanceof Error ? caught.message : t('session.unarchiveFailed'))
                     }
+                  }}
+                  onExportExcel={() => {
+                    void handleExportSession(session.id)
                   }}
                   onDelete={() => setDeleteTarget(session)}
                 />

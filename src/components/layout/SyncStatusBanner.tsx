@@ -18,7 +18,6 @@ export function SyncStatusBanner({ onOpenWorkspace }: { onOpenWorkspace?: () => 
   const groupMemberBannedAt = useAppStore((state) => state.settings.groupMemberBannedAt)
   const lastSyncAt = useAppStore((state) => state.settings.lastGroupSyncAt)
   const lastSyncError = useAppStore((state) => state.settings.lastGroupSyncError)
-  const conflictCount = useAppStore((state) => state.syncConflicts?.length ?? 0)
   const [pendingCount, setPendingCount] = useState(getCachedSyncPendingCount())
   const [online, setOnline] = useState(() =>
     typeof navigator !== 'undefined' ? navigator.onLine : true,
@@ -64,22 +63,6 @@ export function SyncStatusBanner({ onOpenWorkspace }: { onOpenWorkspace?: () => 
         <span className="font-medium">{workspacePrefix}</span>
         <span className="text-text-secondary">·</span>
         <span>{t('members.selfBanned')}</span>
-      </button>
-    )
-  }
-
-  if (conflictCount > 0) {
-    return (
-      <button
-        type="button"
-        disabled={!clickable}
-        className={[uiCalloutWarning, baseClass, wrapperClass].join(' ')}
-        role="status"
-        onClick={onOpenWorkspace}
-      >
-        <span className="font-medium text-text-primary">{workspacePrefix}</span>
-        <span className="text-text-secondary">·</span>
-        <span>{t('conflict.banner').replace('{n}', String(conflictCount))}</span>
       </button>
     )
   }

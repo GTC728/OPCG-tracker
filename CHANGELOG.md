@@ -9,6 +9,22 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.2.0 - 2026-07-16
+
+### New
+
+- **Per-session Excel export**: Each session can export its own Excel independently from Record, Session Manager, and Lobby sessions.
+
+### Changed
+
+- **Win-rate display**: Stats, Top 5, opponents, and player matchup now show raw `W / (W+L)` (e.g. 3W-6L → 33.3%). Sample-size labels remain.
+- **Rematch confirmation**: History「複製重開」and Record recent rematch require a confirm step that shows players/decks before placing a new active match.
+- **Group sync**: Removed conflict-parking UI/flow that stalled sync and caused overwrites. Sync uses LWW + local-touch grace with faster poll/flush intervals.
+
+### Fixed
+
+- **Table revive after W**: Completing an active match now always stamps local-touch on delete, and pulls no longer resurrect a match that is already completed locally.
+
 ## V5.1.3 - 2026-07-13
 
 ### Fixed

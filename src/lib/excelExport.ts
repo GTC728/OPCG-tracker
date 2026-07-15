@@ -23,6 +23,32 @@ interface ColumnDefinition {
 interface ExportOptions {
   deviceLabel?: string
   fileName?: string
+  /** When set, export only this session's matches / active tables / session row. */
+  sessionId?: string
+}
+
+function scopeStateForExport(state: AppState, sessionId?: string): AppState {
+  if (!sessionId) return state
+
+  const matches = state.matches.filter((match) => match.sessionId === sessionId)
+  const matchIds = new Set(matches.map((match) => match.id))
+
+  return {
+    ...state,
+    sessions: state.sessions.filter((session) => session.id === sessionId),
+    matches,
+    activeMatches: state.activeMatches.filter((match) => match.sessionId === sessionId),
+    matchRevisions: state.matchRevisions.filter((revision) => matchIds.has(revision.matchId)),
+    importBatches: state.importBatches.filter((batch) => batch.targetSessionId === sessionId),
+    importRows: state.importRows.filter((row) => {
+      const batch = state.importBatches.find((item) => item.id === row.batchId)
+      return batch?.targetSessionId === sessionId
+    }),
+  }
+}
+
+export function getSessionExportState(state: AppState, sessionId: string): AppState {
+  return scopeStateForExport(state, sessionId)
 }
 
 function text(value: Primitive): string | number | boolean | null {
@@ -289,7 +315,8 @@ function buildJsonSnapshotRows(state: AppState): SheetRow[] {
 }
 
 export function buildExportSheets(state: AppState, options: ExportOptions = {}): Sheet<Blob>[] {
-  const playersById = new Map(state.players.map((player) => [player.id, player]))
+  const scoped = scopeStateForExport(state, options.sessionId)
+  const playersById = new Map(scoped.players.map((player) => [player.id, player]))
   const exportedAt = new Date().toISOString()
 
   const readableMatchColumns = [
@@ -450,39 +477,40 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
   ]
 
   const rowCounts = {
-    matches: state.matches.length,
-    players: state.players.length,
-    player_aliases: state.playerAliases.length,
-    leaders: state.leaders.length,
-    deck_variants: state.deckVariants.length,
-    sessions: state.sessions.length,
-    active_matches: state.activeMatches.length,
-    match_revisions: state.matchRevisions.length,
-    import_batches: state.importBatches.length,
-    import_rows: state.importRows.length,
+    matches: scoped.matches.length,
+    players: scoped.players.length,
+    player_aliases: scoped.playerAliases.length,
+    leaders: scoped.leaders.length,
+    deck_variants: scoped.deckVariants.length,
+    sessions: scoped.sessions.length,
+    active_matches: scoped.activeMatches.length,
+    match_revisions: scoped.matchRevisions.length,
+    import_batches: scoped.importBatches.length,
+    import_rows: scoped.importRows.length,
   }
 
   return [
-    readmeSheet(state, exportedAt),
-    readableSheet('對局總表', readableMatchColumns, buildReadableMatchRows(state)),
+    readmeSheet(scoped, exportedAt),
+    readableSheet('對局總表', readableMatchColumns, buildReadableMatchRows(scoped)),
     sheet('_meta', metaColumns, [
       { key: 'export_format', value: EXPORT_FORMAT },
       { key: 'export_format_version', value: EXPORT_FORMAT_VERSION },
-      { key: 'app_schema_version', value: state.schemaVersion },
-      { key: 'app_version', value: state.appVersion || APP_VERSION },
+      { key: 'app_schema_version', value: scoped.schemaVersion },
+      { key: 'app_version', value: scoped.appVersion || APP_VERSION },
       { key: 'exported_at', value: exportedAt },
       { key: 'exported_by_device', value: options.deviceLabel ?? '' },
       { key: 'timezone', value: Intl.DateTimeFormat().resolvedOptions().timeZone },
+      { key: 'session_id', value: options.sessionId ?? '' },
       { key: 'row_counts', value: json(rowCounts) },
     ]),
-    sheet('matches', matchColumns, buildMatchRows(state)),
+    sheet('matches', matchColumns, buildMatchRows(scoped)),
     sheet(
       'players',
       playerColumns,
-      state.players.map((player) => ({
+      scoped.players.map((player) => ({
         player_id: player.id,
         name: player.name,
-        aliases: joinList(getPlayerAliases(state, player.id)),
+        aliases: joinList(getPlayerAliases(scoped, player.id)),
         archived: player.archived,
         created_at: player.createdAt,
         updated_at: player.updatedAt,
@@ -491,7 +519,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'player_aliases',
       aliasColumns,
-      state.playerAliases.map((alias) => ({
+      scoped.playerAliases.map((alias) => ({
         alias_id: alias.id,
         player_id: alias.playerId,
         player_name: playersById.get(alias.playerId)?.name,
@@ -502,7 +530,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'leaders',
       leaderColumns,
-      state.leaders.map((leader) => ({
+      scoped.leaders.map((leader) => ({
         leader_id: leader.id,
         leader_code: leader.code,
         set_code: leader.setCode,
@@ -516,8 +544,8 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'deck_variants',
       variantColumns,
-      state.deckVariants.map((variant) => {
-        const leader = getLeader(state, variant.leaderId)
+      scoped.deckVariants.map((variant) => {
+        const leader = getLeader(scoped, variant.leaderId)
         return {
           deck_variant_id: variant.id,
           leader_id: variant.leaderId,
@@ -536,7 +564,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'sessions',
       sessionColumns,
-      state.sessions.map((session) => ({
+      scoped.sessions.map((session) => ({
         session_id: session.id,
         name: session.name,
         started_at: session.startedAt,
@@ -544,11 +572,11 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
         created_at: session.createdAt,
       })),
     ),
-    sheet('active_matches', activeMatchColumns, buildActiveMatchRows(state)),
+    sheet('active_matches', activeMatchColumns, buildActiveMatchRows(scoped)),
     sheet(
       'match_revisions',
       revisionColumns,
-      state.matchRevisions.map((revision) => ({
+      scoped.matchRevisions.map((revision) => ({
         revision_id: revision.id,
         match_id: revision.matchId,
         edited_at: revision.editedAt,
@@ -560,7 +588,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'import_batches',
       importBatchColumns,
-      state.importBatches.map((batch) => ({
+      scoped.importBatches.map((batch) => ({
         batch_id: batch.id,
         filename: batch.filename,
         imported_at: batch.importedAt,
@@ -576,7 +604,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
     sheet(
       'import_rows',
       importRowColumns,
-      state.importRows.map((row) => ({
+      scoped.importRows.map((row) => ({
         row_id: row.id,
         batch_id: row.batchId,
         row_number: row.rowNumber,
@@ -587,7 +615,7 @@ export function buildExportSheets(state: AppState, options: ExportOptions = {}):
       })),
     ),
     sheet('_dictionary', dictionaryColumns, buildDictionary(definitions)),
-    sheet('_app_state_json', snapshotColumns, buildJsonSnapshotRows(state)),
+    sheet('_app_state_json', snapshotColumns, buildJsonSnapshotRows(scoped)),
   ]
 }
 
@@ -596,4 +624,20 @@ export async function exportAppStateExcel(state: AppState, options: ExportOption
   const exportedDate = new Date().toISOString().slice(0, 10)
   const fileName = options.fileName ?? `opcg-tracker-export-${exportedDate}.xlsx`
   await writeXlsxFile(buildExportSheets(state, options)).toFile(fileName)
+}
+
+export async function exportSessionExcel(
+  state: AppState,
+  sessionId: string,
+  options: Omit<ExportOptions, 'sessionId'> = {},
+): Promise<void> {
+  const session = state.sessions.find((item) => item.id === sessionId)
+  if (!session) throw new Error('Session not found')
+  const safeName = session.name.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40).trim() || sessionId
+  const exportedDate = new Date().toISOString().slice(0, 10)
+  await exportAppStateExcel(state, {
+    ...options,
+    sessionId,
+    fileName: options.fileName ?? `opcg-session-${safeName}-${exportedDate}.xlsx`,
+  })
 }

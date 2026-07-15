@@ -97,8 +97,8 @@ export function getWeightedWinRate(wins: number, total: number, priorGames = 3, 
 
 export function sortStatsByWeightedWinRate(stats: RecordStat[]): RecordStat[] {
   return [...stats].sort((left, right) => {
-    const leftScore = getWeightedWinRate(left.wins, left.total)
-    const rightScore = getWeightedWinRate(right.wins, right.total)
+    const leftScore = getWinRate(left.wins, left.total) ?? -1
+    const rightScore = getWinRate(right.wins, right.total) ?? -1
     if (rightScore !== leftScore) return rightScore - leftScore
     return right.total - left.total
   })
@@ -198,8 +198,8 @@ export function buildDeckStats(decks: Deck[], matches: Match[], language: Langua
     })
     .filter((stat) => stat.total > 0)
     .sort((left, right) => {
-      const leftScore = getWeightedWinRate(left.wins, left.total)
-      const rightScore = getWeightedWinRate(right.wins, right.total)
+      const leftScore = getWinRate(left.wins, left.total) ?? -1
+      const rightScore = getWinRate(right.wins, right.total) ?? -1
       if (rightScore !== leftScore) return rightScore - leftScore
       return right.total - left.total
     })

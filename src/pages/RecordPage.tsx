@@ -33,6 +33,7 @@ export function RecordPage() {
   const [expanded, setExpanded] = useState(false)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
   const dashboard = useSessionDashboard(currentSessionId ?? null, language)
@@ -88,13 +89,35 @@ export function RecordPage() {
                 {t('record.end')}
               </Button>
             </div>
-            <Button
-              variant="secondary"
-              className="min-h-10 w-full text-xs"
-              onClick={() => setSessionShareOpen(true)}
-            >
-              {t('record.exportSession')}
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                className="min-h-10 text-xs"
+                onClick={() => setSessionShareOpen(true)}
+              >
+                {t('record.exportSession')}
+              </Button>
+              <Button
+                variant="secondary"
+                className="min-h-10 text-xs"
+                disabled={exportingExcel}
+                onClick={async () => {
+                  setExportingExcel(true)
+                  try {
+                    const { exportSessionExcel } = await import('@/lib/excelExport')
+                    const { getAppState } = await import('@/stores/appStore')
+                    await exportSessionExcel(getAppState(), currentSession.id)
+                    toast.success(t('session.exportExcelSuccess'))
+                  } catch (caught) {
+                    toast.error(caught instanceof Error ? caught.message : t('session.exportExcelFailed'))
+                  } finally {
+                    setExportingExcel(false)
+                  }
+                }}
+              >
+                {exportingExcel ? t('session.exportingExcel') : t('session.exportExcel')}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="mt-2 grid grid-cols-2 gap-2">

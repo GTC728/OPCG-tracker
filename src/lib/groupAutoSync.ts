@@ -9,8 +9,8 @@ import { getAppState, updateAppState } from '@/stores/appStore'
 
 export type GroupSyncTrigger = 'init' | 'visibility' | 'online' | 'interval' | 'manual'
 
-const MIN_PULL_INTERVAL_MS = 10_000
-const MIN_FLUSH_INTERVAL_MS = 3_000
+const MIN_PULL_INTERVAL_MS = 4_000
+const MIN_FLUSH_INTERVAL_MS = 1_500
 
 let lastPullAt = 0
 let lastFlushAt = 0

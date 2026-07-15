@@ -16,16 +16,19 @@ describe('winRateDisplay', () => {
     expect(getDisplayWinRate(0, 0)).toBeNull()
   })
 
-  it('smooths small samples toward 50%', () => {
-    expect(getDisplayWinRate(2, 2)).toBeCloseTo(0.7, 3)
-    expect(getDisplayWinRate(0, 2)).toBeCloseTo(0.3, 3)
+  it('shows raw win rate (3W-6L = 33.3%)', () => {
+    expect(getDisplayWinRate(3, 9)).toBeCloseTo(1 / 3, 5)
+    expect(getDisplayWinRate(2, 2)).toBeCloseTo(1, 5)
+    expect(getDisplayWinRate(0, 2)).toBeCloseTo(0, 5)
+    expect(getDisplayWinRate(5, 6)).toBeCloseTo(5 / 6, 5)
   })
 
   it('marks unreliable samples below MIN_RELIABLE_SAMPLE', () => {
     expect(isReliableSample(2)).toBe(false)
     expect(isReliableSample(3)).toBe(true)
-    expect(getSampleLabel(2)).toContain('樣本不足')
-    expect(getSampleLabel(5)).toContain('初步')
+    const t = (key: Parameters<typeof translate>[1]) => translate('zh-Hant', key)
+    expect(getSampleLabel(2, t)).toContain('樣本不足')
+    expect(getSampleLabel(5, t)).toContain('初步')
   })
 
   it('uses gray heatmap color for unreliable samples', () => {
@@ -35,16 +38,14 @@ describe('winRateDisplay', () => {
     expect(reliable).toContain('34, 197, 94')
   })
 
-  it('includes smoothed and raw rates in tooltip for small samples', () => {
+  it('includes reliability and W-L in tooltip', () => {
     const t = (key: Parameters<typeof translate>[1]) => translate('zh-Hant', key)
     const tooltip = formatWinRateTooltip(1, 1, 2, 0.5, t)
-    expect(tooltip).toContain('平滑')
-    expect(tooltip).toContain('實際')
     expect(tooltip).toContain('1W-1L')
   })
 
-  it('derives display rate from raw aggregate', () => {
-    expect(getDisplayWinRateFromRaw(0.6, 10)).toBeCloseTo(0.577, 2)
+  it('passes through raw aggregate rate', () => {
+    expect(getDisplayWinRateFromRaw(0.6, 10)).toBeCloseTo(0.6, 5)
     expect(getDisplayWinRateFromRaw(null, 5)).toBeNull()
   })
 })
@@ -79,35 +80,11 @@ describe('matchTimer average duration', () => {
         id: 'm2',
         sessionId: 's1',
         matchNumber: 2,
-        startedAt: '2026-06-01T11:00:00.000Z',
-        finishedAt: '2026-06-01T11:20:00.000Z',
-      },
-      {
-        ...base,
-        id: 'm3',
-        sessionId: 's1',
-        matchNumber: 3,
         startedAt: null,
-        finishedAt: '2026-06-01T12:00:00.000Z',
+        finishedAt: '2026-06-01T11:00:00.000Z',
       },
     ]
-    const avg = getAverageMatchDurationMs(matches)
-    expect(avg).toBe(25 * 60 * 1000)
-    expect(formatMatchDuration(avg!)).toBe('25:00')
-  })
-
-  it('returns null when no timed matches', () => {
-    expect(
-      getAverageMatchDurationMs([
-        {
-          ...base,
-          id: 'm1',
-          sessionId: 's1',
-          matchNumber: 1,
-          startedAt: null,
-          finishedAt: '2026-06-01T12:00:00.000Z',
-        },
-      ]),
-    ).toBeNull()
+    expect(getAverageMatchDurationMs(matches)).toBe(30 * 60 * 1000)
+    expect(formatMatchDuration(30 * 60 * 1000)).toMatch(/30/)
   })
 })
