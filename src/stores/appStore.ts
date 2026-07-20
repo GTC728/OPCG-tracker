@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { APP_VERSION, createDefaultAppState } from '@/lib/constants'
 import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
+import { ensureImportPlayersInSession, playerIdsFromMatches } from '@/lib/importRoster'
 import { createSession, findOpenSessionForToday, mergeSessionsState } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
@@ -1415,6 +1416,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
         ? `歷史還原 ${filename}：${createdMatches.length} 場（計入成就）${skippedDuplicates ? `，略過 ${skippedDuplicates} 筆重複` : ''}`
         : `匯入 ${filename}：成功 ${createdMatches.length} 場${skippedDuplicates ? `，略過 ${skippedDuplicates} 筆重複` : ''}${syncPausedForImport ? '（已暫停群組推送）' : ''}`,
     )
+
+    if (createdMatches.length) {
+      next = ensureImportPlayersInSession(next, session.id, playerIdsFromMatches(createdMatches))
+    }
 
     if (options.historicalRestore && createdMatches.length) {
       const linkedId = next.settings.linkedPlayerId

@@ -2,9 +2,11 @@ import {
   ASSIGNMENT_DRAWER_EXPANDED,
   ASSIGNMENT_DRAWER_HEADER,
 } from '@/lib/layout'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { useBottomChromePanel } from '@/components/layout/BottomChrome'
+import { ScrollRegion } from '@/components/ui/ScrollRegion'
+import { useHorizontalWheelScroll } from '@/hooks/useWheelScroll'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
@@ -19,8 +21,25 @@ import { selectChipClass } from '@/lib/selectSurface'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, Player } from '@/types'
 
-const H_SCROLL =
-  'flex flex-nowrap items-center gap-1 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+const assignmentChipRail = 'flex flex-nowrap items-center gap-1 py-0.5 snap-none'
+
+function AssignmentChipRail({ className = '', children }: { className?: string; children: ReactNode }) {
+  const ref = useHorizontalWheelScroll<HTMLDivElement>()
+  return (
+    <div
+      ref={ref}
+      className={[
+        assignmentChipRail,
+        'min-w-0 overflow-x-auto overflow-y-hidden ui-scroll-region-x',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </div>
+  )
+}
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase().replace(/[-_\s.]/g, '')
@@ -186,7 +205,7 @@ function AssignmentPanelBody({
     <div className={[playerZoneActive ? zoneHighlightClass : '', 'py-0.5'].join(' ')}>
       <div className={compactRowClass}>
         <p className={labelClass}>{t('assignment.players')}</p>
-        <div className={[H_SCROLL, 'min-w-0 flex-1'].join(' ')}>
+        <AssignmentChipRail className="min-w-0 flex-1">
           {selectablePlayers.map((player) => (
             <DraggablePlayerChip
               key={player.id}
@@ -196,13 +215,13 @@ function AssignmentPanelBody({
               onTapSelect={() => togglePlayer(player.id)}
             />
           ))}
-        </div>
+        </AssignmentChipRail>
       </div>
     </div>
   ) : (
     <div className={playerZoneActive ? zoneHighlightClass : undefined}>
       <p className={labelClass}>{t('assignment.players')}</p>
-      <div className={['mt-1', H_SCROLL].join(' ')}>
+      <AssignmentChipRail className="mt-1">
         {selectablePlayers.map((player) => (
           <DraggablePlayerChip
             key={player.id}
@@ -211,7 +230,7 @@ function AssignmentPanelBody({
             onTapSelect={() => togglePlayer(player.id)}
           />
         ))}
-      </div>
+      </AssignmentChipRail>
     </div>
   )
 
@@ -226,7 +245,7 @@ function AssignmentPanelBody({
           onChange={(event) => setDeckQuery(event.target.value)}
         />
       </div>
-      <div className={['px-2.5', H_SCROLL].join(' ')}>
+      <AssignmentChipRail className="px-2.5">
         {displayDecks.length ? (
           displayDecks.map((deck) => (
             <DraggableDeckChip
@@ -242,7 +261,7 @@ function AssignmentPanelBody({
             {deckQuery.trim() ? t('deck.searchEmpty') : t('assignment.noRecentDecks')}
           </p>
         )}
-      </div>
+      </AssignmentChipRail>
     </div>
   ) : (
     <div className={deckZoneActive ? zoneHighlightClass : undefined}>
@@ -256,7 +275,7 @@ function AssignmentPanelBody({
       {recentDecks.length && !deckQuery.trim() ? (
         <p className="mt-1 text-[10px] text-text-secondary">{t('deck.recentUsed')}</p>
       ) : null}
-      <div className={['mt-1.5', H_SCROLL].join(' ')}>
+      <AssignmentChipRail className="mt-1.5">
         {displayDecks.length ? (
           displayDecks.map((deck) => (
             <DraggableDeckChip
@@ -271,7 +290,7 @@ function AssignmentPanelBody({
             {deckQuery.trim() ? t('deck.searchEmpty') : t('assignment.noRecentDecks')}
           </p>
         )}
-      </div>
+      </AssignmentChipRail>
     </div>
   )
 
@@ -386,8 +405,9 @@ export function AssignmentDock({
         </div>
 
         {expanded ? (
-          <div
-            className="overflow-y-auto py-1.5 scrollbar-none"
+          <ScrollRegion
+            axis="y"
+            className="py-1.5"
             style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
           >
             <AssignmentPanelBody
@@ -402,7 +422,7 @@ export function AssignmentDock({
               recentDeckLimit={recentDeckLimit}
               compact
             />
-          </div>
+          </ScrollRegion>
         ) : null}
       </div>
     ) : null

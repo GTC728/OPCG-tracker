@@ -22,7 +22,8 @@ import { getHighestUnlockedMetal } from '@/lib/achievementTierStyles'
 import { playInteractionSound, uiPopIn, uiPressable } from '@/lib/motion'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { ProfileSection } from '@/components/profile/ProfileSection'
-import { uiGlassCard, uiHorizontalRail, uiHorizontalRailItem, uiSectionTitle } from '@/lib/uiSurface'
+import { HorizontalRail } from '@/components/ui/HorizontalRail'
+import { uiGlassCard, uiHorizontalRailItem, uiSectionTitle } from '@/lib/uiSurface'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 export type { AchievementPeerRate }
@@ -337,7 +338,7 @@ function AchievementFilters({
 
   return (
     <div className="space-y-2">
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto overflow-y-hidden px-1 pb-1 ui-scroll-region-x">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -560,7 +561,7 @@ export function AchievementsPreviewRail({
       onViewAll={onOpenAll}
     >
       {preview.items.length ? (
-        <div className={uiHorizontalRail}>
+        <HorizontalRail>
           {preview.items.map((item) => (
             <AchievementCard
               key={item.definition.id}
@@ -570,7 +571,7 @@ export function AchievementsPreviewRail({
               onClick={() => setDetail(item)}
             />
           ))}
-        </div>
+        </HorizontalRail>
       ) : (
         <p className="text-sm text-text-secondary">{t('achievements.recentEmpty')}</p>
       )}

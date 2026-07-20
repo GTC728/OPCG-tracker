@@ -14,6 +14,7 @@ import {
 import { useToast } from '@/components/ui/Toast'
 import { getPlayerName } from '@/lib/entities'
 import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
+import { getMatchFilterPlayers } from '@/lib/importRoster'
 import { useI18n } from '@/lib/i18n'
 import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
@@ -301,6 +302,10 @@ export function HistoryPage() {
 
   const sessionOptions = useMemo(() => activeListedSessions(sessions), [sessions])
   const listedPlayers = useMemo(() => getListedPlayers(appState), [appState])
+  const filterPlayers = useMemo(
+    () => getMatchFilterPlayers(appState, sessionFilter || undefined),
+    [appState, sessionFilter],
+  )
 
   const editPlayers = useMemo(() => {
     if (!editingMatch) return listedPlayers
@@ -396,7 +401,7 @@ export function HistoryPage() {
         title={t('history.playerFilter')}
         allLabel={t('history.playerAll')}
         value={playerFilter}
-        options={listedPlayers.map((player) => ({ value: player.id, label: player.name }))}
+        options={filterPlayers.map((player) => ({ value: player.id, label: player.name }))}
         onChange={setPlayerFilter}
         onClose={filterSheet.close}
       />

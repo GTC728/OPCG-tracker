@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { selectPickerOptionClass } from '@/lib/selectSurface'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { ScrollRegion } from '@/components/ui/ScrollRegion'
+import { selectPickerOptionClass } from '@/lib/selectSurface'
 
 export function FilterPickerRow({
   label,
@@ -90,8 +91,8 @@ export function OptionPickerSheet({
   onClose: () => void
 }) {
   return (
-    <BottomSheet open={open} title={title} onClose={onClose}>
-      <div className="max-h-[min(60dvh,20rem)] space-y-1 overflow-y-auto">
+    <BottomSheet open={open} title={title} onClose={onClose} manageScroll>
+      <ScrollRegion axis="y" className="max-h-[min(60dvh,20rem)] space-y-1 pr-1">
         {showAllOption ? (
           <button
             type="button"
@@ -117,7 +118,7 @@ export function OptionPickerSheet({
             {option.label}
           </button>
         ))}
-      </div>
+      </ScrollRegion>
     </BottomSheet>
   )
 }

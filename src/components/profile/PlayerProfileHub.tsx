@@ -19,7 +19,8 @@ import {
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecordStat } from '@/lib/stats'
 import { getDisplayWinRate, getSampleLabel } from '@/lib/winRateDisplay'
-import { uiCard, uiHorizontalRail } from '@/lib/uiSurface'
+import { uiCard } from '@/lib/uiSurface'
+import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 import { useAppStore } from '@/stores/appStore'
 
@@ -148,7 +149,7 @@ export function PlayerProfileHub({
         {deckUsage.length ? (
           <DeckUsagePieChart slices={deckUsage} title={t('profile.deckUsagePreview')} compact />
         ) : null}
-        <div className={uiHorizontalRail}>
+        <HorizontalRail>
           {deckStats.length ? (
             deckStats.slice(0, PREVIEW_LIMIT).map((item) => {
               const deck = decks.find((d) => d.id === item.deckId)
@@ -169,11 +170,11 @@ export function PlayerProfileHub({
           ) : (
             <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
           )}
-        </div>
+        </HorizontalRail>
       </ProfileSection>
 
       <ProfileSection title={t('profile.panel.rivals')} onViewAll={() => setPanel('rivals')}>
-        <div className={uiHorizontalRail}>
+        <HorizontalRail>
           {headToHead.length ? (
             headToHead.slice(0, PREVIEW_LIMIT).map((item) => (
               <ProfilePreviewCard
@@ -187,7 +188,7 @@ export function PlayerProfileHub({
           ) : (
             <p className="text-sm text-text-secondary">{t('stats.noHeadToHead')}</p>
           )}
-        </div>
+        </HorizontalRail>
       </ProfileSection>
 
       <ProfileSection title={t('profile.panel.trendsChart')} onViewAll={() => setPanel('trends')}>
@@ -199,7 +200,7 @@ export function PlayerProfileHub({
       </ProfileSection>
 
       <ProfileSection title={t('stats.recentMatches')} onViewAll={() => setPanel('matches')}>
-        <div className={uiHorizontalRail}>
+        <HorizontalRail>
           {recentMatches.map((match) => (
             <div key={match.id} className="w-[16rem] shrink-0 snap-start">
               <MatchListItem
@@ -214,7 +215,7 @@ export function PlayerProfileHub({
               />
             </div>
           ))}
-        </div>
+        </HorizontalRail>
       </ProfileSection>
 
       <PanelSheet open={panel === 'overview'} title={t('profile.panel.overview')} onClose={close}>

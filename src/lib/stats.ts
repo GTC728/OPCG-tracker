@@ -4,6 +4,8 @@ import type { Deck, Language, Match, Player } from '@/types'
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
 
 export const MIN_RELIABLE_SAMPLE = 3
+/** Minimum games for pilot / leaderboard rows (same as reliable sample). */
+export const MIN_PILOT_LEADERBOARD_SAMPLE = MIN_RELIABLE_SAMPLE
 
 export interface PlayerMatchupStat {
   key: string
@@ -408,6 +410,21 @@ export function buildPlayerDeckStats(
     if (right.total !== left.total) return right.total - left.total
     return (right.winRate ?? 0) - (left.winRate ?? 0)
   })
+}
+
+export function sortPilotStatsForLeaderboard(stats: PlayerDeckStat[]): PlayerDeckStat[] {
+  return [...stats]
+    .filter((stat) => stat.total >= MIN_PILOT_LEADERBOARD_SAMPLE)
+    .sort((left, right) => {
+      const leftScore = getWinRate(left.wins, left.total) ?? -1
+      const rightScore = getWinRate(right.wins, right.total) ?? -1
+      if (rightScore !== leftScore) return rightScore - leftScore
+      return right.total - left.total
+    })
+}
+
+export function pickTopPilot(stats: PlayerDeckStat[]): PlayerDeckStat | null {
+  return sortPilotStatsForLeaderboard(stats)[0] ?? null
 }
 
 export function buildFirstSecondStats(matches: Match[]): FirstSecondStat[] {

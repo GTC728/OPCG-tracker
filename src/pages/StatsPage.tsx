@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
+import { StatsReadingGuide } from '@/components/stats/StatsReadingGuide'
 import {
   buildDeckStats,
   buildFirstSecondStats,
@@ -20,6 +21,7 @@ import {
   getCompletedMatches,
   sortStatsByUsage,
   sortStatsByWeightedWinRate,
+  sortPilotStatsForLeaderboard,
   type FirstSecondStat,
   type InsightMessage,
   type MatchupStat,
@@ -692,49 +694,82 @@ function ProfileMatchupSection({
 
 function MiniLeaderboard({
   title,
+  subtitle,
   stats,
+  pilotStats,
   decks,
   variant = 'player',
   onSelect,
+  onSelectPilot,
 }: {
   title: string
-  stats: RecordStat[]
+  subtitle?: string
+  stats?: RecordStat[]
+  pilotStats?: PlayerDeckStat[]
   decks?: Deck[]
-  variant?: 'player' | 'deck'
+  variant?: 'player' | 'deck' | 'pilot'
   onSelect?: (stat: RecordStat) => void
+  onSelectPilot?: (stat: PlayerDeckStat) => void
 }) {
-  const top = stats.slice(0, 5)
+  const top =
+    variant === 'pilot' ? (pilotStats ?? []).slice(0, 5) : (stats ?? []).slice(0, 5)
   if (!top.length) return null
 
   return (
     <section className={[uiCard, 'p-3'].join(' ')}>
       <h3 className="text-sm font-semibold text-brand-500">{title}</h3>
+      {subtitle ? <p className="mt-0.5 text-[10px] text-text-secondary">{subtitle}</p> : null}
       <ol className="mt-2 space-y-1.5">
-        {top.map((stat, index) => (
-          <li key={stat.id}>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
-              onClick={() => onSelect?.(stat)}
-              disabled={!onSelect}
-            >
-              <span className="w-5 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
-              {variant === 'deck' ? (
-                <span className="min-w-0 flex-1 truncate font-medium">
-                  <DeckLabel deck={decks?.find((deck) => deck.id === stat.id)} showCode />
-                </span>
-              ) : (
-                <span className="min-w-0 flex-1 truncate font-medium">{stat.name}</span>
-              )}
-              <span className="shrink-0 text-xs text-text-secondary">
-                {stat.wins}W-{stat.losses}L
-              </span>
-              <span className="shrink-0 text-xs font-semibold">
-                {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
-              </span>
-            </button>
-          </li>
-        ))}
+        {variant === 'pilot'
+          ? (top as PlayerDeckStat[]).map((stat, index) => (
+              <li key={stat.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
+                  onClick={() => onSelectPilot?.(stat)}
+                  disabled={!onSelectPilot}
+                >
+                  <span className="w-5 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{stat.playerName}</span>
+                    <span className="mt-0.5 block truncate text-[10px] text-text-secondary">
+                      <DeckLabel deck={decks?.find((deck) => deck.id === stat.deckId)} showCode />
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-text-secondary">
+                    {stat.wins}W-{stat.losses}L
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold">
+                    {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
+                  </span>
+                </button>
+              </li>
+            ))
+          : (top as RecordStat[]).map((stat, index) => (
+              <li key={stat.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
+                  onClick={() => onSelect?.(stat)}
+                  disabled={!onSelect}
+                >
+                  <span className="w-5 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
+                  {variant === 'deck' ? (
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      <DeckLabel deck={decks?.find((deck) => deck.id === stat.id)} showCode />
+                    </span>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate font-medium">{stat.name}</span>
+                  )}
+                  <span className="shrink-0 text-xs text-text-secondary">
+                    {stat.wins}W-{stat.losses}L
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold">
+                    {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
+                  </span>
+                </button>
+              </li>
+            ))}
       </ol>
     </section>
   )
@@ -1145,6 +1180,11 @@ export function StatsPage() {
     [decks, scopedMatches, language],
   )
 
+  const pilotLeaderboard = useMemo(
+    () => sortPilotStatsForLeaderboard(playerDeckStats),
+    [playerDeckStats],
+  )
+
   const openProfile = (target: ProfileNavTarget) => {
     setProfileStack((prev) => {
       if (prev.length === 0) listScrollY.current = window.scrollY
@@ -1290,10 +1330,19 @@ export function StatsPage() {
             ) : null}
           </section>
           <MetaSummarySection summary={metaSummary} />
+          <StatsReadingGuide />
           <MetaTransferChart stats={weeklyDeckMetaStats} title={t('stats.metaTransfer')} compact />
           <FirstSecondSection stats={firstSecondStats} />
           <RecentFormSection recentForm={globalRecentForm} />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <MiniLeaderboard
+              title={t('stats.pilotsTop5')}
+              subtitle={t('stats.pilotsTop5Hint')}
+              variant="pilot"
+              pilotStats={pilotLeaderboard}
+              decks={decks}
+              onSelectPilot={(stat) => openProfile({ type: 'player', id: stat.playerId })}
+            />
             <MiniLeaderboard
               title={t('stats.playersTop5')}
               stats={playerStats}

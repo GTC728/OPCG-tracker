@@ -177,6 +177,54 @@ textarea:focus-visible {
   background-clip: padding-box;
 }
 
+/* Touch-friendly rails; show scrollbars + wheel works on desktop (see useWheelScroll). */
+.ui-scroll-region-x,
+.ui-scroll-region-y {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.ui-scroll-region-x {
+  scrollbar-width: none;
+}
+
+.ui-scroll-region-x::-webkit-scrollbar {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-scroll-region-x {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+  }
+
+  .ui-scroll-region-x::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+  }
+
+  .ui-scroll-region-x::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+    border-radius: 999px;
+  }
+}
+
+.ui-scroll-region-y {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+}
+
+.ui-scroll-region-y::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ui-scroll-region-y::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 [data-theme='light'] .scrollbar-subtle {
   scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 70%, transparent) transparent;
 }

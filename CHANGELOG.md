@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.3.0 - 2026-07-20
+
+### New
+
+- **Pilot Top 5**: Player × deck leaderboard (min. 3 games) alongside existing player and meta deck boards.
+- **Stats reading guide**: Expandable overview of which rankings are most useful and what each measures.
+
+### Changed
+
+- **Import roster**: Players from imported matches are added to the session roster and appear in history filters (e.g. missing “San” after Excel import).
+- **History player filter**: Options include anyone with visible matches in the selected session, not only lobby roster.
+- **Desktop scrolling**: Horizontal rails and sheet lists support mouse wheel and visible scrollbars on pointer devices.
+
 ## V5.2.0 - 2026-07-16
 
 ### New
