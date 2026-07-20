@@ -11,6 +11,8 @@ import { createDefaultAppState } from '@/lib/constants'
 import {
   buildMetaTransferChartPoints,
   buildWeeklyDeckMetaStats,
+  MIN_WEEKLY_META_MATCHES,
+  partitionWeeklyMetaStats,
 } from '@/lib/stats'
 import type { Deck, Match } from '@/types'
 
@@ -139,6 +141,29 @@ describe('weekly deck meta stats', () => {
     const withData = stats.filter((week) => week.total > 0)
     expect(withData.length).toBeGreaterThan(0)
     expect(withData[withData.length - 1].total).toBe(4)
+    expect(withData[withData.length - 1].matchCount).toBe(2)
+  })
+
+  it('partitions weeks by match count threshold', () => {
+    const now = new Date()
+    const stats = buildWeeklyDeckMetaStats(
+      decks,
+      Array.from({ length: 12 }, (_, index) =>
+        match({
+          id: `m${index}`,
+          deck1Id: 'd1',
+          deck2Id: 'd2',
+          finishedAt: now.toISOString(),
+        }),
+      ),
+      'en',
+      4,
+    )
+    const week = stats.find((item) => item.matchCount > 0)
+    expect(week?.matchCount).toBe(12)
+    const { qualified, skipped } = partitionWeeklyMetaStats(stats, MIN_WEEKLY_META_MATCHES)
+    expect(qualified.length).toBe(1)
+    expect(skipped.length).toBe(0)
   })
 
   it('produces stacked chart points that sum to match count per week', () => {
@@ -148,7 +173,7 @@ describe('weekly deck meta stats', () => {
     ], 'en', 4)
     const week = stats.find((item) => item.total > 0)
     expect(week).toBeTruthy()
-    const { points, deckKeys } = buildMetaTransferChartPoints(stats)
+    const { points, deckKeys } = buildMetaTransferChartPoints(stats, 0)
     expect(deckKeys.length).toBeGreaterThan(0)
     const point = points.find((item) => item.total > 0)
     expect(point).toBeTruthy()

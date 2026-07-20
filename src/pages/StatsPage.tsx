@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
+import { MetaTransferDetailSheet } from '@/components/stats/MetaTransferDetailSheet'
 import { StatsReadingGuide } from '@/components/stats/StatsReadingGuide'
 import {
   buildDeckStats,
@@ -28,7 +29,6 @@ import {
   type MetaSummaryStats,
   type PlayerDeckStat,
   type PlayerMatchupStat,
-  type RecentFormStat,
   type RecordStat,
 } from '@/lib/stats'
 import { formatMatchDuration, getAverageMatchDurationMs } from '@/lib/matchTimer'
@@ -44,6 +44,7 @@ import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
+import type { DashboardStats } from '@/lib/stats'
 
 type StatsSectionId = 'overview' | 'players' | 'decks'
 type ProfileNavTarget = { type: 'player' | 'deck'; id: string }
@@ -546,15 +547,46 @@ function PlayerMatchupHeatmap({
   )
 }
 
-function MetaSummarySection({ summary }: { summary: MetaSummaryStats }) {
+function EnvironmentOverviewSection({
+  dashboard,
+  summary,
+  averageMatchDurationMs,
+}: {
+  dashboard: DashboardStats
+  summary: MetaSummaryStats
+  averageMatchDurationMs: number | null
+}) {
   const { t } = useI18n()
   if (!summary.totalMatches) return null
 
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">{t('stats.meta.overview')}</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <SummaryCard label={t('stats.totalMatches')} value={String(summary.totalMatches)} />
+        {averageMatchDurationMs !== null ? (
+          <SummaryCard
+            label={t('stats.avgMatchDuration')}
+            value={formatMatchDuration(averageMatchDurationMs)}
+            detail={t('stats.avgMatchDurationDetail')}
+          />
+        ) : null}
+        {dashboard.firstPlayerSample > 0 ? (
+          <SummaryCard
+            label={t('stats.firstWinRate')}
+            value={formatPercent(
+              getDisplayWinRateFromRaw(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
+            )}
+            detail={getSampleLabel(dashboard.firstPlayerSample)}
+          />
+        ) : null}
+        {dashboard.topPlayer ? (
+          <SummaryCard
+            label={t('stats.mvp')}
+            value={dashboard.topPlayer.name}
+            detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
+          />
+        ) : null}
         <SummaryCard label={t('stats.activePlayers')} value={String(summary.uniquePlayers)} />
         <SummaryCard label={t('stats.deckVariety')} value={String(summary.uniqueDecks)} />
         <SummaryCard
@@ -781,7 +813,7 @@ function InsightsSection({ insights }: { insights: InsightMessage[] }) {
 
   return (
     <section className="rounded-2xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
-      <h2 className="text-lg font-semibold">{t('stats.insights.title')}</h2>
+      <h2 className="text-base font-semibold text-text-secondary">{t('stats.insights.envTitle')}</h2>
       <div className="mt-3 space-y-2">
         {insights.map((insight) => (
           <p key={insight.id} className="rounded-xl bg-surface/70 p-3 text-sm text-text-primary">
@@ -869,39 +901,6 @@ function PlayerDeckSection({ stats, decks }: { stats: PlayerDeckStat[]; decks: D
           {t('stats.playerDeckEmpty')}
         </div>
       ) : null}
-    </section>
-  )
-}
-
-function RecentFormSection({ recentForm }: { recentForm: RecentFormStat[] }) {
-  const { t } = useI18n()
-  const visibleForms = recentForm.filter((form) => form.total > 0 && form.winRate !== null)
-  if (!visibleForms.length) return null
-
-  return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold">{t('stats.recentForm.title')}</h2>
-      <article className={[uiCard, 'p-4'].join(' ')}>
-        <div className="space-y-3">
-          {visibleForms.map((form) => {
-            const width = `${Math.round((form.winRate ?? 0) * 100)}%`
-
-            return (
-              <div key={form.label}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-text-secondary">
-                    {t('stats.recentForm.window').replace('{n}', form.label)}
-                  </span>
-                  <strong>{formatPercent(form.winRate)}</strong>
-                </div>
-                <div className="h-3 overflow-hidden rounded-full bg-surface-muted">
-                  <div className="h-full rounded-full bg-brand-500" style={{ width }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </article>
     </section>
   )
 }
@@ -1132,6 +1131,7 @@ export function StatsPage() {
   )
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
+  const [metaDetailOpen, setMetaDetailOpen] = useState(false)
   const listScrollY = useRef(0)
   const sectionScrollY = useRef<Partial<Record<StatsSectionId, number>>>({})
   const players = useAppStore((state) => state.players)
@@ -1166,7 +1166,6 @@ export function StatsPage() {
     playerMatchupStats,
     metaSummary,
     firstSecondStats,
-    globalRecentForm,
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
@@ -1303,37 +1302,12 @@ export function StatsPage() {
 
       {activeSection === 'overview' ? (
         <>
-          <section className="grid grid-cols-3 gap-2">
-            <SummaryCard label={t('stats.totalMatches')} value={String(dashboard.totalMatches)} />
-            {averageMatchDurationMs !== null ? (
-              <SummaryCard
-                label={t('stats.avgMatchDuration')}
-                value={formatMatchDuration(averageMatchDurationMs)}
-                detail={t('stats.avgMatchDurationDetail')}
-              />
-            ) : null}
-            {dashboard.firstPlayerSample > 0 ? (
-              <SummaryCard
-                label={t('stats.firstWinRate')}
-                value={formatPercent(
-                  getDisplayWinRateFromRaw(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
-                )}
-                detail={getSampleLabel(dashboard.firstPlayerSample)}
-              />
-            ) : null}
-            {dashboard.topPlayer ? (
-              <SummaryCard
-                label={t('stats.mvp')}
-                value={dashboard.topPlayer.name}
-                detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
-              />
-            ) : null}
-          </section>
-          <MetaSummarySection summary={metaSummary} />
-          <StatsReadingGuide />
-          <MetaTransferChart stats={weeklyDeckMetaStats} title={t('stats.metaTransfer')} compact />
-          <FirstSecondSection stats={firstSecondStats} />
-          <RecentFormSection recentForm={globalRecentForm} />
+          <EnvironmentOverviewSection
+            dashboard={dashboard}
+            summary={metaSummary}
+            averageMatchDurationMs={averageMatchDurationMs}
+          />
+          <InsightsSection insights={insights} />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             <MiniLeaderboard
               title={t('stats.pilotsTop5')}
@@ -1356,7 +1330,14 @@ export function StatsPage() {
               onSelect={(stat) => openProfile({ type: 'deck', id: stat.id })}
             />
           </div>
-          <InsightsSection insights={insights} />
+          <FirstSecondSection stats={firstSecondStats} />
+          <MetaTransferChart
+            stats={weeklyDeckMetaStats}
+            title={t('stats.metaTransfer')}
+            compact
+            onOpenDetail={() => setMetaDetailOpen(true)}
+          />
+          <StatsReadingGuide />
           <section className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -1420,6 +1401,12 @@ export function StatsPage() {
           />
         </ShareExportSheet>
       ) : null}
+      <MetaTransferDetailSheet
+        open={metaDetailOpen}
+        onClose={() => setMetaDetailOpen(false)}
+        stats={weeklyDeckMetaStats}
+        title={t('stats.metaTransfer')}
+      />
     </div>
   )
 }

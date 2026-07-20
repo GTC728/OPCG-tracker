@@ -7,35 +7,32 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { Button } from '@/components/ui/Button'
 import { getChartSliceFill } from '@/lib/deckChartColors'
 import { useI18n } from '@/lib/i18n'
 import {
   buildMetaTransferChartPoints,
+  MIN_WEEKLY_META_MATCHES,
+  partitionWeeklyMetaStats,
   type WeeklyDeckMetaStat,
 } from '@/lib/stats'
 import { uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
 
-export function MetaTransferChart({
+export function MetaTransferStackedChart({
   stats,
-  title,
   compact = false,
+  minMatches = MIN_WEEKLY_META_MATCHES,
 }: {
   stats: WeeklyDeckMetaStat[]
-  title: string
   compact?: boolean
+  minMatches?: number
 }) {
   const { t } = useI18n()
-  const hasData = stats.some((week) => week.total > 0)
-  if (!hasData) return null
-
-  const { points, deckKeys } = buildMetaTransferChartPoints(stats)
+  const { points, deckKeys } = buildMetaTransferChartPoints(stats, minMatches)
+  if (!points.length) return null
 
   return (
-    <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
-      <div className="flex items-end justify-between gap-2">
-        <h2 className={uiSectionTitle}>{title}</h2>
-        <p className="text-xs text-text-secondary">{t('stats.metaTransferLegend')}</p>
-      </div>
+    <>
       <div className={compact ? 'h-40' : 'h-52'}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={points} stackOffset="expand">
@@ -92,7 +89,80 @@ export function MetaTransferChart({
           </li>
         ))}
       </ul>
-      <p className="text-[10px] text-text-secondary">{t('stats.metaTransferHint')}</p>
+    </>
+  )
+}
+
+export function MetaTransferChart({
+  stats,
+  title,
+  compact = false,
+  minMatches = MIN_WEEKLY_META_MATCHES,
+  onOpenDetail,
+  showDetailButton = true,
+  embedded = false,
+}: {
+  stats: WeeklyDeckMetaStat[]
+  title: string
+  compact?: boolean
+  minMatches?: number
+  onOpenDetail?: () => void
+  showDetailButton?: boolean
+  embedded?: boolean
+}) {
+  const { t } = useI18n()
+  const hasData = stats.some((week) => week.matchCount > 0)
+  if (!hasData) return null
+
+  const { qualified, skipped } = partitionWeeklyMetaStats(stats, minMatches)
+  const chartBody = (
+    <MetaTransferStackedChart stats={stats} compact={compact} minMatches={minMatches} />
+  )
+
+  const hints = (
+    <>
+      {qualified.length === 0 ? (
+        <p className="text-sm text-text-secondary">
+          {t('stats.metaTransferNoQualified').replace('{min}', String(minMatches))}
+        </p>
+      ) : null}
+      {skipped.length > 0 ? (
+        <p className="text-[10px] text-text-secondary">
+          {t('stats.metaTransferSkippedWeeks')
+            .replace('{min}', String(minMatches))
+            .replace('{n}', String(skipped.length))}
+        </p>
+      ) : null}
+      <p className="text-[10px] text-text-secondary">
+        {t('stats.metaTransferHint').replace('{min}', String(minMatches))}
+      </p>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="space-y-2">
+        {chartBody}
+        {hints}
+      </div>
+    )
+  }
+
+  return (
+    <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {title ? <h2 className={uiSectionTitle}>{title}</h2> : null}
+          <p className="text-xs text-text-secondary">{t('stats.metaTransferLegend')}</p>
+        </div>
+        {showDetailButton && onOpenDetail ? (
+          <Button variant="ghost" className="shrink-0 px-2 py-1 text-xs" onClick={onOpenDetail}>
+            {t('stats.metaDetail.open')}
+          </Button>
+        ) : null}
+      </div>
+      {qualified.length > 0 ? chartBody : null}
+      {hints}
     </section>
   )
 }

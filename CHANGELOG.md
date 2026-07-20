@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.3.1 - 2026-07-20
+
+### New
+
+- **Meta detail sheet**: Overview meta chart adds a **Details** button with Top 3 trend, 4-week rolling meta, and deck × week heatmap.
+
+### Changed
+
+- **Stats overview layout**: Single **Environment overview** (session KPIs + meta counts), then insights, Top 5 boards, first/second split, and meta transfer preview.
+- **Meta weekly threshold**: Stacked meta preview and charts only include weeks with **≥10 completed matches**; low-sample weeks are skipped with a short hint.
+- **Insights**: Copy focuses on meta concentration, qualified weeks, pilot leader, first/second, and diversity (under environment overview).
+
 ## V5.3.0 - 2026-07-20
 
 ### New

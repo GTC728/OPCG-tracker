@@ -478,12 +478,62 @@ export function buildInsightMessages(
 ): InsightMessage[] {
   const completed = getCompletedMatches(matches)
   const insights: InsightMessage[] = []
+  const appearance = buildDeckAppearanceSummary(decks, matches, language)
+  const { qualified, skipped } = partitionWeeklyMetaStats(
+    buildWeeklyDeckMetaStats(decks, matches, language),
+    MIN_WEEKLY_META_MATCHES,
+  )
+  const playerDeckStats = buildPlayerDeckStats(players, decks, matches, language)
+  const playerStats = buildPlayerStats(players, matches)
+
+  if (appearance.length >= 1 && completed.length >= 6) {
+    const top = appearance[0]
+    insights.push({
+      id: 'meta-top-deck',
+      text: translate(language, 'stats.insight.metaTopDeck')
+        .replace('{deck}', top.name)
+        .replace('{pct}', formatPercent(top.share))
+        .replace('{n}', String(top.appearances)),
+    })
+  }
+
+  if (appearance.length >= 3 && completed.length >= 10) {
+    const topThreeShare =
+      appearance.slice(0, 3).reduce((sum, item) => sum + item.share, 0)
+    insights.push({
+      id: 'meta-top-three',
+      text: translate(language, 'stats.insight.metaTopThree')
+        .replace('{pct}', formatPercent(topThreeShare))
+        .replace('{n}', '3'),
+    })
+  }
+
+  if (qualified.length > 0 || skipped.length > 0) {
+    insights.push({
+      id: 'meta-qualified-weeks',
+      text: translate(language, 'stats.insight.metaQualifiedWeeks')
+        .replace('{qualified}', String(qualified.length))
+        .replace('{skipped}', String(skipped.length))
+        .replace('{min}', String(MIN_WEEKLY_META_MATCHES)),
+    })
+  }
+
+  const topPilot = sortPilotStatsForLeaderboard(playerDeckStats)[0]
+  if (topPilot && (topPilot.winRate ?? 0) >= 0.55) {
+    insights.push({
+      id: 'top-pilot',
+      text: translate(language, 'stats.insight.topPilot')
+        .replace('{player}', topPilot.playerName)
+        .replace('{deck}', topPilot.deckName)
+        .replace('{rate}', formatPercent(topPilot.winRate))
+        .replace('{wins}', String(topPilot.wins))
+        .replace('{losses}', String(topPilot.losses)),
+    })
+  }
+
   const firstSecond = buildFirstSecondStats(matches)
   const first = firstSecond.find((stat) => stat.label === 'first')
   const second = firstSecond.find((stat) => stat.label === 'second')
-  const matchupStats = buildMatchupStats(decks, matches, language)
-  const playerDeckStats = buildPlayerDeckStats(players, decks, matches, language)
-  const playerStats = buildPlayerStats(players, matches)
 
   if (first && second && first.total >= 3) {
     insights.push({
@@ -491,83 +541,6 @@ export function buildInsightMessages(
       text: translate(language, 'stats.insight.firstSecond')
         .replace('{first}', formatPercent(first.winRate))
         .replace('{second}', formatPercent(second.winRate)),
-    })
-  }
-
-  const weakMatchup = matchupStats.find(
-    (matchup) => matchup.total >= 3 && (matchup.deckAWinRate ?? 0) <= 0.34,
-  )
-  if (weakMatchup) {
-    insights.push({
-      id: 'weak-matchup',
-      text: translate(language, 'stats.insight.weakMatchup')
-        .replace('{deckA}', weakMatchup.deckAName)
-        .replace('{deckB}', weakMatchup.deckBName)
-        .replace('{wins}', String(weakMatchup.deckAWins))
-        .replace('{losses}', String(weakMatchup.deckBWins)),
-    })
-  }
-
-  const hotPilot = playerDeckStats.find((stat) => stat.total >= 3 && (stat.winRate ?? 0) >= 0.7)
-  if (hotPilot) {
-    insights.push({
-      id: 'hot-pilot',
-      text: translate(language, 'stats.insight.hotPilot')
-        .replace('{player}', hotPilot.playerName)
-        .replace('{deck}', hotPilot.deckName)
-        .replace('{rate}', formatPercent(hotPilot.winRate)),
-    })
-  }
-
-  const chronologically = [...completed].sort(
-    (left, right) => new Date(left.finishedAt).getTime() - new Date(right.finishedAt).getTime(),
-  )
-  if (chronologically.length >= 3) {
-    const last = chronologically[chronologically.length - 1]
-    let streak = 1
-    for (let index = chronologically.length - 2; index >= 0; index -= 1) {
-      if (chronologically[index].winnerPlayerId !== last.winnerPlayerId) break
-      streak += 1
-    }
-    if (streak >= 3) {
-      const winner = players.find((player) => player.id === last.winnerPlayerId)
-      insights.push({
-        id: 'win-streak',
-        text: translate(language, 'stats.insight.winStreak')
-          .replace('{player}', winner?.name ?? translate(language, 'stats.section.players'))
-          .replace('{n}', String(streak)),
-      })
-    }
-  }
-
-  const deckStats = buildDeckStats(decks, matches, language)
-  const coldWin = completed.find((match) => {
-    const winnerStat = deckStats.find((stat) => stat.id === match.winnerDeckId)
-    return winnerStat && winnerStat.total >= 3 && (winnerStat.winRate ?? 0) < 0.4
-  })
-  if (coldWin) {
-    const deck = decks.find((item) => item.id === coldWin.winnerDeckId)
-    insights.push({
-      id: 'upset',
-      text: translate(language, 'stats.insight.upset').replace(
-        '{deck}',
-        deck ? localizedDeckName(deck, language) : translate(language, 'stats.insight.upsetUnknownDeck'),
-      ),
-    })
-  }
-
-  const uniqueDecks = new Set<string>()
-  for (const match of completed) {
-    uniqueDecks.add(match.deck1Id)
-    uniqueDecks.add(match.deck2Id)
-  }
-  if (completed.length >= 4) {
-    insights.push({
-      id: 'diversity',
-      text: translate(language, 'stats.insight.diversity')
-        .replace('{decks}', String(uniqueDecks.size))
-        .replace('{matches}', String(completed.length))
-        .replace('{pct}', ((uniqueDecks.size / completed.length) * 100).toFixed(0)),
     })
   }
 
@@ -584,7 +557,22 @@ export function buildInsightMessages(
     }
   }
 
-  return insights.slice(0, 4)
+  const uniqueDecks = new Set<string>()
+  for (const match of completed) {
+    uniqueDecks.add(match.deck1Id)
+    uniqueDecks.add(match.deck2Id)
+  }
+  if (completed.length >= 8) {
+    insights.push({
+      id: 'diversity',
+      text: translate(language, 'stats.insight.diversity')
+        .replace('{decks}', String(uniqueDecks.size))
+        .replace('{matches}', String(completed.length))
+        .replace('{pct}', ((uniqueDecks.size / completed.length) * 100).toFixed(0)),
+    })
+  }
+
+  return insights.slice(0, 5)
 }
 
 export function buildHeadToHeadStats(
@@ -828,6 +816,8 @@ export function buildWeeklyWinRateChartPoints(stats: WeeklyWinRateStat[]): Weekl
   })
 }
 
+export const MIN_WEEKLY_META_MATCHES = 10
+
 export interface WeeklyDeckMetaSlice {
   deckId: string
   deckName: string
@@ -838,6 +828,9 @@ export interface WeeklyDeckMetaSlice {
 export interface WeeklyDeckMetaStat {
   weekStart: string
   label: string
+  /** Completed matches in this calendar week (Mon–Sun). */
+  matchCount: number
+  /** Deck appearance slots (≈ 2 × matchCount). */
   total: number
   decks: WeeklyDeckMetaSlice[]
 }
@@ -862,9 +855,11 @@ export function buildWeeklyDeckMetaStats(
     weekEndDate.setDate(weekEndDate.getDate() + 7)
 
     const counts = new Map<string, number>()
+    let matchCount = 0
     for (const match of getCompletedMatches(matches)) {
       const finished = new Date(match.finishedAt)
       if (finished < weekStartDate || finished >= weekEndDate) continue
+      matchCount += 1
       counts.set(match.deck1Id, (counts.get(match.deck1Id) ?? 0) + 1)
       counts.set(match.deck2Id, (counts.get(match.deck2Id) ?? 0) + 1)
     }
@@ -900,6 +895,7 @@ export function buildWeeklyDeckMetaStats(
     weeks.push({
       weekStart,
       label: formatWeekLabel(weekStart),
+      matchCount,
       total,
       decks: deckSlices,
     })
@@ -917,9 +913,11 @@ export interface MetaTransferChartPoint {
 /** Stable deck keys for stacked chart — largest total appearances first, bottom layer first. */
 export function buildMetaTransferChartPoints(
   stats: WeeklyDeckMetaStat[],
+  minMatches = MIN_WEEKLY_META_MATCHES,
 ): { points: MetaTransferChartPoint[]; deckKeys: Array<{ key: string; name: string }> } {
+  const { qualified } = partitionWeeklyMetaStats(stats, minMatches)
   const totals = new Map<string, { name: string; count: number }>()
-  for (const week of stats) {
+  for (const week of qualified) {
     for (const deck of week.decks) {
       const key = deck.deckId
       const current = totals.get(key) ?? { name: deck.deckName, count: 0 }
@@ -931,7 +929,7 @@ export function buildMetaTransferChartPoints(
     .sort((left, right) => right[1].count - left[1].count)
     .map(([key, value]) => ({ key, name: value.name }))
 
-  const activeWeeks = stats.filter((week) => week.total > 0)
+  const activeWeeks = qualified
   const points = activeWeeks.map((week) => {
     const point: MetaTransferChartPoint = { label: week.label, total: week.total }
     for (const { key } of deckKeys) {
@@ -942,4 +940,185 @@ export function buildMetaTransferChartPoints(
   })
 
   return { points, deckKeys }
+}
+
+export function partitionWeeklyMetaStats(
+  stats: WeeklyDeckMetaStat[],
+  minMatches = MIN_WEEKLY_META_MATCHES,
+): {
+  qualified: WeeklyDeckMetaStat[]
+  skipped: WeeklyDeckMetaStat[]
+} {
+  const qualified: WeeklyDeckMetaStat[] = []
+  const skipped: WeeklyDeckMetaStat[] = []
+  for (const week of stats) {
+    if (week.matchCount === 0) continue
+    if (week.matchCount >= minMatches) qualified.push(week)
+    else skipped.push(week)
+  }
+  return { qualified, skipped }
+}
+
+export interface DeckShareTrendPoint {
+  label: string
+  matchCount: number
+  shares: Array<{ deckId: string; deckName: string; share: number }>
+}
+
+/** Top deck share % per qualified week (for line chart). */
+export function buildTopDeckShareTrend(
+  stats: WeeklyDeckMetaStat[],
+  topN = 3,
+  minMatches = MIN_WEEKLY_META_MATCHES,
+): { deckIds: Array<{ id: string; name: string }>; points: DeckShareTrendPoint[] } {
+  const { qualified } = partitionWeeklyMetaStats(stats, minMatches)
+  const totals = new Map<string, { name: string; count: number }>()
+  for (const week of qualified) {
+    for (const deck of week.decks) {
+      if (deck.deckId === '__other__') continue
+      const current = totals.get(deck.deckId) ?? { name: deck.deckName, count: 0 }
+      totals.set(deck.deckId, { name: deck.deckName, count: current.count + deck.count })
+    }
+  }
+  const deckIds = [...totals.entries()]
+    .sort((left, right) => right[1].count - left[1].count)
+    .slice(0, topN)
+    .map(([id, value]) => ({ id, name: value.name }))
+
+  const points = qualified.map((week) => ({
+    label: week.label,
+    matchCount: week.matchCount,
+    shares: deckIds.map(({ id, name }) => {
+      const slice = week.decks.find((deck) => deck.deckId === id)
+      return { deckId: id, deckName: name, share: slice?.share ?? 0 }
+    }),
+  }))
+
+  return { deckIds, points }
+}
+
+export interface MetaHeatmapCell {
+  deckId: string
+  deckName: string
+  share: number
+  count: number
+}
+
+export interface MetaHeatmapRow {
+  label: string
+  matchCount: number
+  cells: MetaHeatmapCell[]
+}
+
+export function buildMetaHeatmapRows(
+  stats: WeeklyDeckMetaStat[],
+  topN = 8,
+  minMatches = MIN_WEEKLY_META_MATCHES,
+): MetaHeatmapRow[] {
+  const { qualified } = partitionWeeklyMetaStats(stats, minMatches)
+  const totals = new Map<string, { name: string; count: number }>()
+  for (const week of qualified) {
+    for (const deck of week.decks) {
+      if (deck.deckId === '__other__') continue
+      const current = totals.get(deck.deckId) ?? { name: deck.deckName, count: 0 }
+      totals.set(deck.deckId, { name: deck.deckName, count: current.count + deck.count })
+    }
+  }
+  const deckOrder = [...totals.entries()]
+    .sort((left, right) => right[1].count - left[1].count)
+    .slice(0, topN)
+    .map(([id, value]) => ({ id, name: value.name }))
+
+  return qualified.map((week) => ({
+    label: week.label,
+    matchCount: week.matchCount,
+    cells: deckOrder.map(({ id, name }) => {
+      const slice = week.decks.find((deck) => deck.deckId === id)
+      return {
+        deckId: id,
+        deckName: name,
+        share: slice?.share ?? 0,
+        count: slice?.count ?? 0,
+      }
+    }),
+  }))
+}
+
+/** Rolling 4-week deck appearance share (qualified weeks only). */
+export function buildRollingDeckMetaShare(
+  stats: WeeklyDeckMetaStat[],
+  windowWeeks = 4,
+  topN = 5,
+  minMatches = MIN_WEEKLY_META_MATCHES,
+): Array<{ label: string; matchCount: number; decks: WeeklyDeckMetaSlice[] }> {
+  const { qualified } = partitionWeeklyMetaStats(stats, minMatches)
+  if (!qualified.length) return []
+
+  const globalTotals = new Map<string, { name: string; count: number }>()
+  for (const week of qualified) {
+    for (const deck of week.decks) {
+      const current = globalTotals.get(deck.deckId) ?? { name: deck.deckName, count: 0 }
+      globalTotals.set(deck.deckId, { name: deck.deckName, count: current.count + deck.count })
+    }
+  }
+  const topDeckIds = new Set(
+    [...globalTotals.entries()]
+      .sort((left, right) => right[1].count - left[1].count)
+      .slice(0, topN)
+      .map(([id]) => id),
+  )
+
+  const result: Array<{ label: string; matchCount: number; decks: WeeklyDeckMetaSlice[] }> = []
+  for (let index = 0; index < qualified.length; index += 1) {
+    const window = qualified.slice(Math.max(0, index - windowWeeks + 1), index + 1)
+    const counts = new Map<string, { name: string; count: number }>()
+    let matchCount = 0
+    for (const week of window) {
+      matchCount += week.matchCount
+      for (const deck of week.decks) {
+        if (!topDeckIds.has(deck.deckId) && deck.deckId !== '__other__') continue
+        const current = counts.get(deck.deckId) ?? { name: deck.deckName, count: 0 }
+        counts.set(deck.deckId, { name: deck.deckName, count: current.count + deck.count })
+      }
+    }
+    const total = [...counts.values()].reduce((sum, item) => sum + item.count, 0)
+    const decks = [...counts.entries()]
+      .map(([deckId, value]) => ({
+        deckId,
+        deckName: value.name,
+        count: value.count,
+        share: total ? value.count / total : 0,
+      }))
+      .sort((left, right) => right.count - left.count)
+
+    result.push({
+      label: qualified[index].label,
+      matchCount,
+      decks,
+    })
+  }
+  return result
+}
+
+export function buildDeckAppearanceSummary(
+  decks: Deck[],
+  matches: Match[],
+  language: Language,
+): Array<{ deckId: string; name: string; appearances: number; share: number }> {
+  const completed = getCompletedMatches(matches)
+  const counts = new Map<string, number>()
+  for (const match of completed) {
+    counts.set(match.deck1Id, (counts.get(match.deck1Id) ?? 0) + 1)
+    counts.set(match.deck2Id, (counts.get(match.deck2Id) ?? 0) + 1)
+  }
+  const total = [...counts.values()].reduce((sum, value) => sum + value, 0)
+  const deckById = new Map(decks.map((deck) => [deck.id, deck]))
+  return [...counts.entries()]
+    .map(([deckId, appearances]) => ({
+      deckId,
+      name: deckById.get(deckId) ? localizedDeckName(deckById.get(deckId)!, language) : '未知牌組',
+      appearances,
+      share: total ? appearances / total : 0,
+    }))
+    .sort((left, right) => right.appearances - left.appearances)
 }
