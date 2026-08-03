@@ -2,11 +2,17 @@ import { create } from 'zustand'
 import { APP_VERSION, createDefaultAppState } from '@/lib/constants'
 import { hasExplicitSessionRoster, resolveDeckQuery, resolvePlayerName } from '@/lib/selectors'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
-import { ensureImportPlayersInSession, playerIdsFromMatches } from '@/lib/importRoster'
+import {
+  ensureImportPlayersInSession,
+  playerIdsFromMatches,
+  repairPlayersReferencedByMatches,
+  syncSessionRostersFromMatches,
+} from '@/lib/importRoster'
 import { createSession, findOpenSessionForToday, mergeSessionsState } from '@/lib/sessions'
 import { findFirstEmptyTableSlot, getActiveMatchForTableSlot, getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import {
   initPersistScheduler,
+  getLastPersistedState,
   schedulePersist,
 } from '@/lib/persistScheduler'
 import { invalidateDerivedCache } from '@/lib/derivedData'
@@ -27,9 +33,11 @@ import {
   clearLocalEntityTouch,
   flushGroupCollabSyncNowAsync,
   pauseGroupCollabNotify,
+  notifyGroupCollabChange,
   pushFullGroupState,
   reinforceLocalEntityTouch,
   resumeGroupCollabNotify,
+  stampLocalCollabTouches,
   stopGroupCollabRealtime,
 } from '@/lib/groupSync'
 import { isMatchEligibleForPlayer } from '@/lib/achievementEligibility'
@@ -459,7 +467,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   hydrate: async () => {
     try {
       const loaded = await loadAppState()
-      const { state } = ensureSessionState(loaded)
+      const { state: withSession } = ensureSessionState(loaded)
+      const state = syncSessionRostersFromMatches(repairPlayersReferencedByMatches(withSession))
       invalidateDerivedCache()
       initPersistScheduler({ ...state, appVersion: APP_VERSION })
       syncMaterializedFromState(state)
@@ -1202,6 +1211,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   importMatches: async (rows, filename, rawData, options = {}) => {
     pauseGroupCollabNotify()
+    const collabBaseline = getLastPersistedState() ?? getAppState()
     const wasPaused = getAppState().settings.groupSyncPaused
     let syncPausedForImport = false
 
@@ -1419,6 +1429,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     if (createdMatches.length) {
       next = ensureImportPlayersInSession(next, session.id, playerIdsFromMatches(createdMatches))
+      next = repairPlayersReferencedByMatches(next)
+      stampLocalCollabTouches({
+        playerIds: playerIdsFromMatches(createdMatches),
+        matchIds: createdMatches.map((match) => match.id),
+        sessionIds: [session.id],
+      })
     }
 
     if (options.historicalRestore && createdMatches.length) {
@@ -1452,6 +1468,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     } finally {
       resumeGroupCollabNotify()
+      notifyGroupCollabChange(collabBaseline, getAppState())
     }
   },
 

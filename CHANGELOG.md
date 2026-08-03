@@ -9,6 +9,21 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.3.2 - 2026-08-03
+
+### New
+
+- **Color meta pie**: Stats overview and session share card show OPCG **color share** (dual-color decks count 50/50 each).
+
+### Changed
+
+- **Deck usage pie**: Slice colors follow each deck’s leader colors (no duplicate palette greens/purples for different red decks).
+- **Leader locale names**: 戰國、基德、大媽、索隆 & 山治; fixed `Eustass"Captain"Kid` locale key generation.
+
+### Fixed
+
+- **Import players missing from lobby/stats**: Group sync no longer drops players still referenced by matches; import stamps collab touches and repairs roster on hydrate.
+
 ## V5.3.1 - 2026-07-20
 
 ### New

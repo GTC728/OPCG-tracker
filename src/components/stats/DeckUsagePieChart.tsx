@@ -1,6 +1,6 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { ColorDots } from '@/components/deck/ColorDots'
-import { getChartSliceFill, summarizeColorPreference } from '@/lib/deckChartColors'
+import { getChartSliceFill, getDeckIdentityFill, getDeckSliceFill, summarizeColorPreference } from '@/lib/deckChartColors'
 import { uiGlassCard, uiLabel, uiSectionTitle } from '@/lib/uiSurface'
 import { useI18n } from '@/lib/i18n'
 import type { DeckUsageSlice } from '@/lib/stats'
@@ -25,6 +25,11 @@ function collapseUsageSlices(slices: DeckUsageSlice[], limit: number): DeckUsage
   ]
 }
 
+function sliceFill(slice: DeckUsageSlice, index: number, slices: DeckUsageSlice[]): string {
+  if (slice.deckId === '__other__') return getChartSliceFill(index)
+  return getDeckSliceFill(slice, index, slices)
+}
+
 function DeckSliceLegend({ slices }: { slices: DeckUsageSlice[] }) {
   return (
     <ul className="space-y-2">
@@ -32,7 +37,7 @@ function DeckSliceLegend({ slices }: { slices: DeckUsageSlice[] }) {
         <li key={slice.deckId} className="flex items-center gap-2 text-sm">
           <span
             className="size-3 shrink-0 rounded-full ring-2 ring-white/15"
-            style={{ background: getChartSliceFill(index) }}
+            style={{ background: sliceFill(slice, index, slices) }}
           />
           <ColorDots colors={slice.colors} />
           <span className="min-w-0 truncate font-medium">{slice.deckName}</span>
@@ -62,7 +67,7 @@ export function DeckUsagePieChart({
   const chartData = chartSlices.map((slice, index) => ({
     name: slice.deckId === '__other__' ? t('stats.deckUsageOther') : slice.deckName,
     value: slice.count,
-    fill: getChartSliceFill(index),
+    fill: sliceFill(slice, index, chartSlices),
     deckId: slice.deckId,
   }))
 
@@ -97,8 +102,8 @@ export function DeckUsagePieChart({
               stroke="color-mix(in srgb, var(--color-surface) 40%, transparent)"
               strokeWidth={2}
             >
-              {chartData.map((entry, index) => (
-                <Cell key={entry.deckId} fill={getChartSliceFill(index)} />
+              {chartData.map((entry) => (
+                <Cell key={entry.deckId} fill={entry.fill} />
               ))}
             </Pie>
             <Tooltip
@@ -133,7 +138,7 @@ export function DeckUsagePieChart({
 export function buildDeckUsageFillMap(slices: DeckUsageSlice[]): Map<string, string> {
   const map = new Map<string, string>()
   slices.forEach((slice, index) => {
-    map.set(slice.deckId, getChartSliceFill(index))
+    map.set(slice.deckId, getDeckIdentityFill(slice, index, slices))
   })
   return map
 }

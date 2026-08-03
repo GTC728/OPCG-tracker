@@ -15,6 +15,7 @@ import {
   buildPlayerDeckStats,
   buildDashboardStats,
   buildMetaSummaryStats,
+  buildEnvironmentDeckUsageSlices,
 } from '@/lib/stats'
 import {
   computeGlobalAchievementRates,
@@ -23,6 +24,7 @@ import {
 } from '@/lib/achievements'
 import { useI18n } from '@/lib/i18n'
 import { formatDateTime } from '@/lib/utils'
+import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
 import type { AchievementUnlock, Deck, Language, Match, Player, Session } from '@/types'
 
 function ShareCardFrame({ children, title, subtitle }: { children: ReactNode; title: string; subtitle: string }) {
@@ -198,6 +200,7 @@ export function SessionDashboardShareCard({
   const scoped = getCompletedMatches(matches).filter((match) => match.sessionId === session.id)
   const dashboard = buildDashboardStats(players, decks, scoped, language)
   const meta = buildMetaSummaryStats(scoped)
+  const environmentDeckUsage = buildEnvironmentDeckUsageSlices(decks, scoped, language)
   const leaderboard = buildPlayerStats(players, scoped)
     .filter((item) => item.total > 0)
     .sort((a, b) => {
@@ -256,6 +259,11 @@ export function SessionDashboardShareCard({
           left: item.name,
           right: `${item.total}場 · ${formatPercent(item.winRate)}`,
         }))}
+      />
+      <ColorMetaPieChart
+        deckUsageSlices={environmentDeckUsage}
+        title={language === 'en' ? 'Color share' : '顏色占比'}
+        compact
       />
       {dashboard.topPlayer ? (
         <p className="text-center text-[10px] text-text-secondary">

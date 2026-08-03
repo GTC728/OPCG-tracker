@@ -118,6 +118,25 @@ function touchLocalSessions(ids: Iterable<string>): void {
   for (const id of ids) localSessionTouch.set(id, now)
 }
 
+export function stampLocalCollabTouches(input: {
+  playerIds?: Iterable<string>
+  matchIds?: Iterable<string>
+  sessionIds?: Iterable<string>
+}): void {
+  if (input.playerIds) {
+    const now = Date.now()
+    for (const id of input.playerIds) localPlayerTouch.set(id, now)
+  }
+  if (input.matchIds) {
+    const now = Date.now()
+    for (const id of input.matchIds) localMatchTouch.set(id, now)
+  }
+  if (input.sessionIds) {
+    const now = Date.now()
+    for (const id of input.sessionIds) localSessionTouch.set(id, now)
+  }
+}
+
 function touchLocalPlayers(ids: Iterable<string>): void {
   const now = Date.now()
   for (const id of ids) localPlayerTouch.set(id, now)
@@ -1271,6 +1290,13 @@ export async function pullGroupCollabState(
       }
     }
 
+    const referencedPlayerIds = new Set<string>()
+    for (const match of current.matches) {
+      if (match.deletedAt !== null) continue
+      referencedPlayerIds.add(match.player1Id)
+      referencedPlayerIds.add(match.player2Id)
+    }
+
     const playersById = new Map(current.players.map((player) => [player.id, player]))
     for (const remotePlayer of remote.players) {
       const existing = playersById.get(remotePlayer.id)
@@ -1287,7 +1313,7 @@ export async function pullGroupCollabState(
     for (const [id] of playersById) {
       if (!remotePlayerIds.has(id)) {
         const localTouch = localPlayerTouch.get(id) ?? 0
-        if (!localTouch) playersById.delete(id)
+        if (!localTouch && !referencedPlayerIds.has(id)) playersById.delete(id)
       }
     }
 

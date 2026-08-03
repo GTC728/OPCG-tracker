@@ -4,6 +4,7 @@ import {
   isListedPlayer,
   isVisibleMatch,
 } from '@/lib/entityVisibility'
+import { nowIso } from '@/lib/utils'
 
 function comparePlayerNames(left: Player, right: Player): number {
   return left.name.localeCompare(right.name, 'zh-Hant')
@@ -108,4 +109,91 @@ export function ensureImportPlayersInSession(
     players,
     sessionPlayers: mergeSessionRosterPlayerIds(state, sessionId, idSet),
   }
+}
+
+/** Merge match participants into each session roster (import / repair). */
+export function syncSessionRostersFromMatches(state: AppState): AppState {
+  let next = state
+  const sessionIds = new Set<string>()
+  for (const match of state.matches) {
+    if (!isVisibleMatch(match)) continue
+    sessionIds.add(match.sessionId)
+  }
+  for (const sessionId of sessionIds) {
+    next = ensureImportPlayersInSession(next, sessionId, collectPlayerIdsFromMatches(next, sessionId))
+  }
+  return next
+}
+
+function buildPlayerNamesFromImportRows(state: AppState): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const row of state.importRows) {
+    if (row.status !== 'imported' || !row.matchId) continue
+    const match = state.matches.find((item) => item.id === row.matchId)
+    if (!match || !isVisibleMatch(match)) continue
+    const p1 = row.raw.player1Name?.trim()
+    const p2 = row.raw.player2Name?.trim()
+    if (p1) names.set(match.player1Id, p1)
+    if (p2) names.set(match.player2Id, p2)
+  }
+  return names
+}
+
+/**
+ * Restore players removed by sync but still referenced on visible matches (e.g. after import).
+ */
+export function repairPlayersReferencedByMatches(state: AppState): AppState {
+  const needed = collectPlayerIdsFromMatches(state)
+  if (!needed.size) return state
+
+  const namesFromImport = buildPlayerNamesFromImportRows(state)
+  const byId = new Map(state.players.map((player) => [player.id, player]))
+  let changed = false
+  const players = [...state.players]
+
+  for (const playerId of needed) {
+    const existing = byId.get(playerId)
+    if (existing && !isDeletedPlayer(existing)) continue
+
+    const recoveredName = namesFromImport.get(playerId) ?? existing?.name ?? '未知玩家'
+    const timestamp = nowIso()
+
+    if (existing) {
+      const index = players.findIndex((player) => player.id === playerId)
+      if (index >= 0) {
+        players[index] = {
+          ...existing,
+          name: recoveredName,
+          archived: false,
+          deletedAt: null,
+          updatedAt: timestamp,
+        }
+        changed = true
+      }
+      continue
+    }
+
+    const player: Player = {
+      id: playerId,
+      name: recoveredName,
+      aliases: [],
+      archived: false,
+      deletedAt: null,
+      profileClaimDeviceId: null,
+      profileClaimedAt: null,
+      linkedUserId: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    players.unshift(player)
+    byId.set(playerId, player)
+    changed = true
+  }
+
+  if (!changed) {
+    return syncSessionRostersFromMatches(state)
+  }
+
+  let next: AppState = { ...state, players }
+  return syncSessionRostersFromMatches(next)
 }

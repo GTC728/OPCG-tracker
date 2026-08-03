@@ -11,9 +11,11 @@ import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
 import { MetaTransferDetailSheet } from '@/components/stats/MetaTransferDetailSheet'
+import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
 import { StatsReadingGuide } from '@/components/stats/StatsReadingGuide'
 import {
   buildDeckStats,
+  buildEnvironmentDeckUsageSlices,
   buildFirstSecondStats,
   buildMatchupStats,
   buildPlayerDeckStats,
@@ -1179,6 +1181,11 @@ export function StatsPage() {
     [decks, scopedMatches, language],
   )
 
+  const environmentDeckUsage = useMemo(
+    () => buildEnvironmentDeckUsageSlices(decks, scopedMatches, language),
+    [decks, scopedMatches, language],
+  )
+
   const pilotLeaderboard = useMemo(
     () => sortPilotStatsForLeaderboard(playerDeckStats),
     [playerDeckStats],
@@ -1331,6 +1338,10 @@ export function StatsPage() {
             />
           </div>
           <FirstSecondSection stats={firstSecondStats} />
+          <ColorMetaPieChart
+            deckUsageSlices={environmentDeckUsage}
+            title={t('stats.colorMetaPie')}
+          />
           <MetaTransferChart
             stats={weeklyDeckMetaStats}
             title={t('stats.metaTransfer')}

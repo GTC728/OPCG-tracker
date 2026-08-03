@@ -731,6 +731,35 @@ export function buildDeckUsageDistribution(
     .sort((a, b) => b.count - a.count)
 }
 
+/** Deck appearances in scope (both sides of each match) — for environment / color meta. */
+export function buildEnvironmentDeckUsageSlices(
+  decks: Deck[],
+  matches: Match[],
+  language: Language,
+): DeckUsageSlice[] {
+  const counts = new Map<string, number>()
+  for (const match of getCompletedMatches(matches)) {
+    counts.set(match.deck1Id, (counts.get(match.deck1Id) ?? 0) + 1)
+    counts.set(match.deck2Id, (counts.get(match.deck2Id) ?? 0) + 1)
+  }
+  const total = [...counts.values()].reduce((sum, value) => sum + value, 0)
+  if (!total) return []
+
+  const deckById = new Map(decks.map((deck) => [deck.id, deck]))
+  return [...counts.entries()]
+    .map(([deckId, count]) => {
+      const deck = deckById.get(deckId)
+      return {
+        deckId,
+        deckName: deck ? localizedDeckName(deck, language) : '未知牌組',
+        count,
+        percentage: count / total,
+        colors: deck?.colors ?? [],
+      }
+    })
+    .sort((a, b) => b.count - a.count)
+}
+
 export interface WeeklyWinRateStat {
   weekStart: string
   label: string

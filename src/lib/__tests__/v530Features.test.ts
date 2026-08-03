@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultAppState } from '@/lib/constants'
-import { getMatchFilterPlayers, mergeSessionRosterPlayerIds } from '@/lib/importRoster'
+import { getMatchFilterPlayers, mergeSessionRosterPlayerIds, repairPlayersReferencedByMatches } from '@/lib/importRoster'
 import { sortPilotStatsForLeaderboard, type PlayerDeckStat } from '@/lib/stats'
 import type { Match, Player } from '@/types'
 
@@ -64,6 +64,42 @@ describe('importRoster', () => {
     )
     expect(merged).toHaveLength(2)
     expect(merged.find((row) => row.playerId === 'p1')?.defaultDeckVariantId).toBe('d9')
+  })
+
+  it('restores players still referenced on imported matches', () => {
+    const state = {
+      ...createDefaultAppState(),
+      players: [player('p1', 'Simon')],
+      sessionPlayers: [{ sessionId: 's1', playerId: 'p1', defaultDeckVariantId: null }],
+      matches: [match('s1', 'p1', 'p2')],
+      activeMatches: [],
+      importRows: [
+        {
+          id: 'row1',
+          batchId: 'b1',
+          rowNumber: 2,
+          raw: {
+            player1Name: 'Simon',
+            player2Name: 'San',
+            deck1Query: '',
+            deck2Query: '',
+            winnerName: 'Simon',
+            firstPlayerName: '',
+            notes: '',
+            date: '',
+          },
+          status: 'imported' as const,
+          errorMessage: null,
+          matchId: 'm-p1-p2',
+        },
+      ],
+    }
+
+    const repaired = repairPlayersReferencedByMatches(state)
+    expect(repaired.players.some((item) => item.id === 'p2' && item.name === 'San')).toBe(true)
+    expect(
+      repaired.sessionPlayers.some((row) => row.sessionId === 's1' && row.playerId === 'p2'),
+    ).toBe(true)
   })
 })
 

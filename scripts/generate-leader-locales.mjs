@@ -5,7 +5,9 @@ import { dirname, join } from 'node:path'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const seedSource = readFileSync(join(root, 'src/data/leaderDecks.ts'), 'utf8')
-const names = [...new Set([...seedSource.matchAll(/"leaderName": "([^"]+)"/g)].map((m) => m[1]))].sort()
+const names = [...new Set(
+  [...seedSource.matchAll(/"leaderName": "((?:\\.|[^"\\])*)"/g)].map((m) => m[1].replace(/\\"/g, '"')),
+)].sort()
 
 /** Official or community-standard names; manual=true when not verified against card text. */
 const KNOWN = {
@@ -17,7 +19,7 @@ const KNOWN = {
   'Caesar Clown': { 'zh-Hant': '凱撒', 'zh-Hans': '凯撒', ja: 'シーザー' },
   'Carrot': { 'zh-Hant': '加洛特', 'zh-Hans': '加洛特', ja: 'キャロット' },
   'Charlotte Katakuri': { 'zh-Hant': '卡塔庫栗', 'zh-Hans': '卡塔库栗', ja: 'カタクリ' },
-  'Charlotte Linlin': { 'zh-Hant': 'Big Mom', 'zh-Hans': 'Big Mom', ja: 'ビッグ・マム' },
+  'Charlotte Linlin': { 'zh-Hant': '大媽', 'zh-Hans': '大妈', ja: 'ビッグ・マム' },
   'Charlotte Pudding': { 'zh-Hant': '布丁', 'zh-Hans': '布丁', ja: 'プリン' },
   'Crocodile': { 'zh-Hant': '沙鱷魚', 'zh-Hans': '沙鳄鱼', ja: 'クロコダイル' },
   'Donquixote Doflamingo': { 'zh-Hant': '多弗朗明哥', 'zh-Hans': '多弗朗明哥', ja: 'ドフラミンゴ' },
@@ -65,6 +67,8 @@ const KNOWN = {
   'Rebecca': { 'zh-Hant': '蕾貝卡', 'zh-Hans': '蕾贝卡', ja: 'レベッカ' },
   'Rob Lucci': { 'zh-Hant': '路奇', 'zh-Hans': '路奇', ja: 'ルッチ' },
   'Roronoa Zoro': { 'zh-Hant': '索隆', 'zh-Hans': '索隆', ja: 'ゾロ' },
+  'Roronoa Zoro & Sanji': { 'zh-Hant': '索隆 & 山治', 'zh-Hans': '索隆 & 山治', ja: 'ゾロ & サンジ' },
+  'Sengoku': { 'zh-Hant': '戰國', 'zh-Hans': '战国', ja: 'センゴク' },
   'Sabo': { 'zh-Hant': '薩博', 'zh-Hans': '萨博', ja: 'サボ' },
   'Sakazuki': { 'zh-Hant': '赤犬', 'zh-Hans': '赤犬', ja: 'サカズキ' },
   'Sanji': { 'zh-Hant': '山治', 'zh-Hans': '山治', ja: 'サンジ' },

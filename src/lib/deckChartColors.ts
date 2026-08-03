@@ -28,6 +28,15 @@ function hslString(color: string): string {
   return `hsl(${tone.h} ${tone.s}% ${tone.l}%)`
 }
 
+/** Pie / legend fill for a primary OPCG color name. */
+export function getOpcgColorFill(color: string): string {
+  const tone = COLOR_HSL[color]
+  if (!tone) return hslString('Blue')
+  let l = tone.l
+  if (color === 'Black') l = Math.max(l, 42)
+  return `hsl(${tone.h} ${tone.s}% ${l}%)`
+}
+
 /** Blend two deck colors 50/50 for dual-color leaders. */
 export function blendDeckColors(colors: string[]): string {
   const unique = [...new Set(colors.filter(Boolean))]
@@ -88,8 +97,9 @@ export function summarizeColorPreference(
   for (const slice of slices) {
     const colors = slice.colors.filter(Boolean)
     if (colors.length >= 2) {
-      const share = slice.count / 2
-      for (const color of colors.slice(0, 2)) {
+      const parts = colors.length > 2 ? colors : colors.slice(0, 2)
+      const share = slice.count / parts.length
+      for (const color of parts) {
         totals.set(color, (totals.get(color) ?? 0) + share)
       }
       grand += slice.count
