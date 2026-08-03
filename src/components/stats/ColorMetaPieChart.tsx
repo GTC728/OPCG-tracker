@@ -1,5 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { ColorDots } from '@/components/deck/ColorDots'
+import { ChartLegendSwatch } from '@/components/deck/ChartLegendSwatch'
 import { getOpcgColorFill, summarizeColorPreference } from '@/lib/deckChartColors'
 import { useI18n } from '@/lib/i18n'
 import type { DeckUsageSlice } from '@/lib/stats'
@@ -31,8 +31,6 @@ export function ColorMetaPieChart({
     fill: getOpcgColorFill(item.color),
     pct: item.pct,
   }))
-
-  const total = chartData.reduce((sum, item) => sum + item.value, 0)
 
   return (
     <section className={[uiGlassCard, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
@@ -81,15 +79,11 @@ export function ColorMetaPieChart({
           <li
             key={item.colorKey}
             className={[
-              'flex items-center gap-1.5',
+              'flex min-w-0 items-center gap-1.5',
               compact ? 'rounded-md bg-surface/50 px-2 py-1 text-[10px] ring-1 ring-white/[0.06]' : 'text-sm',
             ].join(' ')}
           >
-            <span
-              className="size-2.5 shrink-0 rounded-full ring-1 ring-white/20"
-              style={{ background: item.fill }}
-            />
-            <ColorDots colors={[item.colorKey]} size="sm" />
+            <ChartLegendSwatch metaColor={item.colorKey} size="xs" />
             <span className="min-w-0 truncate font-medium">{item.name}</span>
             <span className="ml-auto shrink-0 tabular-nums text-text-secondary">
               {Math.round(item.pct * 100)}%
@@ -100,9 +94,9 @@ export function ColorMetaPieChart({
 
       {!compact ? (
         <p className={uiLabel}>{t('stats.colorMetaPieHint')}</p>
-      ) : total > 0 ? (
+      ) : (
         <p className="text-[9px] text-text-secondary">{t('stats.colorMetaPieHintShort')}</p>
-      ) : null}
+      )}
     </section>
   )
 }

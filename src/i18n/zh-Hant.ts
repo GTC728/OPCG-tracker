@@ -546,7 +546,7 @@ export const zhHant = {
   'profile.panel.achievementsDetail': '等級與進度',
   'profile.panel.rivals': '對手',
   'profile.recentForm': '近期狀態',
-  'stats.deckColorHint': '圓餅圖以高對比色區分牌組；色點代表牌組主色。',
+  'stats.deckColorHint': '圖例色塊與餅圖扇區同色（含雙色混色）；每列僅一個色標。',
   'stats.weeklyWinRateLegend': '實線＝週勝率 · 虛線＝累積平均',
   'stats.weeklyWinRateHint': '最近 12 週；有對局的週次才顯示週勝率點，虛線為累積平均趨勢。',
   'stats.weeklyWinRateTrend': '累積平均',

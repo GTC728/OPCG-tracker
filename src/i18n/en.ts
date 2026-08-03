@@ -546,7 +546,7 @@ export const en = {
   'profile.panel.achievementsDetail': 'Levels & progress',
   'profile.panel.rivals': 'Rivals',
   'profile.recentForm': 'Recent form',
-  'stats.deckColorHint': 'Pie slices use high-contrast colors; dots show deck identity.',
+  'stats.deckColorHint': 'Legend swatches match pie slices (including dual-color blends); one indicator per row.',
   'stats.weeklyWinRateLegend': 'Solid = weekly · dashed = cumulative avg',
   'stats.weeklyWinRateHint': 'Last 12 weeks; dots only on active weeks, dashed line shows cumulative trend.',
   'stats.weeklyWinRateTrend': 'Cumulative avg',

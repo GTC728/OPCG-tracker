@@ -546,7 +546,7 @@ export const zhHans = {
   'profile.panel.achievementsDetail': '等级与进度',
   'profile.panel.rivals': '对手',
   'profile.recentForm': '近期状态',
-  'stats.deckColorHint': '饼图以高对比色区分牌组；色点代表牌组主色。',
+  'stats.deckColorHint': '图例色块与饼图扇区同色（含双色混色）；每列仅一个色标。',
   'stats.weeklyWinRateLegend': '实线＝周胜率 · 虚线＝累积平均',
   'stats.weeklyWinRateHint': '最近 12 周；有对局的周次才显示周胜率点，虚线为累积平均趋势。',
   'stats.weeklyWinRateTrend': '累积平均',

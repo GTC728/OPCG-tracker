@@ -11,12 +11,14 @@ export function DeckLabel({
   deck,
   fallback = '未知牌組',
   showCode = true,
+  showColors = true,
   compact = false,
   className = '',
 }: {
   deck?: Deck | null
   fallback?: string
   showCode?: boolean
+  showColors?: boolean
   compact?: boolean
   className?: string
 }) {
@@ -37,7 +39,7 @@ export function DeckLabel({
         .join(' ')}
     >
       {showCode ? <span className="shrink-0">{deck.setCode}</span> : null}
-      <ColorDots colors={deck.colors} />
+      {showColors ? <ColorDots colors={deck.colors} /> : null}
       <span className={compact ? 'min-w-0 truncate' : 'truncate'}>{leaderLabel}</span>
     </span>
   )

@@ -19,7 +19,7 @@ import {
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecordStat } from '@/lib/stats'
 import { getDisplayWinRate, getSampleLabel } from '@/lib/winRateDisplay'
-import { uiCard } from '@/lib/uiSurface'
+import { uiCard, uiGlassCard } from '@/lib/uiSurface'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -147,30 +147,58 @@ export function PlayerProfileHub({
 
       <ProfileSection title={t('profile.panel.decks')} onViewAll={() => setPanel('decks')}>
         {deckUsage.length ? (
-          <DeckUsagePieChart slices={deckUsage} title={t('profile.deckUsagePreview')} compact />
-        ) : null}
-        <HorizontalRail>
-          {deckStats.length ? (
-            deckStats.slice(0, PREVIEW_LIMIT).map((item) => {
-              const deck = decks.find((d) => d.id === item.deckId)
-              if (!deck) return null
-              const usage = deckUsageById.get(item.deckId)
-              return (
-                <DeckPreviewCard
-                  key={item.deckId}
-                  deck={deck}
-                  usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
-                  winRate={item.winRate}
-                  record={`${item.wins}W-${item.losses}L`}
-                  accentFill={deckUsageFillMap.get(item.deckId)}
-                  onClick={() => onOpenDeck(item.deckId)}
-                />
-              )
-            })
-          ) : (
-            <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
-          )}
-        </HorizontalRail>
+          <div className={[uiGlassCard, 'space-y-3 p-3 sm:p-4'].join(' ')}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex shrink-0 justify-center sm:justify-start">
+                <DeckUsagePieChart slices={deckUsage} title="" inline />
+              </div>
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+                {deckStats.slice(0, 4).map((item) => {
+                  const deck = decks.find((d) => d.id === item.deckId)
+                  if (!deck) return null
+                  const usage = deckUsageById.get(item.deckId)
+                  return (
+                    <DeckPreviewCard
+                      key={item.deckId}
+                      deck={deck}
+                      language={language}
+                      layout="grid"
+                      usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
+                      winRate={item.winRate}
+                      record={`${item.wins}W-${item.losses}L`}
+                      accentFill={deckUsageFillMap.get(item.deckId)}
+                      onClick={() => onOpenDeck(item.deckId)}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+            {deckStats.length > 4 ? (
+              <HorizontalRail>
+                {deckStats.slice(4, PREVIEW_LIMIT).map((item) => {
+                  const deck = decks.find((d) => d.id === item.deckId)
+                  if (!deck) return null
+                  const usage = deckUsageById.get(item.deckId)
+                  return (
+                    <DeckPreviewCard
+                      key={item.deckId}
+                      deck={deck}
+                      language={language}
+                      layout="rail"
+                      usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
+                      winRate={item.winRate}
+                      record={`${item.wins}W-${item.losses}L`}
+                      accentFill={deckUsageFillMap.get(item.deckId)}
+                      onClick={() => onOpenDeck(item.deckId)}
+                    />
+                  )
+                })}
+              </HorizontalRail>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
+        )}
       </ProfileSection>
 
       <ProfileSection title={t('profile.panel.rivals')} onViewAll={() => setPanel('rivals')}>

@@ -546,7 +546,7 @@ export const ja = {
   'profile.panel.achievementsDetail': 'レベルと進捗',
   'profile.panel.rivals': 'ライバル',
   'profile.recentForm': '最近の調子',
-  'stats.deckColorHint': '円グラフは高コントラスト色で区別；ドットはデッキの主色。',
+  'stats.deckColorHint': '凡例は円グラフの扇形と同色（2色は混色）。1行1色標。',
   'stats.weeklyWinRateLegend': '実線＝週間 · 破線＝累積平均',
   'stats.weeklyWinRateHint': '直近12週。対戦週のみ点表示、破線は累積平均トレンド。',
   'stats.weeklyWinRateTrend': '累積平均',

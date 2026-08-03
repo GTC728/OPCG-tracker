@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.3.3 - 2026-08-03
+
+### Changed
+
+- **Chart legends**: `ChartLegendSwatch` — one color indicator per row (pie slice, meta color, or deck colors); no stacked swatch + `ColorDots`.
+- **Player profile decks**: Inline usage pie beside a 2×2 top-deck grid; preview cards show set code and leader with a single color dot row.
+
+### Fixed
+
+- **Duplicate color dots** on deck preview cards, deck usage pie legends, and color meta pie legends.
+
 ## V5.3.2 - 2026-08-03
 
 ### New
