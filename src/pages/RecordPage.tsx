@@ -9,9 +9,11 @@ import { useSessionDashboard } from '@/hooks/useDerivedStats'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent } from '@/lib/stats'
 import { getDisplayWinRate } from '@/lib/winRateDisplay'
-import { PageHero } from '@/components/ui/PageHero'
+import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
 import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
-import { uiCard, uiRecordCard } from '@/lib/uiSurface'
+import { PageHero } from '@/components/ui/PageHero'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { canRecordMatchesEffective } from '@/lib/groupPermissions'
 import { useAppStore } from '@/stores/appStore'
@@ -47,7 +49,7 @@ export function RecordPage() {
         {currentSession ? (
           <>
             <PageHero
-              eyebrow={t('record.currentSession')}
+              eyebrow={t('record.active')}
               title={currentSession.name}
               subtitle={
                 dashboard
@@ -57,77 +59,55 @@ export function RecordPage() {
                   : undefined
               }
             />
-            {dashboard ? (
-              <MetricHeroCard
-                metrics={[
-                  ...(dashboard.firstPlayerSample > 0
-                    ? [
-                        {
-                          label: t('stats.firstWinRate'),
-                          value: formatPercent(dashboard.firstPlayerWinRate),
-                        },
-                      ]
-                    : []),
-                  ...(dashboard.topPlayer
-                    ? [
-                        {
-                          label: t('stats.mvp'),
-                          value: formatPercent(
-                            getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total),
-                          ),
-                          accent: true,
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            ) : null}
+            {(() => {
+              if (!dashboard) return null
+              const heroMetrics = [
+                ...(dashboard.firstPlayerSample > 0
+                  ? [{ label: t('stats.firstWinRate'), value: formatPercent(dashboard.firstPlayerWinRate) }]
+                  : []),
+                ...(dashboard.topPlayer
+                  ? [
+                      {
+                        label: t('stats.mvp'),
+                        value: formatPercent(
+                          getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total),
+                        ),
+                        accent: true,
+                      },
+                    ]
+                  : []),
+              ]
+              if (!heroMetrics.length) return null
+              return heroMetrics.length === 2 ? (
+                <MetricHeroCard split metrics={heroMetrics} />
+              ) : (
+                <MetricHeroCard metrics={heroMetrics} />
+              )
+            })()}
           </>
         ) : (
           <PageHero eyebrow={t('record.currentSession')} title={t('settings.noActiveSession')} />
         )}
 
         {currentSession ? (
-          <div className={[uiRecordCard, 'space-y-2 p-3'].join(' ')}>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant="secondary"
-                className="min-h-10 text-xs"
-                onClick={() => openSessionRosterPrompt(currentSession.id)}
-              >
-                {t('record.players')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="min-h-10 text-xs"
-                onClick={() => setSessionSheetOpen(true)}
-              >
-                {t('record.manageSession')}
-              </Button>
-              <Button
-                variant="ghost"
-                className="min-h-10 text-xs"
-                onClick={() => {
-                  endCurrentSession()
-                  toast.success(t('record.sessionEnded'))
-                }}
-              >
-                {t('record.end')}
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="secondary"
-                className="min-h-10 text-xs"
-                onClick={() => setSessionShareOpen(true)}
-              >
-                {t('record.exportSession')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="min-h-10 text-xs"
-                disabled={exportingExcel}
-                onClick={async () => {
+          <GroupedListSection>
+            <GroupedListRow
+              title={t('record.players')}
+              onClick={() => openSessionRosterPrompt(currentSession.id)}
+            />
+            <GroupedListRow
+              title={t('record.manageSession')}
+              onClick={() => setSessionSheetOpen(true)}
+            />
+            <GroupedListRow
+              title={t('record.exportSession')}
+              onClick={() => setSessionShareOpen(true)}
+            />
+            <GroupedListRow
+              title={t('session.exportExcel')}
+              onClick={() => {
+                if (exportingExcel) return
+                void (async () => {
                   setExportingExcel(true)
                   try {
                     const { exportSessionExcel } = await import('@/lib/excelExport')
@@ -139,12 +119,17 @@ export function RecordPage() {
                   } finally {
                     setExportingExcel(false)
                   }
-                }}
-              >
-                {exportingExcel ? t('session.exportingExcel') : t('session.exportExcel')}
-              </Button>
-            </div>
-          </div>
+                })()
+              }}
+            />
+            <GroupedListRow
+              title={t('record.end')}
+              onClick={() => {
+                endCurrentSession()
+                toast.success(t('record.sessionEnded'))
+              }}
+            />
+          </GroupedListSection>
         ) : (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Button
@@ -233,7 +218,10 @@ export function RecordPage() {
           <p className="mt-1">你在此群組為觀眾，可查看對局與統計，無法錄製或刪除對局。</p>
         </section>
       ) : (
-        <MatchRecorder />
+        <section className="space-y-3">
+          <SectionHeader title={t('record.tableSection')} />
+          <MatchRecorder />
+        </section>
       )}
 
       <SessionManager

@@ -10,11 +10,11 @@ import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
-import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
+import { StatsOverviewPanel } from '@/components/stats/StatsOverviewPanel'
+import { PageHero } from '@/components/ui/PageHero'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
 import { MetaTransferDetailSheet } from '@/components/stats/MetaTransferDetailSheet'
-import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
 import { StatsReadingGuide } from '@/components/stats/StatsReadingGuide'
 import {
   buildDeckStats,
@@ -26,21 +26,16 @@ import {
   formatPercent,
   getCompletedMatches,
   sortStatsByUsage,
-  sortStatsByWeightedWinRate,
-  sortPilotStatsForLeaderboard,
   type FirstSecondStat,
   type InsightMessage,
   type MatchupStat,
-  type MetaSummaryStats,
   type PlayerDeckStat,
   type PlayerMatchupStat,
   type RecordStat,
 } from '@/lib/stats'
-import { formatMatchDuration, getAverageMatchDurationMs } from '@/lib/matchTimer'
 import {
   formatWinRateTooltip,
   getDisplayWinRate,
-  getDisplayWinRateFromRaw,
   getSampleLabel,
   getWinRateHeatmapColor,
   isReliableSample,
@@ -49,7 +44,6 @@ import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
-import type { DashboardStats } from '@/lib/stats'
 
 type StatsSectionId = 'overview' | 'players' | 'decks'
 type ProfileNavTarget = { type: 'player' | 'deck'; id: string }
@@ -552,62 +546,6 @@ function PlayerMatchupHeatmap({
   )
 }
 
-function EnvironmentOverviewSection({
-  dashboard,
-  summary,
-  averageMatchDurationMs,
-}: {
-  dashboard: DashboardStats
-  summary: MetaSummaryStats
-  averageMatchDurationMs: number | null
-}) {
-  const { t } = useI18n()
-  if (!summary.totalMatches) return null
-
-  return (
-    <section className="space-y-3">
-      <h2 className={uiSectionTitle}>{t('stats.meta.overview')}</h2>
-      <MetricHeroCard
-        metrics={[
-          { label: t('stats.totalMatches'), value: String(summary.totalMatches) },
-          { label: t('stats.activePlayers'), value: String(summary.uniquePlayers) },
-          { label: t('stats.deckVariety'), value: String(summary.uniqueDecks) },
-        ]}
-      />
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {averageMatchDurationMs !== null ? (
-          <SummaryCard
-            label={t('stats.avgMatchDuration')}
-            value={formatMatchDuration(averageMatchDurationMs)}
-            detail={t('stats.avgMatchDurationDetail')}
-          />
-        ) : null}
-        {dashboard.firstPlayerSample > 0 ? (
-          <SummaryCard
-            label={t('stats.firstWinRate')}
-            value={formatPercent(
-              getDisplayWinRateFromRaw(dashboard.firstPlayerWinRate, dashboard.firstPlayerSample),
-            )}
-            detail={getSampleLabel(dashboard.firstPlayerSample)}
-          />
-        ) : null}
-        {dashboard.topPlayer ? (
-          <SummaryCard
-            label={t('stats.mvp')}
-            value={dashboard.topPlayer.name}
-            detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
-          />
-        ) : null}
-        <SummaryCard
-          label={t('stats.metaDiversity')}
-          value={`${summary.diversityPercent}%`}
-          detail={t('stats.metaDiversityDetail')}
-        />
-      </div>
-    </section>
-  )
-}
-
 function DeckListSection({
   stats,
   decks,
@@ -745,89 +683,6 @@ function ProfileMatchupSection({
           />
         ))}
       </div>
-    </section>
-  )
-}
-
-function MiniLeaderboard({
-  title,
-  subtitle,
-  stats,
-  pilotStats,
-  decks,
-  variant = 'player',
-  onSelect,
-  onSelectPilot,
-}: {
-  title: string
-  subtitle?: string
-  stats?: RecordStat[]
-  pilotStats?: PlayerDeckStat[]
-  decks?: Deck[]
-  variant?: 'player' | 'deck' | 'pilot'
-  onSelect?: (stat: RecordStat) => void
-  onSelectPilot?: (stat: PlayerDeckStat) => void
-}) {
-  const top =
-    variant === 'pilot' ? (pilotStats ?? []).slice(0, 5) : (stats ?? []).slice(0, 5)
-  if (!top.length) return null
-
-  return (
-    <section className={[uiCard, 'p-3'].join(' ')}>
-      <h3 className="text-sm font-semibold text-brand-500">{title}</h3>
-      {subtitle ? <p className="mt-0.5 text-[10px] text-text-secondary">{subtitle}</p> : null}
-      <ol className="mt-2 space-y-1.5">
-        {variant === 'pilot'
-          ? (top as PlayerDeckStat[]).map((stat, index) => (
-              <li key={stat.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
-                  onClick={() => onSelectPilot?.(stat)}
-                  disabled={!onSelectPilot}
-                >
-                  <span className="w-5 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{stat.playerName}</span>
-                    <span className="mt-0.5 block truncate text-[10px] text-text-secondary">
-                      <DeckLabel deck={decks?.find((deck) => deck.id === stat.deckId)} showCode />
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-text-secondary">
-                    {stat.wins}W-{stat.losses}L
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold">
-                    {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
-                  </span>
-                </button>
-              </li>
-            ))
-          : (top as RecordStat[]).map((stat, index) => (
-              <li key={stat.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
-                  onClick={() => onSelect?.(stat)}
-                  disabled={!onSelect}
-                >
-                  <span className="w-5 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
-                  {variant === 'deck' ? (
-                    <span className="min-w-0 flex-1 truncate font-medium">
-                      <DeckLabel deck={decks?.find((deck) => deck.id === stat.id)} showCode />
-                    </span>
-                  ) : (
-                    <span className="min-w-0 flex-1 truncate font-medium">{stat.name}</span>
-                  )}
-                  <span className="shrink-0 text-xs text-text-secondary">
-                    {stat.wins}W-{stat.losses}L
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold">
-                    {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
-                  </span>
-                </button>
-              </li>
-            ))}
-      </ol>
     </section>
   )
 }
@@ -1194,11 +1049,6 @@ export function StatsPage() {
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
-  const averageMatchDurationMs = useMemo(
-    () => getAverageMatchDurationMs(scopedMatches),
-    [scopedMatches],
-  )
-
   const weeklyDeckMetaStats = useMemo(
     () => buildWeeklyDeckMetaStats(decks, scopedMatches, language),
     [decks, scopedMatches, language],
@@ -1207,11 +1057,6 @@ export function StatsPage() {
   const environmentDeckUsage = useMemo(
     () => buildEnvironmentDeckUsageSlices(decks, scopedMatches, language),
     [decks, scopedMatches, language],
-  )
-
-  const pilotLeaderboard = useMemo(
-    () => sortPilotStatsForLeaderboard(playerDeckStats),
-    [playerDeckStats],
   )
 
   const openProfile = (target: ProfileNavTarget) => {
@@ -1288,26 +1133,26 @@ export function StatsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <PageHero
+        title={t('page.stats.title')}
+        subtitle={scope === 'session' && currentSession ? currentSession.name : t('stats.allData')}
+      />
+
       {linkedPlayer ? (
-        <section className={[uiGlassCard, 'flex items-center justify-between gap-3 p-4'].join(' ')}>
+        <button
+          type="button"
+          className={[uiCardInteractive, 'flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left'].join(' ')}
+          onClick={() => openProfile({ type: 'player', id: linkedPlayer.id })}
+        >
           <div>
             <p className="text-xs text-text-secondary">{t('profile.myProfile')}</p>
             <p className="text-lg font-bold">{linkedPlayer.name}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" className="min-h-9 px-3 py-1.5 text-sm" onClick={() => openProfile({ type: 'player', id: linkedPlayer.id })}>
-              {t('profile.openProfile')}
-            </Button>
-            {scope === 'session' && currentSession ? (
-              <Button variant="ghost" className="min-h-9 px-3 py-1.5 text-sm" onClick={() => setSessionShareOpen(true)}>
-                {t('share.sessionShort')}
-              </Button>
-            ) : null}
-          </div>
-        </section>
+          <span className="text-sm font-semibold text-brand-400">{t('profile.openProfile')} ›</span>
+        </button>
       ) : (
-        <section className={[uiGlassCard, 'space-y-3 p-4'].join(' ')}>
+        <section className={[uiCard, 'space-y-3 p-4'].join(' ')}>
           <p className="text-sm text-text-secondary">{t('profile.statsPrompt')}</p>
           <Button fullWidth onClick={() => setProfileSheetOpen(true)}>
             {t('profile.setupCta')}
@@ -1332,39 +1177,26 @@ export function StatsPage() {
 
       {activeSection === 'overview' ? (
         <>
-          <EnvironmentOverviewSection
-            dashboard={dashboard}
+          <StatsOverviewPanel
             summary={metaSummary}
-            averageMatchDurationMs={averageMatchDurationMs}
-          />
-          <InsightsSection insights={insights} />
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            <MiniLeaderboard
-              title={t('stats.pilotsTop5')}
-              subtitle={t('stats.pilotsTop5Hint')}
-              variant="pilot"
-              pilotStats={pilotLeaderboard}
-              decks={decks}
-              onSelectPilot={(stat) => openProfile({ type: 'player', id: stat.playerId })}
-            />
-            <MiniLeaderboard
-              title={t('stats.playersTop5')}
-              stats={playerStats}
-              onSelect={(stat) => openProfile({ type: 'player', id: stat.id })}
-            />
-            <MiniLeaderboard
-              title={t('stats.decksTop5')}
-              stats={sortStatsByWeightedWinRate(deckStats)}
-              decks={decks}
-              variant="deck"
-              onSelect={(stat) => openProfile({ type: 'deck', id: stat.id })}
-            />
-          </div>
-          <FirstSecondSection stats={firstSecondStats} />
-          <ColorMetaPieChart
+            dashboard={dashboard}
+            playerStats={playerStats}
+            deckStats={deckStats}
+            decks={decks}
             deckUsageSlices={environmentDeckUsage}
-            title={t('stats.colorMetaPie')}
+            language={language}
+            scopeLabel={
+              scope === 'session' && currentSession
+                ? `${currentSession.name} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
+                : t('stats.allData')
+            }
+            onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
+            onOpenDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
+            onViewAllPlayers={() => changeSection('players')}
+            onViewAllDecks={() => changeSection('decks')}
           />
+          {insights.length ? <InsightsSection insights={insights} /> : null}
+          <FirstSecondSection stats={firstSecondStats} />
           <MetaTransferChart
             stats={weeklyDeckMetaStats}
             title={t('stats.metaTransfer')}
@@ -1372,26 +1204,6 @@ export function StatsPage() {
             onOpenDetail={() => setMetaDetailOpen(true)}
           />
           <StatsReadingGuide />
-          <section className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
-              onClick={() => changeSection('players')}
-            >
-              <p className="text-sm text-text-secondary">{t('stats.diveIn')}</p>
-              <h2 className="mt-1 text-lg font-bold">{t('stats.playerProfiles')}</h2>
-              <div className="mt-3 h-2 rounded-full bg-brand-500/70" />
-            </button>
-            <button
-              type="button"
-              className={[uiCardInteractive, 'p-3 text-left'].join(' ')}
-              onClick={() => changeSection('decks')}
-            >
-              <p className="text-sm text-text-secondary">{t('stats.diveIn')}</p>
-              <h2 className="mt-1 text-lg font-bold">{t('stats.deckProfiles')}</h2>
-              <div className="mt-3 h-2 rounded-full bg-emerald-500/70" />
-            </button>
-          </section>
         </>
       ) : null}
 

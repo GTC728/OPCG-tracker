@@ -16,6 +16,7 @@ import { getPlayerName } from '@/lib/entities'
 import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
 import { getMatchFilterPlayers } from '@/lib/importRoster'
 import { useI18n } from '@/lib/i18n'
+import { PageHero } from '@/components/ui/PageHero'
 import { uiCard } from '@/lib/uiSurface'
 import { uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
 import { playInteractionSound } from '@/lib/motion'
@@ -343,7 +344,9 @@ export function HistoryPage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <PageHero title={t('page.history.title')} subtitle={t('page.history.subtitle')} />
+
       <div className="flex flex-wrap gap-2">
         {datePresetOptions.map((option) => (
           <button

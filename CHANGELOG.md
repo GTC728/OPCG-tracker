@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.0 - 2026-08-25
+
+### Changed
+
+- **Apple UI layout (canvas-aligned)**: Large in-page titles (no duplicate header bar), vertical stats overview with rank list + deck cover rail, grouped session actions on Record, solid elevated cards instead of glass on lists.
+- **New panels**: `StatsOverviewPanel`, `SectionHeader`, `RankListRow`; split `MetricHeroCard` for session KPIs.
+
 ## V5.4.0 - 2026-08-25
 
 ### Changed

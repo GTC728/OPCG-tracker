@@ -96,14 +96,12 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
 }
 
 interface AppShellProps {
-  title: string
   activeTab: TabId
   onTabChange: (tab: TabId) => void
   children: ReactNode
 }
 
 export function AppShell({
-  title,
   activeTab,
   onTabChange,
   children,
@@ -114,18 +112,17 @@ export function AppShell({
   return (
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface [@media(min-width:768px)_and_(orientation:landscape)]:max-w-5xl">
-        <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="min-w-0 flex-1 truncate text-lg font-bold leading-snug tracking-tight">{title}</h1>
+        <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-2'].join(' ')}>
+          <div className="flex items-center justify-end gap-2">
             <AppBrandCredit />
           </div>
         </header>
 
-        <div className="px-[var(--ui-page-px)]">
+        <div className="px-[var(--ui-page-px)] pt-1">
           <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
         </div>
 
-        <main className="app-main-bottom-pad flex-1 space-y-[var(--ui-section-gap)] px-[var(--ui-page-px)] pt-[var(--ui-page-pt)]">
+        <main className="app-main-bottom-pad flex-1 space-y-5 px-[var(--ui-page-px)] pt-3 pb-4">
           {children}
         </main>
       </div>

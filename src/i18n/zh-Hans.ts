@@ -272,6 +272,7 @@ export const zhHans = {
   'record.firstSetPrefix': '已设定先攻：',
   'record.firstCleared': '已清除先攻',
   'record.manageSession': '场次',
+  'record.tableSection': '牌桌',
   'common.save': '储存',
   'assignment.showMoreDecks': '显示更多牌组',
   'session.matchCount': '场对局',

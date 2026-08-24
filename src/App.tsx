@@ -241,14 +241,6 @@ export default function App() {
     )
   }
 
-  const pageMeta: Record<TabId, { title: string; subtitle?: string }> = {
-    record: { title: t('page.record.title'), subtitle: t('page.record.subtitle') },
-    stats: { title: t('page.stats.title'), subtitle: t('page.stats.subtitle') },
-    history: { title: t('page.history.title'), subtitle: t('page.history.subtitle') },
-    settings: { title: t('page.settings.title'), subtitle: t('page.settings.subtitle') },
-  }
-  const meta = pageMeta[activeTab]
-
   return (
     <ToastProvider>
       <ThemeBridge />
@@ -257,7 +249,6 @@ export default function App() {
       <GlobalSessionRosterPrompt />
       <SessionDayPrompt />
       <AppShell
-        title={meta.title}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       >

@@ -272,6 +272,7 @@ export const ja = {
   'record.firstSetPrefix': '先攻：',
   'record.firstCleared': '先攻をクリアしました',
   'record.manageSession': 'セッション',
+  'record.tableSection': 'テーブル',
   'common.save': '保存',
   'assignment.showMoreDecks': 'デッキをもっと見る',
   'session.matchCount': '対戦',

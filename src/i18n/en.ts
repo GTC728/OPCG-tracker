@@ -272,6 +272,7 @@ export const en = {
   'record.firstSetPrefix': 'First player: ',
   'record.firstCleared': 'First player cleared',
   'record.manageSession': 'Session',
+  'record.tableSection': 'Tables',
   'common.save': 'Save',
   'assignment.showMoreDecks': 'Show more decks',
   'session.matchCount': 'matches',

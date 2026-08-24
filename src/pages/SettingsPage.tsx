@@ -44,6 +44,7 @@ type SettingsSection =
 
 import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
 import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
+import { PageHero } from '@/components/ui/PageHero'
 
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -74,9 +75,11 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {section === 'home' ? (
         <>
+          <PageHero title={t('page.settings.title')} subtitle={t('page.settings.subtitle')} />
+
           <MetricHeroCard
             metrics={[
               { label: t('settings.playersCount'), value: String(playerCount) },

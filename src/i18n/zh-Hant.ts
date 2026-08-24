@@ -272,6 +272,7 @@ export const zhHant = {
   'record.firstSetPrefix': '已設定先攻：',
   'record.firstCleared': '已清除先攻',
   'record.manageSession': '場次',
+  'record.tableSection': '牌桌',
   'common.save': '儲存',
   'assignment.showMoreDecks': '顯示更多牌組',
   'session.matchCount': '場對局',
