@@ -27,7 +27,7 @@ export function ProfileSection({
         {onViewAll ? (
           <button
             type="button"
-            className={['shrink-0 pt-0.5 text-xs font-semibold', uiLink, uiPressable].join(' ')}
+            className={['shrink-0 text-sm font-semibold', uiLink, uiPressable].join(' ')}
             onClick={() => {
               playInteractionSound('tap')
               onViewAll()

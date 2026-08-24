@@ -8,7 +8,10 @@ import { useToast } from '@/components/ui/Toast'
 import { useSessionDashboard } from '@/hooks/useDerivedStats'
 import { useI18n } from '@/lib/i18n'
 import { formatPercent } from '@/lib/stats'
-import { uiCard } from '@/lib/uiSurface'
+import { getDisplayWinRate } from '@/lib/winRateDisplay'
+import { PageHero } from '@/components/ui/PageHero'
+import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
+import { uiCard, uiRecordCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { canRecordMatchesEffective } from '@/lib/groupPermissions'
 import { useAppStore } from '@/stores/appStore'
@@ -39,30 +42,53 @@ export function RecordPage() {
   const dashboard = useSessionDashboard(currentSessionId ?? null, language)
 
   return (
-    <div className="space-y-3">
-      <section className={[uiCard, 'px-3 py-2.5'].join(' ')}>
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-text-secondary">{t('record.currentSession')}</p>
-          {currentSession ? (
-            <p className="mt-0.5 text-sm font-semibold leading-snug">
-              {currentSession.name}
-              {dashboard ? (
-                <span className="mt-0.5 block text-xs font-normal text-text-secondary">
-                  {dashboard.totalMatches}完成 / {sessionActiveMatches.length}進行
-                  {dashboard.firstPlayerSample > 0
-                    ? ` · 先攻${formatPercent(dashboard.firstPlayerWinRate)}`
-                    : ''}
-                  {dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''}
-                </span>
-              ) : null}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-sm text-text-secondary">{t('settings.noActiveSession')}</p>
-          )}
-        </div>
+    <div className="space-y-4">
+      <section className="space-y-3">
+        {currentSession ? (
+          <>
+            <PageHero
+              eyebrow={t('record.currentSession')}
+              title={currentSession.name}
+              subtitle={
+                dashboard
+                  ? `${dashboard.totalMatches}${t('stats.matchesUnit')} · ${sessionActiveMatches.length}進行${
+                      dashboard.topPlayer ? ` · MVP ${dashboard.topPlayer.name}` : ''
+                    }`
+                  : undefined
+              }
+            />
+            {dashboard ? (
+              <MetricHeroCard
+                metrics={[
+                  ...(dashboard.firstPlayerSample > 0
+                    ? [
+                        {
+                          label: t('stats.firstWinRate'),
+                          value: formatPercent(dashboard.firstPlayerWinRate),
+                        },
+                      ]
+                    : []),
+                  ...(dashboard.topPlayer
+                    ? [
+                        {
+                          label: t('stats.mvp'),
+                          value: formatPercent(
+                            getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total),
+                          ),
+                          accent: true,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : null}
+          </>
+        ) : (
+          <PageHero eyebrow={t('record.currentSession')} title={t('settings.noActiveSession')} />
+        )}
 
         {currentSession ? (
-          <div className="mt-2 space-y-2">
+          <div className={[uiRecordCard, 'space-y-2 p-3'].join(' ')}>
             <div className="grid grid-cols-3 gap-2">
               <Button
                 variant="secondary"

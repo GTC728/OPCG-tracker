@@ -17,6 +17,8 @@ import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
 import { getMatchFilterPlayers } from '@/lib/importRoster'
 import { useI18n } from '@/lib/i18n'
 import { uiCard } from '@/lib/uiSurface'
+import { uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
+import { playInteractionSound } from '@/lib/motion'
 import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, MatchEditInput, Player } from '@/types'
@@ -342,6 +344,22 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {datePresetOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={datePreset === option.value ? uiPillFilterActive : uiPillFilter}
+            onClick={() => {
+              playInteractionSound('toggle')
+              setDatePreset(option.value)
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       <section className={[uiCard, 'p-4'].join(' ')}>
         <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
         <div className="mt-3 space-y-3">

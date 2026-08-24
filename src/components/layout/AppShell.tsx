@@ -75,9 +75,8 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
               type="button"
               aria-label={label}
               aria-current={active ? 'page' : undefined}
-              title={label}
               className={[
-                'flex min-h-11 flex-col items-center justify-center px-1 py-2 transition-colors',
+                'flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition-colors',
                 uiPressable,
                 active ? 'ui-nav-active text-brand-400' : 'text-text-secondary hover:text-text-primary',
               ].join(' ')}
@@ -87,6 +86,7 @@ function BottomNav({ activeTab, onChange }: BottomNavProps) {
               }}
             >
               <NavIcon name={tab.id} />
+              <span className="max-w-full truncate text-[10px] font-medium leading-none">{label}</span>
             </button>
           )
         })}
@@ -116,7 +116,7 @@ export function AppShell({
       <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface [@media(min-width:768px)_and_(orientation:landscape)]:max-w-5xl">
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-[var(--ui-header-py)]'].join(' ')}>
           <div className="flex items-center justify-between gap-2">
-            <h1 className="min-w-0 flex-1 truncate text-base font-bold leading-snug tracking-tight">{title}</h1>
+            <h1 className="min-w-0 flex-1 truncate text-lg font-bold leading-snug tracking-tight">{title}</h1>
             <AppBrandCredit />
           </div>
         </header>

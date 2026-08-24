@@ -21,7 +21,24 @@ export const uiListRow = [
 
 export const uiLabel = 'text-xs font-medium text-text-secondary'
 
-export const uiSectionTitle = 'text-base font-semibold text-text-primary'
+export const uiSectionTitle = 'text-xl font-bold tracking-tight text-text-primary'
+
+export const uiPageEyebrow = 'text-xs font-medium text-text-secondary'
+
+export const uiHeroTitle = 'text-2xl font-bold tracking-tight text-text-primary'
+
+export const uiRecordCard = 'ui-record-card rounded-2xl'
+
+export const uiGroupedSection = 'ui-grouped-section'
+
+export const uiGroupedRow =
+  'ui-grouped-row flex w-full items-center gap-3 px-4 py-3 text-left'
+
+export const uiPillFilter = 'ui-pill-filter'
+
+export const uiPillFilterActive = 'ui-pill-filter ui-pill-filter--active'
+
+export const uiDeckArtCard = 'ui-deck-art-card shrink-0 snap-start'
 
 export const uiPill =
   'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide'

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
+import { DeckArtCard } from '@/components/deck/DeckArtCard'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
 import { getLinkedPlayer } from '@/lib/profileClaim'
 import { hasPersonalProfile } from '@/lib/personalProfile'
@@ -8,6 +10,7 @@ import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
+import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
 import { uiCard, uiCardInteractive, uiGlassCard, uiLink, uiSectionTitle } from '@/lib/uiSurface'
 import { MetaTransferChart } from '@/components/stats/MetaTransferChart'
 import { MetaTransferDetailSheet } from '@/components/stats/MetaTransferDetailSheet'
@@ -563,9 +566,15 @@ function EnvironmentOverviewSection({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold">{t('stats.meta.overview')}</h2>
+      <h2 className={uiSectionTitle}>{t('stats.meta.overview')}</h2>
+      <MetricHeroCard
+        metrics={[
+          { label: t('stats.totalMatches'), value: String(summary.totalMatches) },
+          { label: t('stats.activePlayers'), value: String(summary.uniquePlayers) },
+          { label: t('stats.deckVariety'), value: String(summary.uniqueDecks) },
+        ]}
+      />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        <SummaryCard label={t('stats.totalMatches')} value={String(summary.totalMatches)} />
         {averageMatchDurationMs !== null ? (
           <SummaryCard
             label={t('stats.avgMatchDuration')}
@@ -589,8 +598,6 @@ function EnvironmentOverviewSection({
             detail={`${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`}
           />
         ) : null}
-        <SummaryCard label={t('stats.activePlayers')} value={String(summary.uniquePlayers)} />
-        <SummaryCard label={t('stats.deckVariety')} value={String(summary.uniqueDecks)} />
         <SummaryCard
           label={t('stats.metaDiversity')}
           value={`${summary.diversityPercent}%`}
@@ -610,13 +617,13 @@ function DeckListSection({
   decks: Deck[]
   onSelectDeck: (deckId: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const sorted = sortStatsByUsage(stats)
   const totalAppearances = sorted.reduce((sum, stat) => sum + stat.total, 0)
   if (!sorted.length || !totalAppearances) {
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('stats.deckList')}</h2>
+        <h2 className={uiSectionTitle}>{t('stats.deckList')}</h2>
         <EmptyState>{t('stats.emptyAfterMatches')}</EmptyState>
       </section>
     )
@@ -632,13 +639,29 @@ function DeckListSection({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{t('stats.deckList')}</h2>
+        <h2 className={uiSectionTitle}>{t('stats.deckList')}</h2>
         <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
           {t('stats.deckListCount')
             .replace('{n}', String(sorted.length))
             .replace('{total}', String(totalAppearances))}
         </span>
       </div>
+      <HorizontalRail>
+        {sorted.slice(0, 8).map((stat) => {
+          const deck = decks.find((item) => item.id === stat.id)
+          if (!deck) return null
+          const usage = (stat.total / totalAppearances) * 100
+          return (
+            <DeckArtCard
+              key={stat.id}
+              deck={deck}
+              language={language}
+              subtitle={`${usage.toFixed(0)}% · ${formatPercent(getDisplayWinRate(stat.wins, stat.total))}`}
+              onClick={() => onSelectDeck(stat.id)}
+            />
+          )
+        })}
+      </HorizontalRail>
       <article className={[uiCard, 'divide-y divide-white/[0.06] overflow-hidden'].join(' ')}>
         {sorted.map((stat) => {
           const usage = (stat.total / totalAppearances) * 100

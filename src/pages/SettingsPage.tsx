@@ -42,34 +42,8 @@ type SettingsSection =
   | 'data'
   | 'system'
 
-function SettingsRow({
-  title,
-  description,
-  meta,
-  onClick,
-}: {
-  title: string
-  description: string
-  meta?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-3 rounded-xl bg-surface-elevated px-3 py-2.5 text-left ring-1 ring-surface-muted transition hover:bg-surface-muted active:scale-[0.99]"
-      onClick={onClick}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block text-xs text-text-secondary line-clamp-1">{description}</span>
-      </span>
-      <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
-        {meta ? <span className="max-w-[6.5rem] truncate tabular-nums">{meta}</span> : null}
-        <span aria-hidden className="text-sm leading-none">›</span>
-      </span>
-    </button>
-  )
-}
+import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
+import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
 
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -103,82 +77,63 @@ export function SettingsPage() {
     <div className="space-y-3">
       {section === 'home' ? (
         <>
-          <section className="rounded-xl bg-surface-elevated p-3">
-            <h2 className="text-xs font-semibold text-text-secondary">{t('settings.dataOverview')}</h2>
-            <dl className="mt-2 grid grid-cols-4 gap-2 text-center">
-              <div>
-                <dt className="text-[10px] text-text-secondary">{t('settings.playersCount')}</dt>
-                <dd className="text-xl font-bold">{playerCount}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-text-secondary">{t('settings.decksCount')}</dt>
-                <dd className="text-xl font-bold">{deckCount}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-text-secondary">{t('settings.matchesCount')}</dt>
-                <dd className="text-xl font-bold">{matchCount}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-text-secondary">{t('settings.activeCount')}</dt>
-                <dd className="text-xl font-bold">{activeMatches}</dd>
-              </div>
-            </dl>
-          </section>
+          <MetricHeroCard
+            metrics={[
+              { label: t('settings.playersCount'), value: String(playerCount) },
+              { label: t('settings.decksCount'), value: String(deckCount) },
+              { label: t('settings.matchesCount'), value: String(matchCount) },
+              { label: t('settings.activeCount'), value: String(activeMatches) },
+            ]}
+          />
 
-          <section className="space-y-1.5">
-            <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
-              {t('workspace.sectionTitle')}
-            </p>
-            <SettingsRow
+          <GroupedListSection title={t('workspace.sectionTitle')}>
+            <GroupedListRow
               title={t('lobby.title')}
               description={t('lobby.homeDescV501')}
               meta={workspaceMeta}
               onClick={() => setSection('lobby-browse')}
             />
-          </section>
+          </GroupedListSection>
 
-          <section className="space-y-1.5">
-            <p className="px-1 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
-              {t('workspace.personalSection')}
-            </p>
-            <SettingsRow
+          <GroupedListSection title={t('workspace.personalSection')}>
+            <GroupedListRow
               title={t('settings.profile')}
               description={t('settings.profileDesc')}
               onClick={() => setSection('profile')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('workspace.accountTitle')}
               description={t('workspace.accountDesc')}
               onClick={() => setSection('account')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('settings.appearance')}
               description={t('settings.appearanceDesc')}
               onClick={() => setSection('appearance')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('settings.language')}
               description={t('settings.languageDesc')}
               meta={languageLabels.find((item) => item.value === language)?.label}
               onClick={() => setSection('language')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('settings.leaders')}
               description={t('settings.leadersDesc')}
               meta={`${deckCount}`}
               onClick={() => setSection('leaders')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('settings.dataTools')}
               description={t('settings.dataToolsDesc')}
               onClick={() => setSection('data')}
             />
-            <SettingsRow
+            <GroupedListRow
               title={t('settings.system')}
               description={t('settings.systemDesc')}
               onClick={() => setSection('system')}
             />
-          </section>
+          </GroupedListSection>
 
           <section className="rounded-xl bg-surface-elevated p-3 text-sm text-text-secondary">
             <h2 className="text-sm font-semibold text-text-primary">{t('settings.about')}</h2>

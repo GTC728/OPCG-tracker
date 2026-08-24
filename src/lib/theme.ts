@@ -12,19 +12,19 @@ const accentPalettes: Record<
 }
 
 const darkSurfaces = {
-  surface: '#0b1220',
-  elevated: '#151f32',
-  muted: '#2a3548',
-  textPrimary: '#f1f5f9',
-  textSecondary: '#94a3b8',
+  surface: '#000000',
+  elevated: '#1c1c1e',
+  muted: '#2c2c2e',
+  textPrimary: '#ffffff',
+  textSecondary: '#98989d',
 }
 
 const lightSurfaces = {
-  surface: '#eef2f7',
+  surface: '#f2f2f7',
   elevated: '#ffffff',
-  muted: '#cbd5e1',
-  textPrimary: '#0f172a',
-  textSecondary: '#475569',
+  muted: '#d1d1d6',
+  textPrimary: '#000000',
+  textSecondary: '#6c6c70',
 }
 
 function resolveThemeMode(theme: ThemeMode): 'dark' | 'light' {

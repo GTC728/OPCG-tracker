@@ -9,6 +9,15 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.4.0 - 2026-08-25
+
+### Changed
+
+- **Apple-inspired UI (light + dark)**: iOS-style grouped lists, hero metrics, pill filters, deck cover cards, and capsule segmented controls — both themes via Settings → Appearance.
+- **Theme surfaces**: Dark `#000` / `#1c1c1e` and light `#f2f2f7` / `#ffffff` palettes (Apple Music / App Store direction).
+- **Bottom nav**: Icon + text labels; taller tab bar.
+- **Record / Settings / Stats / History / Profile**: Page heroes, metric summary cards, horizontal deck rails where applicable.
+
 ## V5.3.3 - 2026-08-03
 
 ### Changed
