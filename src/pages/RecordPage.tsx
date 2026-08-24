@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { MatchSummaryCard } from '@/components/match/MatchSummaryCard'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
 import { SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SessionManager } from '@/components/session/SessionManager'
+import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useSessionDashboard } from '@/hooks/useDerivedStats'
@@ -17,6 +19,14 @@ import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { canRecordMatchesEffective } from '@/lib/groupPermissions'
 import { useAppStore } from '@/stores/appStore'
+import type { Match } from '@/types'
+
+function recentSessionMatches(matches: Match[], sessionId: string, limit = 4): Match[] {
+  return matches
+    .filter((match) => match.sessionId === sessionId && match.finishedAt)
+    .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
+    .slice(0, limit)
+}
 
 export function RecordPage() {
   const { t, language } = useI18n()
@@ -35,13 +45,25 @@ export function RecordPage() {
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const createNewSession = useAppStore((s) => s.createNewSession)
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
-  const [expanded, setExpanded] = useState(false)
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
+  const [sessionManageOpen, setSessionManageOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
   const dashboard = useSessionDashboard(currentSessionId ?? null, language)
+  const recentMatches = useMemo(
+    () => (currentSessionId ? recentSessionMatches(matches, currentSessionId) : []),
+    [matches, currentSessionId],
+  )
+
+  const openSessionManage = () => {
+    if (currentSession) {
+      setSessionManageOpen(true)
+      return
+    }
+    setSessionSheetOpen(true)
+  }
 
   return (
     <div className="space-y-4">
@@ -86,130 +108,24 @@ export function RecordPage() {
             })()}
           </>
         ) : (
-          <PageHero eyebrow={t('record.currentSession')} title={t('settings.noActiveSession')} />
+          <>
+            <PageHero eyebrow={t('record.currentSession')} title={t('settings.noActiveSession')} />
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                className="min-h-10 text-xs"
+                onClick={() => {
+                  createNewSession()
+                  toast.success(t('record.sessionStarted'))
+                }}
+              >
+                {t('record.newSession')}
+              </Button>
+              <Button variant="secondary" className="min-h-10 text-xs" onClick={() => setSessionSheetOpen(true)}>
+                {t('record.manageSession')}
+              </Button>
+            </div>
+          </>
         )}
-
-        {currentSession ? (
-          <GroupedListSection>
-            <GroupedListRow
-              title={t('record.players')}
-              onClick={() => openSessionRosterPrompt(currentSession.id)}
-            />
-            <GroupedListRow
-              title={t('record.manageSession')}
-              onClick={() => setSessionSheetOpen(true)}
-            />
-            <GroupedListRow
-              title={t('record.exportSession')}
-              onClick={() => setSessionShareOpen(true)}
-            />
-            <GroupedListRow
-              title={t('session.exportExcel')}
-              onClick={() => {
-                if (exportingExcel) return
-                void (async () => {
-                  setExportingExcel(true)
-                  try {
-                    const { exportSessionExcel } = await import('@/lib/excelExport')
-                    const { getAppState } = await import('@/stores/appStore')
-                    await exportSessionExcel(getAppState(), currentSession.id)
-                    toast.success(t('session.exportExcelSuccess'))
-                  } catch (caught) {
-                    toast.error(caught instanceof Error ? caught.message : t('session.exportExcelFailed'))
-                  } finally {
-                    setExportingExcel(false)
-                  }
-                })()
-              }}
-            />
-            <GroupedListRow
-              title={t('record.end')}
-              onClick={() => {
-                endCurrentSession()
-                toast.success(t('record.sessionEnded'))
-              }}
-            />
-          </GroupedListSection>
-        ) : (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button
-              className="min-h-10 text-xs"
-              onClick={() => {
-                createNewSession()
-                toast.success(t('record.sessionStarted'))
-              }}
-            >
-              {t('record.newSession')}
-            </Button>
-            <Button
-              variant="secondary"
-              className="min-h-10 text-xs"
-              onClick={() => setSessionSheetOpen(true)}
-            >
-              {t('record.manageSession')}
-            </Button>
-          </div>
-        )}
-
-        {currentSession ? (
-          <button
-            type="button"
-            className="mt-2 w-full text-center text-[11px] text-brand-400 outline-none"
-            onClick={() => setExpanded((value) => !value)}
-          >
-            {expanded ? '收起詳情 ▲' : '展開詳情 ▼'}
-          </button>
-        ) : null}
-
-        {expanded && currentSession && dashboard ? (
-          <dl className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-muted pt-2 text-xs">
-            <div className="rounded-lg bg-surface px-2 py-1.5">
-              <dt className="text-text-secondary">{t('record.start')}</dt>
-              <dd className="font-semibold">{formatDateTime(currentSession.startedAt)}</dd>
-            </div>
-            <div className="rounded-lg bg-surface px-2 py-1.5">
-              <dt className="text-text-secondary">{t('record.completedActive')}</dt>
-              <dd className="font-semibold">
-                {dashboard.totalMatches} / {sessionActiveMatches.length}
-              </dd>
-            </div>
-            <div className="rounded-lg bg-surface px-2 py-1.5">
-              <dt className="text-text-secondary">{t('record.mvp')}</dt>
-              <dd className="font-semibold">
-                {dashboard.topPlayer ? (
-                  <>
-                    <span className="block truncate">{dashboard.topPlayer.name}</span>
-                    <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
-                      {formatPercent(dashboard.topPlayer.winRate)} · {dashboard.topPlayer.wins}W
-                      {dashboard.topPlayer.losses}L
-                    </span>
-                  </>
-                ) : (
-                  '—'
-                )}
-              </dd>
-            </div>
-            <div className="rounded-lg bg-surface px-2 py-1.5">
-              <dt className="text-text-secondary">{t('record.topDeck')}</dt>
-              <dd className="font-semibold">
-                {dashboard.topDeck ? (
-                  <span className="block min-w-0 truncate">
-                    <DeckLabel
-                      deck={decks.find((deck) => deck.id === dashboard.topDeck?.id)}
-                      showCode
-                    />
-                    <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
-                      {formatPercent(dashboard.topDeck.winRate)} · {dashboard.topDeck.wins}W
-                      {dashboard.topDeck.losses}L
-                    </span>
-                  </span>
-                ) : (
-                  '—'
-                )}
-              </dd>
-            </div>
-          </dl>
-        ) : null}
       </section>
 
       {readOnly ? (
@@ -219,10 +135,129 @@ export function RecordPage() {
         </section>
       ) : (
         <section className="space-y-3">
-          <SectionHeader title={t('record.tableSection')} />
+          <SectionHeader title={t('record.tableSection')} action={t('lobby.manage')} onAction={openSessionManage} />
           <MatchRecorder />
         </section>
       )}
+
+      {currentSession && recentMatches.length ? (
+        <section className="space-y-2">
+          <SectionHeader title={t('record.recentMatches')} />
+          <div className="space-y-2">
+            {recentMatches.map((match) => (
+              <MatchSummaryCard key={match.id} match={match} players={players} decks={decks} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <BottomSheet
+        open={sessionManageOpen}
+        onClose={() => setSessionManageOpen(false)}
+        title={t('record.manageSession')}
+      >
+        {currentSession ? (
+          <div className="space-y-4">
+            {dashboard ? (
+              <dl className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-surface px-2 py-1.5">
+                  <dt className="text-text-secondary">{t('record.start')}</dt>
+                  <dd className="font-semibold">{formatDateTime(currentSession.startedAt)}</dd>
+                </div>
+                <div className="rounded-lg bg-surface px-2 py-1.5">
+                  <dt className="text-text-secondary">{t('record.completedActive')}</dt>
+                  <dd className="font-semibold">
+                    {dashboard.totalMatches} / {sessionActiveMatches.length}
+                  </dd>
+                </div>
+                <div className="rounded-lg bg-surface px-2 py-1.5">
+                  <dt className="text-text-secondary">{t('record.mvp')}</dt>
+                  <dd className="font-semibold">
+                    {dashboard.topPlayer ? (
+                      <>
+                        <span className="block truncate">{dashboard.topPlayer.name}</span>
+                        <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
+                          {formatPercent(dashboard.topPlayer.winRate)} · {dashboard.topPlayer.wins}W
+                          {dashboard.topPlayer.losses}L
+                        </span>
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
+                </div>
+                <div className="rounded-lg bg-surface px-2 py-1.5">
+                  <dt className="text-text-secondary">{t('record.topDeck')}</dt>
+                  <dd className="font-semibold">
+                    {dashboard.topDeck ? (
+                      <span className="block min-w-0 truncate">
+                        <DeckLabel deck={decks.find((deck) => deck.id === dashboard.topDeck?.id)} showCode />
+                        <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
+                          {formatPercent(dashboard.topDeck.winRate)} · {dashboard.topDeck.wins}W
+                          {dashboard.topDeck.losses}L
+                        </span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
+
+            <GroupedListSection>
+              <GroupedListRow
+                title={t('record.players')}
+                onClick={() => {
+                  setSessionManageOpen(false)
+                  openSessionRosterPrompt(currentSession.id)
+                }}
+              />
+              <GroupedListRow
+                title={t('record.manageSession')}
+                onClick={() => {
+                  setSessionManageOpen(false)
+                  setSessionSheetOpen(true)
+                }}
+              />
+              <GroupedListRow
+                title={t('record.exportSession')}
+                onClick={() => {
+                  setSessionManageOpen(false)
+                  setSessionShareOpen(true)
+                }}
+              />
+              <GroupedListRow
+                title={t('session.exportExcel')}
+                onClick={() => {
+                  if (exportingExcel) return
+                  void (async () => {
+                    setExportingExcel(true)
+                    try {
+                      const { exportSessionExcel } = await import('@/lib/excelExport')
+                      const { getAppState } = await import('@/stores/appStore')
+                      await exportSessionExcel(getAppState(), currentSession.id)
+                      toast.success(t('session.exportExcelSuccess'))
+                    } catch (caught) {
+                      toast.error(caught instanceof Error ? caught.message : t('session.exportExcelFailed'))
+                    } finally {
+                      setExportingExcel(false)
+                    }
+                  })()
+                }}
+              />
+              <GroupedListRow
+                title={t('record.end')}
+                onClick={() => {
+                  endCurrentSession()
+                  setSessionManageOpen(false)
+                  toast.success(t('record.sessionEnded'))
+                }}
+              />
+            </GroupedListSection>
+          </div>
+        ) : null}
+      </BottomSheet>
 
       <SessionManager
         compact

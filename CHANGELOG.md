@@ -9,6 +9,16 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.1 - 2026-08-25
+
+### Changed
+
+- **Canvas-complete Apple UI**: All five reference screens aligned — Record (table grid + recent matches, session manage sheet), Stats (accent pill tabs + color meta chips), Settings (workspace hero + separated groups), History (clean match cards), Profile (hero + form bars + donut deck list + achievement rail).
+
+### Fixed
+
+- **Email login**: Magic-link sign-in uses Supabase `signInWithOtp` instead of raw `fetch`, with clearer network error messages when offline.
+
 ## V5.5.0 - 2026-08-25
 
 ### Changed

@@ -1,5 +1,5 @@
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
-import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
+import { ColorMetaPills } from '@/components/stats/ColorMetaPills'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
 import { RankListRow } from '@/components/ui/RankListRow'
@@ -132,7 +132,7 @@ export function StatsOverviewPanel({
       </section>
 
       {deckUsageSlices.length ? (
-        <ColorMetaPieChart deckUsageSlices={deckUsageSlices} title={t('stats.colorMetaPie')} compact />
+        <ColorMetaPills deckUsageSlices={deckUsageSlices} title={t('stats.colorMetaPie')} />
       ) : null}
     </div>
   )

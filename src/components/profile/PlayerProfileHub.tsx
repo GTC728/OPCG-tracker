@@ -5,6 +5,8 @@ import { DeckPreviewCard } from '@/components/profile/DeckPreviewCard'
 import { ProfileIdentityCard } from '@/components/profile/ProfileIdentityCard'
 import { ProfilePreviewCard } from '@/components/profile/ProfilePreviewCard'
 import { ProfileSection } from '@/components/profile/ProfileSection'
+import { RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { RecentFormBars } from '@/components/profile/RecentFormBars'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { DeckUsagePieChart, buildDeckUsageFillMap } from '@/components/stats/DeckUsagePieChart'
@@ -129,53 +131,56 @@ export function PlayerProfileHub({
         title={player.name}
         stat={stat}
         streak={streak}
-        recentForm={recentForm}
-        recentMatches={recentMatches}
-        playerId={player.id}
         onBack={onBack}
         backLabel={backLabel}
         onShare={onShare}
         onViewDetails={() => setPanel('overview')}
       />
 
-      <AchievementsPreviewRail
-        achievements={previewAchievements}
-        variant="profile"
-        previewLimit={PREVIEW_LIMIT}
-        onOpenAll={() => setPanel('achievements')}
-      />
+      <section className="space-y-2">
+        <SectionHeader title={t('profile.recentForm')} />
+        <div className="rounded-2xl border border-[var(--ui-border)] bg-surface-elevated px-3 py-3">
+          <RecentMatchWinStrip matches={recentMatches} playerId={player.id} />
+        </div>
+      </section>
 
-      <ProfileSection title={t('profile.panel.decks')} onViewAll={() => setPanel('decks')}>
+      <section className="space-y-2">
+        <SectionHeader title={t('profile.panel.decks')} action={t('achievements.viewAll')} onAction={() => setPanel('decks')} />
         {deckUsage.length ? (
           <div className={[uiGlassCard, 'space-y-3 p-3 sm:p-4'].join(' ')}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex shrink-0 justify-center sm:justify-start">
+            <div className="flex items-start gap-3">
+              <div className="flex shrink-0 justify-center">
                 <DeckUsagePieChart slices={deckUsage} title="" inline />
               </div>
-              <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-                {deckStats.slice(0, 4).map((item) => {
+              <div className="min-w-0 flex-1 space-y-2">
+                {deckStats.slice(0, 3).map((item, index) => {
                   const deck = decks.find((d) => d.id === item.deckId)
                   if (!deck) return null
                   const usage = deckUsageById.get(item.deckId)
                   return (
-                    <DeckPreviewCard
+                    <button
                       key={item.deckId}
-                      deck={deck}
-                      language={language}
-                      layout="grid"
-                      usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
-                      winRate={item.winRate}
-                      record={`${item.wins}W-${item.losses}L`}
-                      accentFill={deckUsageFillMap.get(item.deckId)}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 text-left"
                       onClick={() => onOpenDeck(item.deckId)}
-                    />
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="w-4 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
+                        <span className="truncate text-sm font-medium">
+                          {deck.setCode} {deck.leaderName}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-xs text-text-secondary">
+                        {usage ? `${Math.round(usage.percentage * 100)}%` : '—'}
+                      </span>
+                    </button>
                   )
                 })}
               </div>
             </div>
-            {deckStats.length > 4 ? (
+            {deckStats.length > 3 ? (
               <HorizontalRail>
-                {deckStats.slice(4, PREVIEW_LIMIT).map((item) => {
+                {deckStats.slice(3, PREVIEW_LIMIT).map((item) => {
                   const deck = decks.find((d) => d.id === item.deckId)
                   if (!deck) return null
                   const usage = deckUsageById.get(item.deckId)
@@ -199,7 +204,21 @@ export function PlayerProfileHub({
         ) : (
           <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
         )}
-      </ProfileSection>
+      </section>
+
+      <section className="space-y-2">
+        <SectionHeader
+          title={t('profile.panel.achievements')}
+          action={t('achievements.viewAll')}
+          onAction={() => setPanel('achievements')}
+        />
+        <AchievementsPreviewRail
+          achievements={previewAchievements}
+          variant="profile"
+          previewLimit={PREVIEW_LIMIT}
+          onOpenAll={() => setPanel('achievements')}
+        />
+      </section>
 
       <ProfileSection title={t('profile.panel.rivals')} onViewAll={() => setPanel('rivals')}>
         <HorizontalRail>

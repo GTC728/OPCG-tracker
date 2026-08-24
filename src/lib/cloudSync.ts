@@ -99,27 +99,14 @@ export async function getCloudSession(): Promise<{ session: Session | null; user
 }
 
 export async function signInWithEmail(email: string): Promise<void> {
-  const config = getSupabaseConfig()
-  if (!config) throw new Error('尚未設定 Supabase')
-
-  const response = await fetch(`${config.url}/auth/v1/otp`, {
-    method: 'POST',
-    headers: {
-      apikey: config.key,
-      authorization: `Bearer ${config.key}`,
-      'content-type': 'application/json',
+  const supabase = await requireClient()
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim(),
+    options: {
+      emailRedirectTo: window.location.origin,
     },
-    body: JSON.stringify({
-      email,
-      create_user: true,
-      gotrue_meta_security: {},
-      email_redirect_to: window.location.origin,
-    }),
   })
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    throw new Error(body?.msg ?? body?.message ?? '登入連結寄送失敗')
-  }
+  if (error) throw error
 }
 
 async function requireUser() {

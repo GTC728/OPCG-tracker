@@ -14,8 +14,6 @@ import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import { AppCredit } from '@/components/layout/AppCredit'
 import {
   countListedPlayers,
-  countVisibleActiveMatches,
-  countVisibleMatches,
 } from '@/lib/entityVisibility'
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { languageLabels, useI18n } from '@/lib/i18n'
@@ -43,8 +41,8 @@ type SettingsSection =
   | 'system'
 
 import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
-import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
 import { PageHero } from '@/components/ui/PageHero'
+import { WorkspaceHeroCard } from '@/components/ui/WorkspaceHeroCard'
 
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -60,15 +58,24 @@ export function SettingsPage() {
   const appState = useAppStore()
   const lastGroupCode = useAppStore((state) => state.settings.lastGroupCode)
   const groupMemberRole = useAppStore((state) => state.settings.groupMemberRole)
+  const profileDisplayName = useAppStore((state) => state.settings.profileDisplayName)
+  const lastGroupSyncAt = useAppStore((state) => state.settings.lastGroupSyncAt)
   const playerCount = countListedPlayers(appState)
   const deckCount = appState.decks.filter((deck) => !deck.archived).length
-  const matchCount = countVisibleMatches(appState)
-  const currentSessionId = appState.currentSessionId
-  const activeMatches = countVisibleActiveMatches(appState, currentSessionId ?? undefined)
 
   const workspaceMeta = lastGroupCode
     ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
     : t('workspace.local')
+
+  const workspaceTitle = profileDisplayName?.trim() || lastGroupCode || t('workspace.local')
+  const workspaceSubtitle = lastGroupCode
+    ? lastGroupSyncAt
+      ? t('systemStatus.bannerSynced').replace(
+          '{time}',
+          new Date(lastGroupSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        )
+      : `${playerCount} ${t('settings.playersCount')}`
+    : t('workspace.localDataNote')
 
   const navigateLobby = (target: LobbyNavigateTarget) => {
     setSection(`lobby-${target}` as SettingsSection)
@@ -80,60 +87,66 @@ export function SettingsPage() {
         <>
           <PageHero title={t('page.settings.title')} subtitle={t('page.settings.subtitle')} />
 
-          <MetricHeroCard
-            metrics={[
-              { label: t('settings.playersCount'), value: String(playerCount) },
-              { label: t('settings.decksCount'), value: String(deckCount) },
-              { label: t('settings.matchesCount'), value: String(matchCount) },
-              { label: t('settings.activeCount'), value: String(activeMatches) },
-            ]}
+          <WorkspaceHeroCard
+            title={workspaceTitle}
+            subtitle={workspaceSubtitle}
+            pillLabel={lastGroupCode ? t('lobby.title') : undefined}
+            onClick={lastGroupCode ? () => setSection('lobby-browse') : undefined}
           />
 
-          <GroupedListSection title={t('workspace.sectionTitle')}>
+          <GroupedListSection title={t('workspace.personalSection')} variant="separated">
             <GroupedListRow
-              title={t('lobby.title')}
-              description={t('lobby.homeDescV501')}
-              meta={workspaceMeta}
-              onClick={() => setSection('lobby-browse')}
-            />
-          </GroupedListSection>
-
-          <GroupedListSection title={t('workspace.personalSection')}>
-            <GroupedListRow
+              variant="separated"
               title={t('settings.profile')}
-              description={t('settings.profileDesc')}
               onClick={() => setSection('profile')}
             />
             <GroupedListRow
-              title={t('workspace.accountTitle')}
-              description={t('workspace.accountDesc')}
-              onClick={() => setSection('account')}
-            />
-            <GroupedListRow
+              variant="separated"
               title={t('settings.appearance')}
-              description={t('settings.appearanceDesc')}
               onClick={() => setSection('appearance')}
             />
             <GroupedListRow
+              variant="separated"
               title={t('settings.language')}
-              description={t('settings.languageDesc')}
               meta={languageLabels.find((item) => item.value === language)?.label}
               onClick={() => setSection('language')}
             />
+          </GroupedListSection>
+
+          <GroupedListSection title={t('workspace.groupSection')} variant="separated">
             <GroupedListRow
+              variant="separated"
+              title={t('lobby.title')}
+              meta={workspaceMeta}
+              onClick={() => setSection('lobby-browse')}
+            />
+            <GroupedListRow
+              variant="separated"
+              title={t('workspace.syncStatus')}
+              onClick={() => setSection('lobby-sync')}
+            />
+            <GroupedListRow
+              variant="separated"
               title={t('settings.leaders')}
-              description={t('settings.leadersDesc')}
               meta={`${deckCount}`}
               onClick={() => setSection('leaders')}
             />
+          </GroupedListSection>
+
+          <GroupedListSection title={t('workspace.dataSection')} variant="separated">
             <GroupedListRow
+              variant="separated"
+              title={t('workspace.accountTitle')}
+              onClick={() => setSection('account')}
+            />
+            <GroupedListRow
+              variant="separated"
               title={t('settings.dataTools')}
-              description={t('settings.dataToolsDesc')}
               onClick={() => setSection('data')}
             />
             <GroupedListRow
+              variant="separated"
               title={t('settings.system')}
-              description={t('settings.systemDesc')}
               onClick={() => setSection('system')}
             />
           </GroupedListSection>

@@ -322,6 +322,43 @@ textarea:focus-visible {
   background: color-mix(in srgb, white 12%, var(--color-surface-elevated));
 }
 
+.ui-pill-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--glass-inset-bg);
+  border: 1px solid transparent;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.ui-pill-tab--active {
+  color: white;
+  background: var(--color-brand-500);
+  border-color: transparent;
+}
+
+.ui-separated-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--ui-border);
+  transition: background-color 150ms ease;
+}
+
+.ui-separated-row:hover {
+  background: color-mix(in srgb, var(--color-surface-muted) 12%, var(--color-surface-elevated));
+}
+
 .ui-deck-art-card {
   width: 8.5rem;
   border-radius: 1rem;

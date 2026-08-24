@@ -231,30 +231,36 @@ function HistoryMatchCard({
 }) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
+  const left = getPlayerName(players, match.player1Id)
+  const right = getPlayerName(players, match.player2Id)
+  const winner = match.winnerPlayerId ? getPlayerName(players, match.winnerPlayerId) : null
+  const time = formatDateTime(match.finishedAt).split(' ').slice(-1)[0] ?? ''
 
   return (
     <article className={uiCard}>
       <button
         type="button"
-        className="block w-full px-3 py-2.5 text-left outline-none"
+        className="block w-full px-3.5 py-3 text-left outline-none"
         onClick={() => setExpanded((value) => !value)}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="shrink-0 text-xs font-semibold text-brand-500">#{match.matchNumber}</span>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-xs tabular-nums text-text-secondary">
-              {formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
+          <p className="truncate text-sm font-semibold">
+            {left} vs {right}
+          </p>
+          {winner ? (
+            <span className="shrink-0 rounded-md bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">
+              {winner === left ? 'W' : 'L'}
             </span>
-            <span className="text-xs text-brand-400">{expanded ? '▲' : '▼'}</span>
-          </div>
+          ) : null}
         </div>
         <div className="mt-1.5 min-w-0">
-          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors showDuration />
+          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors={false} />
         </div>
+        <p className="mt-1 text-xs text-text-secondary">{time}</p>
       </button>
 
       {expanded ? (
-        <div className="border-t border-surface-muted px-3 pb-3 pt-2">
+        <div className="border-t border-surface-muted px-3.5 pb-3 pt-2">
           <p className="text-xs text-text-secondary">完成：{formatDateTime(match.finishedAt)}</p>
           <p className="mt-1 text-xs text-text-secondary">
             先攻：{match.firstPlayerId ? getPlayerName(players, match.firstPlayerId) : '未記錄'}

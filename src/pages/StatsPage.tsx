@@ -7,6 +7,7 @@ import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
 import { getLinkedPlayer } from '@/lib/profileClaim'
 import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
+import { PillTabBar } from '@/components/ui/PillTabBar'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
@@ -96,8 +97,7 @@ function SectionTabs({
 }) {
   const { t } = useI18n()
   return (
-    <SegmentedControl
-      className="grid-cols-3"
+    <PillTabBar
       value={activeSection}
       onChange={onChange}
       options={[

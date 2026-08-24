@@ -49,7 +49,17 @@ export function AccountBackupPanel() {
 
   function getFriendlyCloudError(caught: unknown, fallback: string): string {
     const rawMessage = caught instanceof Error ? caught.message : fallback
-    return rawMessage.toLowerCase().includes('rate limit') ? t('cloud.rateLimited') : rawMessage
+    const lowered = rawMessage.toLowerCase()
+    if (lowered.includes('rate limit')) return t('cloud.rateLimited')
+    if (
+      lowered.includes('failed to fetch') ||
+      lowered.includes('networkerror') ||
+      lowered.includes('load failed') ||
+      lowered.includes('network request failed')
+    ) {
+      return t('cloud.networkError')
+    }
+    return rawMessage
   }
 
   async function refreshCloudStatus() {
@@ -109,7 +119,7 @@ export function AccountBackupPanel() {
   }
 
   return (
-    <section className="rounded-2xl bg-surface-elevated p-4">
+    <section className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{t('workspace.accountTitle')}</h2>

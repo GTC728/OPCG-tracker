@@ -1,18 +1,24 @@
 import type { ReactNode } from 'react'
 import { uiPressable } from '@/lib/motion'
-import { uiGroupedRow, uiGroupedSection, uiPageEyebrow } from '@/lib/uiSurface'
+import { uiGroupedRow, uiGroupedSection, uiPageEyebrow, uiSeparatedRow } from '@/lib/uiSurface'
 
 export function GroupedListSection({
   title,
   children,
+  variant = 'inset',
 }: {
   title?: string
   children: ReactNode
+  variant?: 'inset' | 'separated'
 }) {
   return (
     <section className="space-y-2">
       {title ? <p className={[uiPageEyebrow, 'px-1 uppercase tracking-wide'].join(' ')}>{title}</p> : null}
-      <div className={uiGroupedSection}>{children}</div>
+      {variant === 'separated' ? (
+        <div className="space-y-1.5">{children}</div>
+      ) : (
+        <div className={uiGroupedSection}>{children}</div>
+      )}
     </section>
   )
 }
@@ -22,14 +28,18 @@ export function GroupedListRow({
   description,
   meta,
   onClick,
+  variant = 'inset',
 }: {
   title: string
   description?: string
   meta?: string
   onClick: () => void
+  variant?: 'inset' | 'separated'
 }) {
+  const rowClass = variant === 'separated' ? uiSeparatedRow : uiGroupedRow
+
   return (
-    <button type="button" className={[uiGroupedRow, uiPressable].join(' ')} onClick={onClick}>
+    <button type="button" className={[rowClass, uiPressable].join(' ')} onClick={onClick}>
       <span className="min-w-0 flex-1 text-left">
         <span className="block text-sm font-semibold">{title}</span>
         {description ? (

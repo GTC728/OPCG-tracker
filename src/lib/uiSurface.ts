@@ -34,6 +34,14 @@ export const uiGroupedSection = 'ui-grouped-section'
 export const uiGroupedRow =
   'ui-grouped-row flex w-full items-center gap-3 px-4 py-3 text-left'
 
+export const uiMetricHero = 'ui-metric-hero'
+
+export const uiPillTab = 'ui-pill-tab'
+
+export const uiPillTabActive = 'ui-pill-tab ui-pill-tab--active'
+
+export const uiSeparatedRow = 'ui-separated-row'
+
 export const uiPillFilter = 'ui-pill-filter'
 
 export const uiPillFilterActive = 'ui-pill-filter ui-pill-filter--active'

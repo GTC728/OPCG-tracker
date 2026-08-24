@@ -234,6 +234,7 @@ export function MatchRecorder() {
 
       {currentSessionId ? (
         <TableBoard
+          embedded
           sessionId={currentSessionId}
           players={rosterPlayers}
           decks={activeDecks}

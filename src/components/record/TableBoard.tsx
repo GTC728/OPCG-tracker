@@ -453,6 +453,7 @@ export function TableBoard({
   matches,
   onComplete,
   onSetFirstPlayer,
+  embedded = false,
 }: {
   sessionId: string
   players: Player[]
@@ -460,6 +461,7 @@ export function TableBoard({
   matches: Match[]
   onComplete: (matchId: string, winnerPlayerId: string) => void
   onSetFirstPlayer: (matchId: string, firstPlayerId: string | null) => void
+  embedded?: boolean
 }) {
   const { t } = useI18n()
   const toast = useToast()
@@ -561,20 +563,22 @@ export function TableBoard({
 
   const tablesSection = (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{t('table.title')}</h2>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount <= 1} onClick={() => changeTableCount(-1)}>
-            −
-          </Button>
-          <span className="min-w-6 text-center text-sm font-semibold">{tableCount}</span>
-          <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount >= MAX_TABLE_COUNT} onClick={() => changeTableCount(1)}>
-            +
-          </Button>
+      {embedded ? null : (
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">{t('table.title')}</h2>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount <= 1} onClick={() => changeTableCount(-1)}>
+              −
+            </Button>
+            <span className="min-w-6 text-center text-sm font-semibold">{tableCount}</span>
+            <Button variant="ghost" className="min-h-8 px-2 py-0.5 text-xs" disabled={tableCount >= MAX_TABLE_COUNT} onClick={() => changeTableCount(1)}>
+              +
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className={isSideBySide ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
+      <div className={embedded || isSideBySide ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
         {Array.from({ length: tableCount }, (_, index) => {
           const slot = index + 1
           const match = getActiveMatchForTableSlot(sessionMatches, sessionId, slot)
