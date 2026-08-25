@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DeckSearchField } from '@/components/deck/DeckSearchField'
-import { MatchResultRow } from '@/components/match/MatchResultRow'
+import { HistoryMatchCard } from '@/components/history/HistoryMatchCard'
 import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -16,10 +16,8 @@ import { getMatchFilterPlayers } from '@/lib/importRoster'
 import { useI18n } from '@/lib/i18n'
 import { PageHero } from '@/components/ui/PageHero'
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { uiCard } from '@/lib/uiSurface'
 import { uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
 import { playInteractionSound } from '@/lib/motion'
-import { formatDateTime } from '@/lib/utils'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Match, MatchEditInput, Player } from '@/types'
 
@@ -210,77 +208,6 @@ function EditMatchForm({
         <Button type="submit">儲存對局</Button>
       </div>
     </form>
-  )
-}
-
-function HistoryMatchCard({
-  match,
-  players,
-  decks,
-  onEdit,
-  onCopy,
-  onDelete,
-}: {
-  match: Match
-  players: Player[]
-  decks: Deck[]
-  onEdit: () => void
-  onCopy: () => void
-  onDelete: () => void
-}) {
-  const { t } = useI18n()
-  const [expanded, setExpanded] = useState(false)
-  const left = getPlayerName(players, match.player1Id)
-  const right = getPlayerName(players, match.player2Id)
-  const winner = match.winnerPlayerId ? getPlayerName(players, match.winnerPlayerId) : null
-  const time = formatDateTime(match.finishedAt).split(' ').slice(-1)[0] ?? ''
-
-  return (
-    <article className={uiCard}>
-      <button
-        type="button"
-        className="block w-full px-3.5 py-3 text-left outline-none"
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">
-            {left} vs {right}
-          </p>
-          {winner ? (
-            <span className="shrink-0 rounded-md bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">
-              {winner === left ? 'W' : 'L'}
-            </span>
-          ) : null}
-        </div>
-        <div className="mt-1.5 min-w-0">
-          <MatchResultRow match={match} players={players} decks={decks} compact bare showResultColors={false} />
-        </div>
-        <p className="mt-1 text-xs text-text-secondary">{time}</p>
-      </button>
-
-      {expanded ? (
-        <div className="border-t border-surface-muted px-3.5 pb-3 pt-2">
-          <p className="text-xs text-text-secondary">完成：{formatDateTime(match.finishedAt)}</p>
-          <p className="mt-1 text-xs text-text-secondary">
-            先攻：{match.firstPlayerId ? getPlayerName(players, match.firstPlayerId) : '未記錄'}
-          </p>
-          {match.notes ? <p className="mt-1 text-xs text-text-secondary">備註：{match.notes}</p> : null}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button variant="secondary" className="min-h-9 py-1.5 text-xs" onClick={onEdit}>
-              {t('common.edit')}
-            </Button>
-            <Button variant="secondary" className="min-h-9 py-1.5 text-xs" onClick={onCopy}>
-              {t('history.copyRematch')}
-            </Button>
-          </div>
-          <div className="mt-2">
-            <Button variant="danger" className="min-h-9 w-full py-1.5 text-xs" onClick={onDelete}>
-              {t('common.delete')}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </article>
   )
 }
 

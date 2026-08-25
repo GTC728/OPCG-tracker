@@ -31,11 +31,26 @@ export function WinLossBadge({ won }: { won: boolean }) {
   return (
     <span
       className={[
-        'inline-flex size-6 items-center justify-center rounded-md text-xs font-bold',
-        won ? 'bg-success/15 text-success ring-1 ring-success/30' : 'bg-danger/10 text-danger ring-1 ring-danger/25',
+        'inline-flex size-[22px] shrink-0 items-center justify-center rounded-md text-[10px] font-bold leading-none',
+        won
+          ? 'border border-success/40 bg-success/15 text-success'
+          : 'border border-danger/35 bg-danger/12 text-danger',
       ].join(' ')}
     >
       {won ? 'W' : 'L'}
+    </span>
+  )
+}
+
+export function FirstPlayerBadge({ label }: { label?: string }) {
+  const { t } = useI18n()
+
+  return (
+    <span
+      className="inline-flex h-[22px] shrink-0 items-center justify-center rounded-md border border-danger/40 bg-danger/12 px-1 text-[9px] font-bold leading-none text-danger"
+      title={t('match.firstTurn')}
+    >
+      {label ?? t('match.firstTurn')}
     </span>
   )
 }

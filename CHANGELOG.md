@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.6 - 2026-08-25
+
+### Changed
+
+- **History**: Match cards use winner color-bar layout (D) with per-player W/L and red `1st` badge; expand shows inline actions (修正 / 重開 / 刪除).
+
 ## V5.5.5 - 2026-08-25
 
 ### Changed
