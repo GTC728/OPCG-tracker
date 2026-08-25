@@ -30,6 +30,44 @@ export function normalizeStorageCode(groupCode: string): string {
   return groupCode.trim().toLowerCase()
 }
 
+/** Lowercase lookup term with leading @ stripped and spaces collapsed to hyphens. */
+export function normalizeGroupLookupTerm(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+/** Alphanumeric-only form for fuzzy public-id / storage-code matching. */
+export function compactGroupLookupTerm(value: string): string {
+  return normalizeGroupLookupTerm(value).replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * Expand a lobby search/join term into equivalent lookup keys.
+ * Handles shorthand like `ghk-2026` vs storage code `opcg-hk-2026`.
+ */
+export function expandGroupLookupTerms(lookup: string): string[] {
+  const base = normalizeGroupLookupTerm(lookup)
+  if (!base) return []
+
+  const terms = new Set<string>([base])
+  const compact = compactGroupLookupTerm(base)
+  if (compact) terms.add(compact)
+
+  if (base.startsWith('opcg-')) {
+    const stripped = base.slice('opcg-'.length)
+    if (stripped) terms.add(stripped)
+  } else {
+    terms.add(`opcg-${base}`)
+  }
+
+  return [...terms]
+}
+
 export function normalizeInviteSlug(value: string): string {
   return value
     .trim()

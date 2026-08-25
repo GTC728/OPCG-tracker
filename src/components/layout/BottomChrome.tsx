@@ -49,7 +49,7 @@ export function BottomChromeShell({ nav, children }: BottomChromeShellProps) {
 
   return (
     <BottomChromeContext.Provider value={{ setPanel }}>
-      {children}
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">{children}</div>
       <div
         ref={chromeRef}
         className="ui-frost-bar safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[var(--ui-border)]"

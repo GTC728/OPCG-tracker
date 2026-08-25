@@ -80,7 +80,7 @@ export const zh = {
   'data.exporting': '匯出中...',
   'data.exportSuccess': 'Excel 已匯出',
   'data.importTitle': 'CSV / Excel 匯入',
-  'data.importDesc': '支援欄位 mapping preview；牌組欄可填 OP16 / ST21 / EB04 / 主將名 / 本地別名。',
+  'data.importDesc': '支援欄位 mapping preview；牌組欄可填 OP17 / ST21 / EB04 / 主將名 / 本地別名。',
   'data.chooseFile': '選擇 Excel / CSV 檔案',
   'data.reading': '讀取中...',
   'data.supportedFiles': '支援 .csv, .xlsx, .xls',

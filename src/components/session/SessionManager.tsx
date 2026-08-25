@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SwipeReveal } from '@/components/motion/SwipeReveal'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
@@ -38,7 +39,7 @@ function SessionRow({
 }) {
   const { t } = useI18n()
 
-  return (
+  const row = (
     <div
       className={[
         'rounded-xl p-3 ring-1 ring-surface-muted',
@@ -90,6 +91,16 @@ function SessionRow({
       </div>
     </div>
   )
+
+  if (onArchive) {
+    return (
+      <SwipeReveal action={t('session.archive')} onAction={onArchive}>
+        {row}
+      </SwipeReveal>
+    )
+  }
+
+  return row
 }
 
 export function SessionManager({

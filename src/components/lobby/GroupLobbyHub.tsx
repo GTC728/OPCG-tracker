@@ -11,6 +11,7 @@ import {
   IconSwitch,
 } from '@/components/ui/LobbyIcons'
 import { GroupClanRoster } from '@/components/lobby/GroupClanRoster'
+import { PushStage } from '@/components/motion/PushStage'
 import { GroupLobbyPanel } from '@/components/settings/GroupLobbyPanel'
 import { useToast } from '@/components/ui/Toast'
 import { flushGroupCollabSyncNow } from '@/lib/groupSync'
@@ -489,12 +490,14 @@ export function GroupLobbyHub({ onClose, initialTab }: GroupLobbyHubProps) {
 
   if (selected) {
     return (
-      <GroupDetailView
-        group={selected}
-        busy={switchBusyId !== null}
-        onBack={() => setSelected(null)}
-        onJoined={handleJoined}
-      />
+      <PushStage onBack={() => setSelected(null)}>
+        <GroupDetailView
+          group={selected}
+          busy={switchBusyId !== null}
+          onBack={() => setSelected(null)}
+          onJoined={handleJoined}
+        />
+      </PushStage>
     )
   }
 

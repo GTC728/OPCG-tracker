@@ -18,6 +18,7 @@ import { prepareRestoredAppState } from '@/lib/restoreState'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import { BackupVersionList } from '@/components/settings/BackupVersionList'
+import { Switch } from '@/components/motion/Switch'
 
 function getDefaultDeviceLabel(): string {
   const platform = navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'
@@ -160,14 +161,14 @@ export function AccountBackupPanel() {
               {t('workspace.backupStale').replace('{n}', String(backupAgeDays(getAppState()) ?? '?'))}
             </p>
           ) : null}
-          <label className="flex items-center gap-2 text-xs text-text-secondary">
-            <input
-              type="checkbox"
+          <div className="flex items-center justify-between gap-3 text-xs text-text-secondary">
+            <span>{t('workspace.autoBackupOnLogin')}</span>
+            <Switch
               checked={settings.autoBackupOnLogin !== false}
-              onChange={(event) => updateSettings({ autoBackupOnLogin: event.target.checked })}
+              onChange={(autoBackupOnLogin) => updateSettings({ autoBackupOnLogin })}
+              label={t('workspace.autoBackupOnLogin')}
             />
-            {t('workspace.autoBackupOnLogin')}
-          </label>
+          </div>
           <label className="block">
             <span className="text-sm text-text-secondary">{t('systemStatus.device')}</span>
             <input

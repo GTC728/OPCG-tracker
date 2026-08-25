@@ -2,14 +2,22 @@ import {
   ASSIGNMENT_DRAWER_EXPANDED,
   ASSIGNMENT_DRAWER_HEADER,
 } from '@/lib/layout'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { useBottomChromePanel } from '@/components/layout/BottomChrome'
+import { Collapse } from '@/components/motion/Collapse'
 import { ScrollRegion } from '@/components/ui/ScrollRegion'
 import { useHorizontalWheelScroll } from '@/hooks/useWheelScroll'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
+import { uiPressable } from '@/lib/motion'
+import {
+  isScrollAtTop,
+  rubberBandDown,
+  settleSheetDismiss,
+} from '@/lib/motionTokens'
+import { lockPageDragAxis } from '@/lib/pageCarousel'
 import { getAssignmentRecentDeckIds } from '@/lib/selectors'
 import {
   encodeTableDragPayload,
@@ -350,6 +358,13 @@ export function AssignmentDock({
   const [expandedInternal, setExpandedInternal] = useState(false)
   const expanded = expandedProp ?? expandedInternal
   const setExpanded = onExpandedChange ?? setExpandedInternal
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const dragStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  const dragLastRef = useRef<{ y: number; t: number } | null>(null)
+  const dragAxisRef = useRef<'undecided' | 'h' | 'v'>('undecided')
+  const [drawerDragY, setDrawerDragY] = useState(0)
+  const [drawerDragging, setDrawerDragging] = useState(false)
 
   const selectablePlayers = useMemo(() => players.filter(isSelectablePlayer), [players])
 
@@ -367,16 +382,83 @@ export function AssignmentDock({
       ? pendingLabel
       : `${selectablePlayers.length} ${t('assignment.playersShort')}`
 
+  const onDrawerPointerDown = (event: PointerEvent<HTMLDivElement>, fromBody: boolean) => {
+    if (!expanded) return
+    if (fromBody && !isScrollAtTop(bodyRef.current)) return
+    dragStartRef.current = { x: event.clientX, y: event.clientY, t: event.timeStamp }
+    dragLastRef.current = { y: event.clientY, t: event.timeStamp }
+    dragAxisRef.current = 'undecided'
+  }
+
+  const onDrawerPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current
+    if (!start) return
+    const dx = event.clientX - start.x
+    const dy = event.clientY - start.y
+    if (dragAxisRef.current === 'undecided') {
+      const locked = lockPageDragAxis(dx, dy)
+      if (!locked) return
+      dragAxisRef.current = locked
+      if (locked === 'v' && dy > 0) {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        setDrawerDragging(true)
+      }
+    }
+    if (dragAxisRef.current !== 'v') return
+    dragLastRef.current = { y: event.clientY, t: event.timeStamp }
+    setDrawerDragY(rubberBandDown(dy))
+  }
+
+  const onDrawerPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = dragStartRef.current
+    dragStartRef.current = null
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    if (dragAxisRef.current !== 'v' || !start) {
+      dragAxisRef.current = 'undecided'
+      setDrawerDragging(false)
+      return
+    }
+    dragAxisRef.current = 'undecided'
+    setDrawerDragging(false)
+    const height = drawerRef.current?.getBoundingClientRect().height ?? 1
+    const last = dragLastRef.current
+    const flickDt = last ? event.timeStamp - last.t : 0
+    const velocityY =
+      last && flickDt >= 8
+        ? (event.clientY - last.y) / flickDt
+        : (event.clientY - start.y) / Math.max(1, event.timeStamp - start.t)
+    const offsetY = rubberBandDown(event.clientY - start.y)
+    if (settleSheetDismiss({ offsetY, velocityY, height }) === 'close') {
+      setDrawerDragY(0)
+      setExpanded(false)
+      return
+    }
+    setDrawerDragY(0)
+  }
+
   const drawerPanel =
     variant === 'drawer' ? (
-      <div className="overflow-hidden rounded-t-2xl border-t border-[var(--ui-border)]">
+      <div
+        ref={drawerRef}
+        className="overflow-hidden rounded-t-2xl border-t border-[var(--ui-border)]"
+        style={{
+          transform: drawerDragY ? `translate3d(0, ${drawerDragY}px, 0)` : undefined,
+          transition: drawerDragging ? 'none' : 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+      >
         <div
           className="flex items-center gap-1.5 border-b border-surface-muted/80 px-2.5"
           style={{ height: ASSIGNMENT_DRAWER_HEADER }}
+          onPointerDown={(event) => onDrawerPointerDown(event, false)}
+          onPointerMove={onDrawerPointerMove}
+          onPointerUp={onDrawerPointerUp}
+          onPointerCancel={onDrawerPointerUp}
         >
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none"
+            className={['flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none', uiPressable].join(' ')}
             onClick={() => setExpanded(!expanded)}
           >
             <span className="text-[11px] font-semibold">{t('assignment.title')}</span>
@@ -404,12 +486,19 @@ export function AssignmentDock({
           </button>
         </div>
 
-        {expanded ? (
-          <ScrollRegion
-            axis="y"
-            className="py-1.5"
-            style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
-          >
+        <div
+          ref={bodyRef}
+          onPointerDown={(event) => onDrawerPointerDown(event, true)}
+          onPointerMove={onDrawerPointerMove}
+          onPointerUp={onDrawerPointerUp}
+          onPointerCancel={onDrawerPointerUp}
+        >
+          <Collapse open={expanded}>
+            <ScrollRegion
+              axis="y"
+              className="py-1.5"
+              style={{ maxHeight: `calc(${ASSIGNMENT_DRAWER_EXPANDED} - ${ASSIGNMENT_DRAWER_HEADER})` }}
+            >
             <AssignmentPanelBody
               sessionId={sessionId}
               players={players}
@@ -423,7 +512,8 @@ export function AssignmentDock({
               compact
             />
           </ScrollRegion>
-        ) : null}
+        </Collapse>
+        </div>
       </div>
     ) : null
 
@@ -434,57 +524,49 @@ export function AssignmentDock({
     return null
   }
 
-  if (!expanded) {
-    return (
-      <section className="rounded-xl bg-surface-elevated px-3 py-2">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-2 text-left text-sm outline-none"
-          onClick={() => setExpanded(true)}
-        >
-          <span className="font-semibold">{t('assignment.title')}</span>
-          <span className="text-xs text-text-secondary">
-            {selectablePlayers.length} {t('assignment.playersShort')} · {recentDeckLimit} {t('assignment.decksShort')}
-          </span>
-          <span className="text-xs text-brand-400">▼</span>
-        </button>
-      </section>
-    )
-  }
-
   return (
     <section className="rounded-xl bg-surface-elevated p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{t('assignment.title')}</p>
-        {pendingAssignment || pendingTableTarget ? (
-          <button
-            type="button"
-            className="text-xs text-brand-400 outline-none"
-            onClick={() => {
-              onClearAssignment()
-              onClearTableTarget?.()
-            }}
-          >
-            {t('assignment.tapCancel')}
-          </button>
-        ) : (
-          <button type="button" className="text-xs text-text-secondary outline-none" onClick={() => setExpanded(false)}>
-            ▲
-          </button>
+      <button
+        type="button"
+        className={['flex w-full items-center justify-between gap-2 text-left text-sm outline-none', uiPressable].join(
+          ' ',
         )}
-      </div>
-
-      <AssignmentPanelBody
-        sessionId={sessionId}
-        players={players}
-        decks={decks}
-        matches={matches}
-        pendingAssignment={pendingAssignment}
-        pendingTableTarget={pendingTableTarget}
-        onSelectAssignment={onSelectAssignment}
-        onClearAssignment={onClearAssignment}
-        recentDeckLimit={recentDeckLimit}
-      />
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        <span className="font-semibold">{t('assignment.title')}</span>
+        <span className="text-xs text-text-secondary">
+          {selectablePlayers.length} {t('assignment.playersShort')} · {recentDeckLimit} {t('assignment.decksShort')}
+        </span>
+        <span className="text-xs text-brand-400">{expanded ? '▲' : '▼'}</span>
+      </button>
+      {pendingAssignment || pendingTableTarget ? (
+        <button
+          type="button"
+          className="mt-2 text-xs text-brand-400 outline-none"
+          onClick={() => {
+            onClearAssignment()
+            onClearTableTarget?.()
+          }}
+        >
+          {t('assignment.tapCancel')}
+        </button>
+      ) : null}
+      <Collapse open={expanded}>
+        <div className="pt-2">
+          <AssignmentPanelBody
+            sessionId={sessionId}
+            players={players}
+            decks={decks}
+            matches={matches}
+            pendingAssignment={pendingAssignment}
+            pendingTableTarget={pendingTableTarget}
+            onSelectAssignment={onSelectAssignment}
+            onClearAssignment={onClearAssignment}
+            recentDeckLimit={recentDeckLimit}
+          />
+        </div>
+      </Collapse>
     </section>
   )
 }

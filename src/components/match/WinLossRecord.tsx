@@ -1,4 +1,4 @@
-import { formatWinLossRecord } from '@/lib/winLossRecord'
+import { CountUp } from '@/components/motion/CountUp'
 
 export function WinLossRecord({
   wins,
@@ -11,7 +11,10 @@ export function WinLossRecord({
 }) {
   return (
     <span className={['tabular-nums', className].filter(Boolean).join(' ')}>
-      {formatWinLossRecord(wins, losses)}
+      <CountUp value={wins} />
+      W-
+      <CountUp value={losses} />
+      L
     </span>
   )
 }

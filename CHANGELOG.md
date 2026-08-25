@@ -9,6 +9,20 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.0 - 2026-08-26
+
+### New
+
+- **Motion library**: Shared primitives in `src/components/motion/` and `src/lib/motionTokens.ts` — press, sheet enter/exit/drag-dismiss, page-snap (already in `PagedList`), tab enter, collapse, count-up, push, shake, stagger, swipe-reveal, pull-refresh, swipe-down dismiss, long-press menus, pinch/double-tap zoom, history-back, and iOS-style switch. Wired onto sheets, toasts, segments, assignment drawer, profile numbers, settings drill-in, tab pull-to-sync, tables, history long-press, session archive swipe, and deck art. Spec in `docs/UI-DESIGN.md`.
+- **Main tab swipe**: The four bottom-nav pages (Record → Stats → History → Settings) follow the finger and snap, same 28% / flick rule as `PagedList`. Nested carousels and horizontal rails keep their own drag. Each tab scrolls inside its pane so peek lines up with the screen.
+- **Swipe back**: Drill-in screens (settings, player/deck profile, lobby group detail) pop when dragged left-to-right. Assignment drawer and every bottom sheet dismiss when dragged down (including `manageScroll` sheets once the inner list is at the top).
+- **System back & shortcuts**: Browser / Android back closes the top sheet or drill-in (hidden tabs do not steal it). Desktop `1`–`4` switch the four tabs. Toast swipes down to dismiss. Pull down on a tab to sync when a group is bound.
+- **OP17 leaders**: Six OP17 starter decks added to the built-in library (Edward.Newgate, Shanks, Rocks.D.Xebec, Kaido, Monkey.D.Luffy, Charlotte Linlin).
+
+### Fixed
+
+- **Public lobby discovery**: Shorthand lookups like `GHK-2026` now resolve against storage codes such as `opcg-hk-2026`. Saving lobby settings ensures the group registry row exists before updating visibility. Client fallbacks query public groups when RPC search returns nothing. Run `docs/supabase-v5.6-group-lobby-fix.sql` on Supabase for server-side fuzzy search and legacy backfill.
+
 ## V5.5.13 - 2026-08-26
 
 ### Changed

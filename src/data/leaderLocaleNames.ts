@@ -64,6 +64,7 @@ export const LEADER_LOCALE_NAMES: Record<string, LeaderLocaleEntry> = {
   "Queen": { 'zh-Hant': "奎因", 'zh-Hans': "奎因", ja: "クイーン" },
   "Rebecca": { 'zh-Hant': "蕾貝卡", 'zh-Hans': "蕾贝卡", ja: "レベッカ" },
   "Rob Lucci": { 'zh-Hant': "路奇", 'zh-Hans': "路奇", ja: "ルッチ" },
+  "Rocks.D.Xebec": { 'zh-Hant': "Rocks.D.Xebec", 'zh-Hans': "Rocks.D.Xebec", ja: "Rocks.D.Xebec", manual: true },
   "Roronoa Zoro": { 'zh-Hant': "索隆", 'zh-Hans': "索隆", ja: "ゾロ" },
   "Roronoa Zoro & Sanji": { 'zh-Hant': "索隆 & 山治", 'zh-Hans': "索隆 & 山治", ja: "ゾロ & サンジ" },
   "Sabo": { 'zh-Hant': "薩博", 'zh-Hans': "萨博", ja: "サボ" },

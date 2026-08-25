@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionDayPrompt } from '@/components/session/SessionDayPrompt'
 import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
@@ -11,7 +11,10 @@ import { Button } from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { formatAchievementToast } from '@/lib/achievements'
 import { runPeriodicBackupIfNeeded } from '@/lib/autoBackup'
+import { runGroupForegroundSync } from '@/lib/groupAutoSync'
 import { flushPersistNow } from '@/lib/persistScheduler'
+import { TabPager } from '@/components/motion/TabPager'
+import { useHotkeys } from '@/components/motion/useHotkeys'
 import { playInteractionSound } from '@/lib/motion'
 import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
@@ -20,61 +23,39 @@ import type { Language, TabId } from '@/types'
 
 const TAB_ORDER: TabId[] = ['record', 'stats', 'history', 'settings']
 
-function PageContent({ activeTab }: { activeTab: TabId }) {
-  const [mountedTabs, setMountedTabs] = useState<Set<TabId>>(() => new Set(['record']))
-  const prevTabRef = useRef<TabId>(activeTab)
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'none'>('none')
-
-  useEffect(() => {
-    setMountedTabs((prev) => {
-      if (prev.has(activeTab)) return prev
-      const next = new Set(prev)
-      next.add(activeTab)
-      return next
-    })
-  }, [activeTab])
-
-  useEffect(() => {
-    const prevIndex = TAB_ORDER.indexOf(prevTabRef.current)
-    const nextIndex = TAB_ORDER.indexOf(activeTab)
-    if (prevIndex >= 0 && nextIndex >= 0 && prevTabRef.current !== activeTab) {
-      setSlideDirection(nextIndex > prevIndex ? 'left' : 'right')
-    } else {
-      setSlideDirection('none')
-    }
-    prevTabRef.current = activeTab
-  }, [activeTab])
-
-  const tabClass = (tab: TabId) => {
-    if (activeTab !== tab) return 'hidden'
-    if (slideDirection === 'left') return 'ui-tab-enter-from-right'
-    if (slideDirection === 'right') return 'ui-tab-enter-from-left'
-    return 'ui-tab-enter'
-  }
+function PageContent({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: TabId
+  onTabChange: (tab: TabId) => void
+}) {
+  const { t } = useI18n()
+  const groupCode = useAppStore((state) => state.settings.lastGroupCode)
 
   return (
-    <>
-      {mountedTabs.has('record') ? (
-        <div className={tabClass('record')} aria-hidden={activeTab !== 'record'}>
-          <RecordPage />
-        </div>
-      ) : null}
-      {mountedTabs.has('stats') ? (
-        <div className={tabClass('stats')} aria-hidden={activeTab !== 'stats'}>
-          <StatsPage />
-        </div>
-      ) : null}
-      {mountedTabs.has('history') ? (
-        <div className={tabClass('history')} aria-hidden={activeTab !== 'history'}>
-          <HistoryPage />
-        </div>
-      ) : null}
-      {mountedTabs.has('settings') ? (
-        <div className={tabClass('settings')} aria-hidden={activeTab !== 'settings'}>
-          <SettingsPage />
-        </div>
-      ) : null}
-    </>
+    <TabPager
+      tabs={TAB_ORDER}
+      active={activeTab}
+      onChange={onTabChange}
+      onRefresh={groupCode ? () => runGroupForegroundSync(groupCode, 'manual') : undefined}
+      refreshIdleLabel={t('motion.pullRefresh')}
+      refreshBusyLabel={t('motion.pullRefreshing')}
+      render={(tab) => {
+        switch (tab) {
+          case 'record':
+            return <RecordPage />
+          case 'stats':
+            return <StatsPage />
+          case 'history':
+            return <HistoryPage />
+          case 'settings':
+            return <SettingsPage />
+          default:
+            return null
+        }
+      }}
+    />
   )
 }
 
@@ -83,7 +64,7 @@ function OnboardingScreen() {
   const completeOnboarding = useAppStore((s) => s.completeOnboarding)
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-surface px-5 py-8">
+    <div className="flex h-full items-center justify-center bg-surface px-5 py-8">
       <section className="w-full max-w-md rounded-3xl bg-surface-elevated p-6 shadow-2xl ring-1 ring-surface-muted">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">OPCG Tracker V4</p>
         <h1 className="mt-3 text-3xl font-bold">{t('onboarding.title')}</h1>
@@ -198,15 +179,13 @@ export default function App() {
   const onboardingCompleted = useAppStore((s) => s.settings.onboardingCompleted)
   const hydrate = useAppStore((s) => s.hydrate)
   const setActiveTab = useAppStore((s) => s.setActiveTab)
-  const scrollPositions = useRef<Partial<Record<TabId, number>>>({})
 
-  const handleTabChange = (tab: TabId) => {
-    scrollPositions.current[activeTab] = window.scrollY
-    setActiveTab(tab)
-    requestAnimationFrame(() => {
-      window.scrollTo(0, scrollPositions.current[tab] ?? 0)
-    })
-  }
+  useHotkeys([
+    { key: '1', handler: () => setActiveTab('record') },
+    { key: '2', handler: () => setActiveTab('stats') },
+    { key: '3', handler: () => setActiveTab('history') },
+    { key: '4', handler: () => setActiveTab('settings') },
+  ])
 
   useGroupCollab()
 
@@ -227,7 +206,7 @@ export default function App() {
 
   if (!hydrated) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-surface text-text-secondary">
+      <div className="flex h-full items-center justify-center bg-surface text-text-secondary">
         {t('app.loading')}
       </div>
     )
@@ -250,9 +229,9 @@ export default function App() {
       <SessionDayPrompt />
       <AppShell
         activeTab={activeTab}
-        onTabChange={handleTabChange}
+        onTabChange={setActiveTab}
       >
-        <PageContent activeTab={activeTab} />
+        <PageContent activeTab={activeTab} onTabChange={setActiveTab} />
       </AppShell>
     </ToastProvider>
   )

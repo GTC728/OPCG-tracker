@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DeckSearchField } from '@/components/deck/DeckSearchField'
 import { HistoryMatchCard } from '@/components/history/HistoryMatchCard'
+import { Shake } from '@/components/motion/Shake'
 import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -119,6 +120,7 @@ function EditMatchForm({
     notes: match.notes,
   })
   const [error, setError] = useState<string | null>(null)
+  const [errorTick, setErrorTick] = useState(0)
 
   const patchInput = (patch: Partial<MatchEditInput>) => {
     setInput((current) => {
@@ -146,6 +148,7 @@ function EditMatchForm({
           onSave(input)
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : '儲存失敗')
+          setErrorTick((tick) => tick + 1)
         }
       }}
     >
@@ -201,7 +204,11 @@ function EditMatchForm({
           onChange={(event) => patchInput({ notes: event.target.value || null })}
         />
       </label>
-      {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-red-200">{error}</p> : null}
+      {error ? (
+        <Shake key={errorTick} active>
+          <p className="rounded-xl bg-danger/10 p-3 text-sm text-red-200">{error}</p>
+        </Shake>
+      ) : null}
       <div className="grid grid-cols-2 gap-3">
         <Button type="button" variant="ghost" onClick={onCancel}>
           取消

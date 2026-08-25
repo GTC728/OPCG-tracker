@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { ContextMenu } from '@/components/motion/ContextMenu'
+import { LongPress } from '@/components/motion/LongPress'
 import { PlayerMergeTool } from '@/components/settings/PlayerMergeTool'
 import { MemberActionBar } from '@/components/settings/GroupMemberRow'
 import { IconButton } from '@/components/ui/IconButton'
@@ -269,6 +271,7 @@ function PlayerCard({
 }) {
   const { t } = useI18n()
   const [manageOpen, setManageOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const linked = Boolean(player.linkedUserId)
   const showMemberActions =
     Boolean(member) &&
@@ -278,6 +281,7 @@ function PlayerCard({
 
   return (
     <>
+      <LongPress onLongPress={() => setMenuOpen(true)} disabled={!canManageRoster}>
       <article className="flex items-center gap-2 rounded-xl bg-surface px-2.5 py-2 ring-1 ring-surface-muted">
         <span
           className={[
@@ -327,6 +331,17 @@ function PlayerCard({
           ) : null}
         </div>
       </article>
+      </LongPress>
+
+      <ContextMenu
+        open={menuOpen}
+        title={player.name}
+        items={[
+          { id: 'edit', label: t('lobby.edit'), onSelect: onEdit },
+          { id: 'delete', label: t('lobby.delete'), danger: true, onSelect: onDelete },
+        ]}
+        onClose={() => setMenuOpen(false)}
+      />
 
       {showMemberActions && member ? (
         <BottomSheet open={manageOpen} title={player.name} onClose={() => setManageOpen(false)}>
@@ -354,27 +369,43 @@ function DeckCard({
   onEditAliases: () => void
   onDelete: () => void
 }) {
+  const { t } = useI18n()
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
-    <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">
-            <DeckLabel deck={deck} />
-          </h3>
-          <p className="mt-2 text-sm text-text-secondary">
-            {deck.aliases.length ? `別名：${formatList(deck.aliases)}` : '未設定別名'}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEditAliases}>
-          編輯別名
-        </Button>
-        <Button variant="danger" className="min-h-10 py-2 text-sm" onClick={onDelete}>
-          刪除
-        </Button>
-      </div>
-    </article>
+    <>
+      <LongPress onLongPress={() => setMenuOpen(true)}>
+        <article className="rounded-2xl bg-surface p-4 ring-1 ring-surface-muted">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">
+                <DeckLabel deck={deck} />
+              </h3>
+              <p className="mt-2 text-sm text-text-secondary">
+                {deck.aliases.length ? `別名：${formatList(deck.aliases)}` : '未設定別名'}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button variant="secondary" className="min-h-10 py-2 text-sm" onClick={onEditAliases}>
+              編輯別名
+            </Button>
+            <Button variant="danger" className="min-h-10 py-2 text-sm" onClick={onDelete}>
+              刪除
+            </Button>
+          </div>
+        </article>
+      </LongPress>
+      <ContextMenu
+        open={menuOpen}
+        title={t('table.moreActions')}
+        items={[
+          { id: 'aliases', label: t('common.edit'), onSelect: onEditAliases },
+          { id: 'delete', label: t('common.delete'), danger: true, onSelect: onDelete },
+        ]}
+        onClose={() => setMenuOpen(false)}
+      />
+    </>
   )
 }
 

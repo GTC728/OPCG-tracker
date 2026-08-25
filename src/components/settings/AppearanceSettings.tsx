@@ -1,5 +1,6 @@
 import { accentOptions, applyAppearanceSettings } from '@/lib/theme'
 import { playInteractionSound, uiPressable } from '@/lib/motion'
+import { Switch } from '@/components/motion/Switch'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
@@ -113,14 +114,14 @@ export function AppearanceSettings() {
         </div>
       </section>
 
-      <label className="ui-card-inset flex items-center justify-between px-3 py-3">
+      <div className="ui-card-inset flex items-center justify-between gap-3 px-3 py-3">
         <span className="text-sm">{t('appearance.achievementNotifications')}</span>
-        <input
-          type="checkbox"
+        <Switch
           checked={settings.achievementNotifications}
-          onChange={(event) => updateSettings({ achievementNotifications: event.target.checked })}
+          onChange={(achievementNotifications) => updateSettings({ achievementNotifications })}
+          label={t('appearance.achievementNotifications')}
         />
-      </label>
+      </div>
     </div>
   )
 }

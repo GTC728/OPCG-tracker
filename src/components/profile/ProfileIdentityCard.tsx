@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/Button'
 import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { formatStreakLine } from '@/components/profile/RecentFormBars'
 import { useI18n } from '@/lib/i18n'
+import { CountUp } from '@/components/motion/CountUp'
 import { formatPercent, type RecordStat, type WinStreakStats } from '@/lib/stats'
 import { getDisplayWinRate } from '@/lib/winRateDisplay'
 import { uiLink, uiMetricHero, uiPageEyebrow } from '@/lib/uiSurface'
@@ -29,6 +30,7 @@ export function ProfileIdentityCard({
   const backText = backLabel ?? t('stats.backToStats')
   const wins = stat?.wins ?? 0
   const losses = stat?.losses ?? 0
+  const winRate = getDisplayWinRate(wins, stat?.total ?? 0)
 
   return (
     <section className={[uiMetricHero, 'space-y-4 p-4'].join(' ')}>
@@ -51,7 +53,9 @@ export function ProfileIdentityCard({
       <div className="grid grid-cols-4 gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs text-text-secondary">{t('stats.sessionCount')}</p>
-          <p className="mt-1 truncate text-sm font-bold tabular-nums sm:text-lg">{sessionCount}</p>
+          <p className="mt-1 truncate text-sm font-bold tabular-nums sm:text-lg">
+            <CountUp value={sessionCount} />
+          </p>
         </div>
         <div className="min-w-0">
           <p className="truncate text-xs text-text-secondary">{t('stats.record')}</p>
@@ -62,7 +66,7 @@ export function ProfileIdentityCard({
         <div className="min-w-0">
           <p className="truncate text-xs text-text-secondary">{t('stats.winRate')}</p>
           <p className="mt-1 truncate text-sm font-bold tabular-nums sm:text-lg">
-            {formatPercent(getDisplayWinRate(wins, stat?.total ?? 0))}
+            {winRate === null ? formatPercent(null) : <CountUp value={winRate * 100} format={(n) => `${n.toFixed(1)}%`} />}
           </p>
         </div>
         <div className="min-w-0">

@@ -10,6 +10,7 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 - Desktop scrollbar: `.scrollbar-subtle` in `src/index.css`
 - Overlay pager: `src/components/ui/FloatingSidePager.tsx` + `.ui-floating-pager-btn`
 - Frosted glass: `.ui-frost` / `.ui-frost-bar` / `.ui-frost-control` in `src/index.css`
+- Motion library: `src/lib/motionTokens.ts`, `src/lib/motion.ts`, `src/components/motion/`
 - Paginated lists: `src/components/ui/PagedList.tsx`
 - Layout constants: `src/lib/layout.ts`
 - App shell / bottom nav: `src/components/layout/AppShell.tsx`
@@ -175,6 +176,41 @@ Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped setti
 
 ---
 
+## Motion library (Unreleased / V5.6)
+
+Reusable primitives — **not** one mega-component. Tokens in `src/lib/motionTokens.ts`; CSS in `src/index.css`; components in `src/components/motion/`. Sounds stay in `src/lib/motion.ts`.
+
+**Follow-finger while pressed, settle on release.** `prefers-reduced-motion: reduce` skips animation (instant state). Do **not** put `transform` / lasting animation on `.ui-sheet-frost` or an ancestor.
+
+| Primitive | Use for | Do not use on |
+|-----------|---------|----------------|
+| `ui-pressable` | Buttons, list rows, cards, nav, W buttons | Decorative static text |
+| `BottomSheet` enter / exit / drag-dismiss | Every sheet (header, or body when scrolled to top; 28% height or flick down) | — |
+| `PagedList` page-snap | History / profile match paging | Nested inside another horizontal drag |
+| `ui-tab-enter-*` / `TabPager` | Bottom-nav tap **and** follow-finger swipe between Record / Stats / History / Settings | Nested `.ui-page-snap` / `.ui-scroll-region-x`; drill-in screens while dragging right to pop |
+| `PushStage` + `SwipeBack` | Stats player/deck profile, Settings drill-in, lobby group detail — enter from right, drag right to pop | Tab switches at the tab root (those use `TabPager`) |
+| `Collapse` | Collapsible sections, assignment drawer, history card expand | Horizontal carousels |
+| `CountUp` | W-L counts, win rate, session count | Static labels, share PNG export |
+| `Shake` | Form / save errors | Success toasts |
+| `Switch` | Boolean settings | Multi-option segments (`SegmentedControl` thumb) |
+| `SegmentedControl` thumb | Scope / stats pills | — |
+| `Stagger` | First-paint lists of independent items | Grouped inset rows (extra wrappers break radii) |
+| `SwipeReveal` | Isolated rows with a trailing action (session archive) | **`PagedList` / History cards** (fights page-snap) |
+| `PullRefresh` | Tab pane vertical scroll (group sync when a group is bound) | Nested inside another overflow scroller; local-only (disabled) |
+| `SwipeDismiss` | Toast swipe-down to dismiss | Sheets (those already drag-dismiss) |
+| `LongPress` + `ContextMenu` | Table more-actions, history card actions, player/deck manage | Live Win buttons as the only target (still cancelled if you move) |
+| `Zoomable` | Deck art cover + deck profile hero (pinch / double-tap lightbox) | Recharts / heatmaps / match cards |
+| `useHistoryBack` | Every `BottomSheet`, `PushStage` drill-in (Android / browser back). Hidden tab panes do not capture. | Shake-to-undo, leaving the PWA when nothing is open |
+| `useHotkeys` | Desktop `1`–`4` switch Record / Stats / History / Settings; Escape pops sheet then drill-in | While typing in an input |
+| `ReorderList` | Vertical lists with a persistable order | **Live tables** (slot number is identity); History paging |
+| `useShakeGesture` | Library only | **Do not wire** — misfires at a real table |
+
+Durations: press 140ms, fast 180ms, base 220ms, sheet/page 280ms, push 320ms, count 420ms. Ease: `cubic-bezier(0.22, 1, 0.36, 1)`.
+
+**Out of scope (OS chrome):** home indicator, app switcher, Control Center, system back bar. Pinch-zoom on charts is out of scope (gesture fight).
+
+---
+
 ## Match records & profile (V5.5.7–V5.5.9.1, 2026-08-26)
 
 ### Shared match card
@@ -206,6 +242,7 @@ Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped setti
 - Reuse `PagedList` (`DEFAULT_PAGE_SIZE = 10`) for any long list that needs paging, including **History** completed matches.
 - Side arrows: `FloatingSidePager` only — overlay, never layout columns or list padding. Bottom: page chips + number input +「前往」。
 - **Page-snap carousel** (跟手分頁輪播; iOS paging `UIScrollView` / Android `ViewPager`): drag horizontally to peek the next/previous page; release past **28%** width or a flick to snap. Vertical pan only scrolls the list. Arrow/chip/jump use the same slide. Math in `src/lib/pageCarousel.ts`.
+- **Main tabs**: The same follow-finger snap switches Record / Stats / History / Settings (`TabPager`). Nested `PagedList` and horizontal rails keep their own drag.
 
 ---
 
@@ -417,6 +454,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | Unreleased V5.6: motion library; tab swipe; sheet/drawer pull-down; swipe-right pop; pull-to-sync; toast swipe-dismiss; long-press menus; deck zoom; Android/browser back; desktop 1–4 tabs |
 | 2026-08-26 | V5.5.13: PagedList page-snap carousel (follow-finger peek + snap); vertical scroll does not change page |
 | 2026-08-26 | V5.5.12: overlay pager does not inset lists; History uses PagedList 10/page |
 | 2026-08-26 | V5.5.11.2: denser sheet frost (94%) on a non-transformed layer so blur works and copy stays readable |

@@ -6,6 +6,15 @@ export const PAGE_AXIS_LOCK_PX = 12
 export const PAGE_RUBBER = 0.32
 export const PAGE_SETTLE_MS = 280
 
+/** Nested surfaces that own horizontal dragging — tab swipe must not steal them. */
+export const NESTED_HORIZONTAL_GESTURE_SELECTOR =
+  '.ui-page-snap, .ui-scroll-region-x, .ui-swipe-reveal, [data-no-tab-swipe], input, textarea, select, [draggable="true"]'
+
+export function isNestedHorizontalGestureTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest(NESTED_HORIZONTAL_GESTURE_SELECTOR))
+}
+
 export function rubberBandPageOffset(offsetX: number, canPrev: boolean, canNext: boolean): number {
   if (offsetX < 0 && !canNext) return offsetX * PAGE_RUBBER
   if (offsetX > 0 && !canPrev) return offsetX * PAGE_RUBBER

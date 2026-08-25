@@ -51,6 +51,20 @@ export const uiPressable = 'ui-pressable'
 
 export const uiPopIn = 'ui-pop-in'
 
+export const uiSlideUp = 'ui-slide-up'
+
+export const uiSlideDown = 'ui-slide-down'
+
+export const uiMotionPush = 'ui-motion-push-in'
+
+export {
+  MOTION_EASE,
+  MOTION_MS,
+  prefersReducedMotion,
+  settleSheetDismiss,
+  tweenNumber,
+} from '@/lib/motionTokens'
+
 export function bindPressFeedback(
   element: HTMLElement | null,
   sound: InteractionSound = 'tap',

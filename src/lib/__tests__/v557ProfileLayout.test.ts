@@ -8,6 +8,7 @@ import { zhHant } from '@/i18n/zh-Hant'
 import { resolveMatchRecordSides } from '@/lib/matchRecordSides'
 import {
   lockPageDragAxis,
+  NESTED_HORIZONTAL_GESTURE_SELECTOR,
   rubberBandPageOffset,
   settlePageDrag,
 } from '@/lib/pageCarousel'
@@ -65,6 +66,8 @@ describe('pagination', () => {
     expect(css).toContain('.ui-sheet-frost {')
     expect(css).toMatch(/\.ui-sheet-panel-body\s*\{[^}]*ui-sheet-panel-in/)
     expect(css).not.toMatch(/\.ui-sheet-panel\s*\{[^}]*ui-sheet-panel-in/)
+    expect(css).toMatch(/\.ui-sheet-root--out \.ui-sheet-panel-body\s*\{[^}]*ui-sheet-panel-out/)
+    expect(css).not.toMatch(/\.ui-sheet-root--out \.ui-sheet-panel\s*\{[^}]*ui-sheet-panel-out/)
   })
 })
 
@@ -97,6 +100,15 @@ describe('page-snap carousel', () => {
     expect(
       settlePageDrag({ offsetX: -200, velocityX: 0, width: 400, canPrev: true, canNext: false }),
     ).toBe('stay')
+  })
+
+  it('does not steal nested horizontal carousels or rails', () => {
+    expect(NESTED_HORIZONTAL_GESTURE_SELECTOR).toContain('.ui-page-snap')
+    expect(NESTED_HORIZONTAL_GESTURE_SELECTOR).toContain('.ui-scroll-region-x')
+    expect(NESTED_HORIZONTAL_GESTURE_SELECTOR).toContain('[data-no-tab-swipe]')
+    const app = readFileSync(resolve(__dirname, '../../App.tsx'), 'utf8')
+    expect(app).toContain('TabPager')
+    expect(app).toContain("['record', 'stats', 'history', 'settings']")
   })
 })
 

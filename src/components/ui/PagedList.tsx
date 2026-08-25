@@ -192,6 +192,7 @@ export function PagedList<T>({
       setDragging(true)
     }
     if (axisRef.current !== 'h') return
+    event.stopPropagation()
     const previous = lastMoveRef.current
     lastMoveRef.current = { x: event.clientX, t: event.timeStamp }
     if (previous && event.timeStamp === previous.t) return
@@ -209,6 +210,7 @@ export function PagedList<T>({
       axisRef.current = 'undecided'
       return
     }
+    event.stopPropagation()
     axisRef.current = 'undecided'
     const width = event.currentTarget.getBoundingClientRect().width
     const last = lastMoveRef.current

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { LongPress } from '@/components/motion/LongPress'
 import { AssignmentDock } from '@/components/record/AssignmentDock'
 import { MatchForm } from '@/components/record/MatchForm'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -12,6 +13,7 @@ import { useI18n } from '@/lib/i18n'
 import { useLiveMatchDuration } from '@/lib/matchTimer'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import { selectSurfaceClass } from '@/lib/selectSurface'
+import { uiPressable } from '@/lib/motion'
 import { uiRecordCard } from '@/lib/uiSurface'
 import {
   decodeTableDragPayload,
@@ -156,7 +158,10 @@ function EmbeddedPlayerWinBlock({
   return (
     <button
       type="button"
-      className="w-full rounded-xl border border-[var(--ui-border)] bg-surface/40 px-2.5 py-2 text-left outline-none transition active:border-success/40 active:bg-success/10 touch-manipulation"
+      className={[
+        'w-full rounded-xl border border-[var(--ui-border)] bg-surface/40 px-2.5 py-2 text-left outline-none transition active:border-success/40 active:bg-success/10 touch-manipulation',
+        uiPressable,
+      ].join(' ')}
       onClick={onWin}
     >
       <div className="flex items-center justify-between gap-2">
@@ -232,6 +237,7 @@ function WinButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' 
       type="button"
       className={[
         'flex shrink-0 items-center justify-center rounded-md border border-success/40 bg-success/15 font-bold leading-none text-success outline-none active:bg-success/30 touch-manipulation',
+        uiPressable,
         size === 'md' ? 'h-7 min-w-9 px-2.5 text-xs' : 'h-5 w-5 text-[9px]',
       ].join(' ')}
       onClick={(event) => {
@@ -343,7 +349,8 @@ function CompactCompleteTable({
   if (embedded) {
     return (
       <>
-        <article className={[uiRecordCard, 'flex flex-col p-3'].join(' ')}>
+        <LongPress onLongPress={() => setMenuOpen(true)}>
+          <article className={[uiRecordCard, 'flex flex-col p-3'].join(' ')}>
           <EmbeddedTableHeader
             slot={slot}
             timer={elapsed ?? undefined}
@@ -368,6 +375,7 @@ function CompactCompleteTable({
             />
           </div>
         </article>
+        </LongPress>
 
         <TableActionsSheet
           open={menuOpen}
@@ -409,6 +417,7 @@ function CompactCompleteTable({
 
   return (
     <>
+      <LongPress onLongPress={() => setMenuOpen(true)}>
       <article className="flex min-h-8 min-w-0 touch-manipulation items-center gap-1 rounded-xl bg-surface-elevated px-1.5 py-1 ring-1 ring-surface-muted">
         <TableNumberBadge slot={slot} />
         {elapsed ? (
@@ -442,6 +451,7 @@ function CompactCompleteTable({
           ⋯
         </button>
       </article>
+      </LongPress>
 
       <TableActionsSheet
         open={menuOpen}

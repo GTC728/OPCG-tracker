@@ -43,6 +43,23 @@ type SettingsSection =
 import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
 import { PageHero } from '@/components/ui/PageHero'
 import { WorkspaceHeroCard } from '@/components/ui/WorkspaceHeroCard'
+import { PushStage } from '@/components/motion/PushStage'
+
+function settingsBackSection(section: SettingsSection): SettingsSection {
+  if (
+    section === 'lobby-session' ||
+    section === 'lobby-players' ||
+    section === 'lobby-sync' ||
+    section === 'workspace-session' ||
+    section === 'workspace-players' ||
+    section === 'workspace-members' ||
+    section === 'workspace-sync' ||
+    section === 'workspace-join'
+  ) {
+    return 'lobby-browse'
+  }
+  return 'home'
+}
 
 function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -162,8 +179,8 @@ export function SettingsPage() {
             </div>
           </section>
         </>
-      ) : null}
-
+      ) : (
+        <PushStage key={section} className="space-y-5" onBack={() => setSection(settingsBackSection(section))}>
       {section === 'lobby-browse' ? (
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
@@ -289,6 +306,8 @@ export function SettingsPage() {
           <SystemStatusPanel />
         </>
       ) : null}
+        </PushStage>
+      )}
     </div>
   )
 }

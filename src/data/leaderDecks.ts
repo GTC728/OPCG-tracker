@@ -2541,6 +2541,144 @@ export const SEEDED_LEADER_DECKS: Deck[] = [
     "updatedAt": "2026-07-02T00:00:00.000Z"
   },
   {
+    "id": "leader-op17-001",
+    "setCode": "OP17",
+    "leaderCode": "OP17-001",
+    "leaderName": "Edward.Newgate",
+    "colors": [
+      "Red"
+    ],
+    "displayName": "OP17-001 Edward.Newgate",
+    "aliases": [
+      "OP17-001",
+      "OP17001",
+      "OP17 001",
+      "OP17",
+      "Edward.Newgate",
+      "OP-17",
+      "The Four Emperors",
+      "Whitebeard Pirates"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-op17-020",
+    "setCode": "OP17",
+    "leaderCode": "OP17-020",
+    "leaderName": "Shanks",
+    "colors": [
+      "Green"
+    ],
+    "displayName": "OP17-020 Shanks",
+    "aliases": [
+      "OP17-020",
+      "OP17020",
+      "OP17 020",
+      "OP17",
+      "Shanks",
+      "OP-17",
+      "The Four Emperors",
+      "Red-Haired Pirates"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-op17-039",
+    "setCode": "OP17",
+    "leaderCode": "OP17-039",
+    "leaderName": "Rocks.D.Xebec",
+    "colors": [
+      "Blue"
+    ],
+    "displayName": "OP17-039 Rocks.D.Xebec",
+    "aliases": [
+      "OP17-039",
+      "OP17039",
+      "OP17 039",
+      "OP17",
+      "Rocks.D.Xebec",
+      "OP-17",
+      "Rocks Pirates"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-op17-058",
+    "setCode": "OP17",
+    "leaderCode": "OP17-058",
+    "leaderName": "Kaido",
+    "colors": [
+      "Purple"
+    ],
+    "displayName": "OP17-058 Kaido",
+    "aliases": [
+      "OP17-058",
+      "OP17058",
+      "OP17 058",
+      "OP17",
+      "Kaido",
+      "OP-17",
+      "The Four Emperors",
+      "Animal Kingdom Pirates"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-op17-079",
+    "setCode": "OP17",
+    "leaderCode": "OP17-079",
+    "leaderName": "Monkey.D.Luffy",
+    "colors": [
+      "Black"
+    ],
+    "displayName": "OP17-079 Monkey.D.Luffy",
+    "aliases": [
+      "OP17-079",
+      "OP17079",
+      "OP17 079",
+      "OP17",
+      "Monkey.D.Luffy",
+      "OP-17",
+      "Elbaph",
+      "The Four Emperors",
+      "Straw Hat Crew"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-op17-099",
+    "setCode": "OP17",
+    "leaderCode": "OP17-099",
+    "leaderName": "Charlotte Linlin",
+    "colors": [
+      "Yellow"
+    ],
+    "displayName": "OP17-099 Charlotte Linlin",
+    "aliases": [
+      "OP17-099",
+      "OP17099",
+      "OP17 099",
+      "OP17",
+      "Charlotte Linlin",
+      "OP-17",
+      "The Four Emperors",
+      "Big Mom Pirates"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
     "id": "leader-p-011",
     "setCode": "P",
     "leaderCode": "P-011",
@@ -3075,6 +3213,30 @@ export const SEEDED_LEADER_DECKS: Deck[] = [
       "ST21",
       "Monkey.D.Luffy",
       "ST-21",
+      "The Four Emperors",
+      "Straw Hat Crew"
+    ],
+    "archived": false,
+    "createdAt": "2026-07-02T00:00:00.000Z",
+    "updatedAt": "2026-07-02T00:00:00.000Z"
+  },
+  {
+    "id": "leader-st21-001_r1",
+    "setCode": "ST21",
+    "leaderCode": "ST21-001_r1",
+    "leaderName": "Monkey.D.Luffy",
+    "colors": [
+      "Red"
+    ],
+    "displayName": "ST21-001_r1 Monkey.D.Luffy",
+    "aliases": [
+      "ST21-001_r1",
+      "ST21001_r1",
+      "ST21 001_r1",
+      "ST21",
+      "Monkey.D.Luffy",
+      "ST-31",
+      "ST31",
       "The Four Emperors",
       "Straw Hat Crew"
     ],

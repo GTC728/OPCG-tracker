@@ -111,7 +111,7 @@ export function AppShell({
 
   return (
     <BottomChromeShell nav={<BottomNav activeTab={activeTab} onChange={onTabChange} />}>
-      <div className="mx-auto flex min-h-full w-full max-w-lg flex-col bg-surface [@media(min-width:768px)_and_(orientation:landscape)]:max-w-5xl">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-lg flex-1 flex-col overflow-hidden bg-surface [@media(min-width:768px)_and_(orientation:landscape)]:max-w-5xl">
         <header className={[uiHeaderBar, 'px-[var(--ui-page-px)] py-2'].join(' ')}>
           <div className="flex items-center justify-end gap-2">
             <AppBrandCredit />
@@ -122,7 +122,7 @@ export function AppShell({
           <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
         </div>
 
-        <main className="app-main-bottom-pad flex-1 space-y-5 px-[var(--ui-page-px)] pt-3 pb-4">
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-[var(--ui-page-px)] pt-3">
           {children}
         </main>
       </div>

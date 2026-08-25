@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
+import { PushStage } from '@/components/motion/PushStage'
+import { Zoomable } from '@/components/motion/Zoomable'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
+import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
+import { getDeckArtCoverStyle } from '@/lib/deckArtCover'
 import { getLinkedPlayer } from '@/lib/profileClaim'
 import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
@@ -341,7 +344,7 @@ function MatchupHeatmap({
           {t('stats.matchup.winRateWL')}
         </span>
       </div>
-      <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
+      <article className={[uiCard, 'overflow-x-auto ui-scroll-region-x p-3'].join(' ')}>
         {rankedDecks.length >= 2 ? (
           <div
             className="min-w-max"
@@ -475,7 +478,7 @@ function PlayerMatchupHeatmap({
           {t('stats.matchup.winRateWL')}
         </span>
       </div>
-      <article className={[uiCard, 'overflow-x-auto p-3'].join(' ')}>
+      <article className={[uiCard, 'overflow-x-auto ui-scroll-region-x p-3'].join(' ')}>
         {rankedPlayers.length >= 2 ? (
           <div
             className="min-w-max"
@@ -960,6 +963,12 @@ function DeckProfileView({
         onBack={onBack}
         backLabel={backLabel}
       />
+      <Zoomable>
+        <div
+          className="ui-deck-art-cover ui-deck-art-cover--hero"
+          style={getDeckArtCoverStyle(deck.colors)}
+        />
+      </Zoomable>
       <MiniStatGrid stat={stat} />
       <FirstSecondSection stats={buildFirstSecondStats(deckMatches)} />
       <section className="space-y-3">
@@ -1100,7 +1109,7 @@ export function StatsPage() {
 
   if (selectedPlayer) {
     return (
-      <>
+      <PushStage onBack={handleProfileBack}>
         <PlayerProfileView
           player={selectedPlayer}
           allMatches={allMatches}
@@ -1114,22 +1123,24 @@ export function StatsPage() {
           onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
         />
         <ProfileLinkSheet open={profileSheetOpen} onClose={() => setProfileSheetOpen(false)} />
-      </>
+      </PushStage>
     )
   }
 
   if (selectedDeck) {
     return (
-      <DeckProfileView
-        deck={selectedDeck}
-        matches={scopedMatches}
-        players={players}
-        decks={decks}
-        language={language}
-        onBack={handleProfileBack}
-        backLabel={profileBackLabel}
-        onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
-      />
+      <PushStage onBack={handleProfileBack}>
+        <DeckProfileView
+          deck={selectedDeck}
+          matches={scopedMatches}
+          players={players}
+          decks={decks}
+          language={language}
+          onBack={handleProfileBack}
+          backLabel={profileBackLabel}
+          onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
+        />
+      </PushStage>
     )
   }
 

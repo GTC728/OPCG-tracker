@@ -17,7 +17,7 @@ import {
   type GroupJoinRequest,
   type GroupVisibility,
 } from '@/lib/groupLobby'
-import { fetchGroupRegistry, isValidInviteSlug, normalizeInviteSlug } from '@/lib/groupRegistry'
+import { fetchGroupRegistry, isValidInviteSlug, normalizeInviteSlug, ensureGroupRegistryOnJoin } from '@/lib/groupRegistry'
 import { getCompletedMatches } from '@/lib/stats'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
@@ -91,6 +91,7 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
     if (!canManage) return
     setBusy(true)
     try {
+      await ensureGroupRegistryOnJoin(groupCode, { isOwner: true, displayName })
       await updateGroupLobbySettings(groupCode, {
         displayName,
         publicId: publicId.trim() || groupCode,
@@ -99,6 +100,7 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
         visibility,
         joinPolicy,
       })
+      await refreshGroupStatsSnapshot(groupCode).catch(() => null)
       toast.success(t('groupLobby.saved'))
       void loadProfile()
     } catch (caught) {

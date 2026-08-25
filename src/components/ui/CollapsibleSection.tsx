@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Collapse } from '@/components/motion/Collapse'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { useI18n } from '@/lib/i18n'
 
@@ -21,7 +22,9 @@ export function CollapsibleSection({
         action={open ? t('common.collapse') : t('common.expand')}
         onAction={() => setOpen((value) => !value)}
       />
-      {open ? <div className="space-y-4">{children}</div> : null}
+      <Collapse open={open}>
+        <div className="space-y-4 pt-3">{children}</div>
+      </Collapse>
     </section>
   )
 }

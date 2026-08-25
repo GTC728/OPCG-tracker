@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Switch } from '@/components/motion/Switch'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { ImportHistoryPanel } from '@/components/settings/ImportHistoryPanel'
@@ -428,27 +429,14 @@ function ImportTool() {
                 {groupSyncPaused ? '（目前推送已暫停）' : ''}
               </p>
             ) : null}
-            <label className="mt-3 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={createNewSession}
-                onChange={(event) => setCreateNewSession(event.target.checked)}
-              />
+            <div className="mt-3 flex items-center justify-between gap-3">
               <span>{t('data.importTargetNew')}</span>
-            </label>
+              <Switch checked={createNewSession} onChange={setCreateNewSession} label={t('data.importTargetNew')} />
+            </div>
             {!createNewSession ? (
               <p className="mt-1 text-amber-200">{t('data.importTargetCurrent')}</p>
             ) : null}
-            <label className="mt-3 flex items-start gap-2">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={historicalRestore}
-                onChange={(event) => {
-                  setHistoricalRestore(event.target.checked)
-                  setConfirmText('')
-                }}
-              />
+            <div className="mt-3 flex items-start justify-between gap-3">
               <span>
                 <span className="font-medium text-text-primary">歷史戰績還原</span>
                 <span className="mt-1 block text-text-secondary">
@@ -460,7 +448,15 @@ function ImportTool() {
                   ))}
                 </ul>
               </span>
-            </label>
+              <Switch
+                checked={historicalRestore}
+                onChange={(value) => {
+                  setHistoricalRestore(value)
+                  setConfirmText('')
+                }}
+                label="歷史戰績還原"
+              />
+            </div>
             {historicalRestore && historicalValidation && !historicalValidation.ok ? (
               <p className="mt-2 rounded-lg bg-amber-500/15 p-2 text-amber-100">
                 {historicalValidation.error}
