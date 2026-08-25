@@ -153,12 +153,12 @@ textarea:focus-visible {
 
 .scrollbar-subtle {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, white 16%, transparent) transparent;
 }
 
 .scrollbar-subtle::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-track {
@@ -166,15 +166,13 @@ textarea:focus-visible {
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  background: color-mix(in srgb, white 16%, transparent);
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: none;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-text-secondary) 55%, transparent);
-  background-clip: padding-box;
+  background: color-mix(in srgb, white 32%, transparent);
 }
 
 /* Touch-friendly rails; show scrollbars + wheel works on desktop (see useWheelScroll). */
@@ -226,7 +224,15 @@ textarea:focus-visible {
 }
 
 [data-theme='light'] .scrollbar-subtle {
-  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 70%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, black 18%, transparent) transparent;
+}
+
+[data-theme='light'] .scrollbar-subtle::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, black 18%, transparent);
+}
+
+[data-theme='light'] .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, black 32%, transparent);
 }
 
 /* ── Glass / card surfaces ── */

@@ -14,7 +14,7 @@ export function FloatingSidePager({
   nextLabel: string
 }) {
   const buttonClass =
-    'absolute top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--glass-bg-solid)] text-base font-semibold text-text-secondary shadow-[var(--glass-shadow)] ring-1 ring-[var(--ui-border)] backdrop-blur-md outline-none disabled:pointer-events-none disabled:opacity-25'
+    'absolute top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/15 text-white/65 ring-1 ring-white/12 backdrop-blur-[1px] outline-none transition hover:bg-black/30 hover:text-white disabled:pointer-events-none disabled:opacity-20'
 
   return (
     <>

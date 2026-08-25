@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.9.1 - 2026-08-26
+
+### Changed
+
+- **Paging arrows**: Higher transparency so match cards remain readable behind the overlay.
+- **Scrollbars**: Profile match list and other `scrollbar-subtle` tracks are thinner and lower contrast on desktop.
+
 ## V5.5.9 - 2026-08-26
 
 ### Changed
