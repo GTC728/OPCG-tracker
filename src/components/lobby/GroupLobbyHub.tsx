@@ -21,11 +21,13 @@ import { listMyGroupMemberships } from '@/lib/groupRegistry'
 import {
   joinGroupWithPolicy,
   joinPolicyLabelKey,
+  publishGroupDiscoverability,
   resolveGroupLookup,
   searchPublicGroups,
   visibilityLabelKey,
   type PublicGroupCard,
 } from '@/lib/groupLobby'
+import { canManageGroup } from '@/lib/groupPermissions'
 import { useI18n } from '@/lib/i18n'
 import { getCompletedMatches } from '@/lib/stats'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
@@ -398,6 +400,24 @@ export function GroupLobbyHub({ onClose, initialTab }: GroupLobbyHubProps) {
     setLoadingSearch(true)
     setSearchError(null)
     try {
+      const state = getAppState()
+      if (
+        !debouncedQuery &&
+        state.settings.lastGroupCode &&
+        canManageGroup(state.settings.groupMemberRole)
+      ) {
+        const lookup = await resolveGroupLookup(state.settings.lastGroupCode).catch(() => null)
+        if (!lookup || lookup.visibility === 'public') {
+          await publishGroupDiscoverability(state.settings.lastGroupCode, {
+            displayName: lookup?.displayName ?? state.settings.lastGroupCode.toUpperCase(),
+            publicId: lookup?.publicId ?? state.settings.lastGroupCode,
+            visibility: 'public',
+            joinPolicy: lookup?.joinPolicy,
+            description: lookup?.description ?? null,
+          }).catch(() => null)
+        }
+      }
+
       if (debouncedQuery) {
         const resolved = await resolveGroupLookup(debouncedQuery)
         if (requestId !== searchRequestRef.current) return

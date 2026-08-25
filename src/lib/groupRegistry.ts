@@ -130,13 +130,134 @@ export async function ensureGroupRegistryOnJoin(
 
   const storageCode = normalizeStorageCode(groupCode)
   const groupKey = await resolveGroupKey(groupCode)
+  const displayName = options?.displayName?.trim() || storageCode.toUpperCase()
+
   const { error } = await supabase.rpc('ensure_group_registry', {
     p_group_key: groupKey,
     p_storage_code: storageCode,
-    p_display_name: options?.displayName?.trim() || storageCode.toUpperCase(),
+    p_display_name: displayName,
     p_owner_user_id: options?.isOwner ? user.id : null,
   })
   if (error && error.code !== '42883' && error.code !== 'PGRST202') throw error
+
+  await upsertGroupRegistryRow(groupKey, storageCode, displayName, {
+    ownerUserId: options?.isOwner ? user.id : null,
+  })
+}
+
+async function upsertGroupRegistryRow(
+  groupKey: string,
+  storageCode: string,
+  displayName: string,
+  options?: {
+    ownerUserId?: string | null
+    visibility?: import('@/lib/groupLobby').GroupVisibility
+    publicId?: string
+    joinPolicy?: import('@/lib/groupLobby').GroupJoinPolicy
+    description?: string | null
+    inviteSlug?: string | null
+  },
+): Promise<void> {
+  const supabase = await getSupabaseClient()
+  if (!supabase) return
+
+  const now = new Date().toISOString()
+  const visibility = options?.visibility
+  const publicId = normalizeGroupLookupTerm(options?.publicId ?? storageCode) || storageCode
+
+  const { data: existing, error: readError } = await supabase
+    .from('groups')
+    .select('group_key')
+    .eq('group_key', groupKey)
+    .maybeSingle()
+
+  if (readError && readError.code !== '42P01' && readError.code !== 'PGRST205') throw readError
+  if (readError?.code === '42P01' || readError?.code === 'PGRST205') return
+
+  const richPayload: Record<string, unknown> = {
+    display_name: displayName,
+    settings: { storage_code: storageCode },
+    updated_at: now,
+  }
+  if (publicId) richPayload.public_id = publicId
+  if (visibility) richPayload.visibility = visibility
+  if (options?.joinPolicy) richPayload.join_policy = options.joinPolicy
+  if (options?.description !== undefined) richPayload.description = options.description
+  if (options?.inviteSlug !== undefined) richPayload.invite_slug = options.inviteSlug
+  if (visibility === 'public') richPayload.last_active_at = now
+  if (options?.ownerUserId) richPayload.owner_user_id = options.ownerUserId
+
+  if (!existing) {
+    const { error: insertError } = await supabase.from('groups').insert({
+      group_key: groupKey,
+      ...richPayload,
+    })
+    if (insertError) {
+      const { error: legacyInsertError } = await supabase.from('groups').insert({
+        group_key: groupKey,
+        display_name: displayName,
+        owner_user_id: options?.ownerUserId ?? undefined,
+        settings: { storage_code: storageCode },
+        updated_at: now,
+      })
+      if (legacyInsertError) throw legacyInsertError
+    }
+    return
+  }
+
+  const { error: updateError } = await supabase.from('groups').update(richPayload).eq('group_key', groupKey)
+  if (updateError) {
+    const { error: legacyUpdateError } = await supabase
+      .from('groups')
+      .update({
+        display_name: displayName,
+        settings: { storage_code: storageCode },
+        updated_at: now,
+      })
+      .eq('group_key', groupKey)
+    if (legacyUpdateError) throw legacyUpdateError
+  }
+}
+
+export async function mirrorGroupLobbySettings(
+  groupCode: string,
+  patch: {
+    displayName?: string
+    publicId?: string | null
+    inviteSlug?: string | null
+    description?: string | null
+    visibility?: import('@/lib/groupLobby').GroupVisibility
+    joinPolicy?: import('@/lib/groupLobby').GroupJoinPolicy
+  },
+): Promise<void> {
+  const storageCode = normalizeStorageCode(groupCode)
+  const groupKey = await resolveGroupKey(groupCode)
+  const displayName = patch.displayName?.trim() || storageCode.toUpperCase()
+  const publicId =
+    patch.publicId !== undefined && patch.publicId !== null
+      ? normalizeGroupLookupTerm(patch.publicId) || storageCode
+      : storageCode
+
+  let inviteSlug: string | null | undefined
+  if (patch.inviteSlug !== undefined) {
+    if (patch.inviteSlug === null || patch.inviteSlug === '') {
+      inviteSlug = null
+    } else {
+      const slug = normalizeInviteSlug(patch.inviteSlug)
+      if (!isValidInviteSlug(slug)) throw new Error('邀請代碼格式不正確')
+      inviteSlug = slug
+    }
+  }
+
+  const { user } = await getCloudSession()
+  await upsertGroupRegistryRow(groupKey, storageCode, displayName, {
+    ownerUserId: user?.id ?? null,
+    visibility: patch.visibility ?? 'public',
+    publicId,
+    joinPolicy: patch.joinPolicy,
+    description: patch.description ?? null,
+    inviteSlug,
+  })
 }
 
 export async function fetchGroupRegistry(groupCode: string): Promise<GroupRegistryProfile | null> {

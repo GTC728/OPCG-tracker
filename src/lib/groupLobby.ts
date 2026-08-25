@@ -4,6 +4,7 @@ import {
   ensureGroupRegistryOnJoin,
   expandGroupLookupTerms,
   isValidInviteSlug,
+  mirrorGroupLobbySettings,
   normalizeGroupLookupTerm,
   normalizeInviteSlug,
   normalizeStorageCode,
@@ -184,14 +185,14 @@ async function fetchPublicGroupsDirect(options?: {
   const { user } = await getCloudSession()
   if (!user) return []
 
-  const { data, error } = await supabase.from('groups').select(GROUP_SELECT).eq('visibility', 'public')
+  const { data, error } = await supabase.from('groups').select(GROUP_SELECT)
   if (error) {
     if (error.code === '42P01' || error.code === 'PGRST205') return []
     throw error
   }
 
   const query = options?.query?.trim() ?? ''
-  let rows = (data ?? []) as RawGroupRow[]
+  let rows = (data ?? []).filter((row) => parseVisibility((row as RawGroupRow).visibility) === 'public') as RawGroupRow[]
   if (query) {
     rows = rows.filter((row) => groupRowMatchesLookup(row, query))
   }
@@ -244,6 +245,26 @@ async function resolveGroupLookupDirect(lookup: string): Promise<PublicGroupCard
     is_member: memberKeys.has(String(match.group_key ?? '')),
     join_status: memberKeys.has(String(match.group_key ?? '')) ? 'member' : 'none',
   })
+}
+
+export async function publishGroupDiscoverability(
+  groupCode: string,
+  patch: {
+    displayName?: string
+    publicId?: string | null
+    inviteSlug?: string | null
+    description?: string | null
+    visibility?: GroupVisibility
+    joinPolicy?: GroupJoinPolicy
+  },
+): Promise<void> {
+  if (patch.visibility !== 'public') return
+  await ensureGroupRegistryOnJoin(groupCode, {
+    isOwner: true,
+    displayName: patch.displayName,
+  })
+  await mirrorGroupLobbySettings(groupCode, patch)
+  await refreshGroupStatsSnapshot(groupCode).catch(() => null)
 }
 
 export async function searchPublicGroups(options?: {
@@ -471,20 +492,27 @@ export async function updateGroupLobbySettings(
         displayName: patch.displayName,
         inviteSlug: patch.inviteSlug,
       })
-      const payload: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      }
-      if (normalizedPublicId !== undefined) payload.public_id = normalizedPublicId
-      if (patch.visibility !== undefined) payload.visibility = patch.visibility
-      if (patch.joinPolicy !== undefined) payload.join_policy = patch.joinPolicy
-      if (patch.description !== undefined) payload.description = patch.description || null
-      if (patch.visibility === 'public') payload.last_active_at = new Date().toISOString()
-      const { error: updateError } = await supabase.from('groups').update(payload).eq('group_key', groupKey)
-      if (updateError) throw updateError
+      await mirrorGroupLobbySettings(groupCode, {
+        displayName: patch.displayName,
+        publicId: normalizedPublicId,
+        inviteSlug: normalizedSlug ?? patch.inviteSlug,
+        description: patch.description,
+        visibility: patch.visibility,
+        joinPolicy: patch.joinPolicy,
+      })
       return
     }
     throw error
   }
+
+  await mirrorGroupLobbySettings(groupCode, {
+    displayName: patch.displayName,
+    publicId: normalizedPublicId,
+    inviteSlug: normalizedSlug ?? patch.inviteSlug,
+    description: patch.description,
+    visibility: patch.visibility,
+    joinPolicy: patch.joinPolicy,
+  }).catch(() => null)
 }
 
 export async function createGroupInviteLink(

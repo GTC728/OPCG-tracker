@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.1 - 2026-08-26
+
+### Fixed
+
+- **Public lobby persistence**: Saving or browsing as a group manager now upserts the `groups` registry row directly (visibility, public ID, activity) so public groups like GHK-2026 appear in search even when Supabase lobby RPCs are missing or stale.
+
 ## V5.6.0 - 2026-08-26
 
 ### New

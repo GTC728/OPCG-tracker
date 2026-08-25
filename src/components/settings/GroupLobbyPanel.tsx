@@ -8,6 +8,7 @@ import {
   createGroupInviteLink,
   joinPolicyLabelKey,
   listGroupJoinRequests,
+  publishGroupDiscoverability,
   refreshGroupStatsSnapshot,
   resolveGroupLookup,
   reviewJoinRequest,
@@ -17,7 +18,7 @@ import {
   type GroupJoinRequest,
   type GroupVisibility,
 } from '@/lib/groupLobby'
-import { fetchGroupRegistry, isValidInviteSlug, normalizeInviteSlug, ensureGroupRegistryOnJoin } from '@/lib/groupRegistry'
+import { fetchGroupRegistry, isValidInviteSlug, normalizeInviteSlug } from '@/lib/groupRegistry'
 import { getCompletedMatches } from '@/lib/stats'
 import { useI18n } from '@/lib/i18n'
 import { useAppStore } from '@/stores/appStore'
@@ -71,8 +72,18 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
     } else {
       setPublicId(groupCode)
     }
+    if (canManage && (lookup?.visibility ?? 'public') === 'public') {
+      void publishGroupDiscoverability(groupCode, {
+        displayName: registry?.displayName ?? groupCode.toUpperCase(),
+        publicId: lookup?.publicId ?? groupCode,
+        inviteSlug: registry?.inviteSlug ?? null,
+        description: lookup?.description ?? null,
+        visibility: 'public',
+        joinPolicy: lookup?.joinPolicy ?? 'request',
+      }).catch(() => null)
+    }
     void refreshGroupStatsSnapshot(groupCode).catch(() => null)
-  }, [groupCode])
+  }, [groupCode, canManage])
 
   const loadRequests = useCallback(async () => {
     if (!groupCode || !canManage) return
@@ -91,7 +102,6 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
     if (!canManage) return
     setBusy(true)
     try {
-      await ensureGroupRegistryOnJoin(groupCode, { isOwner: true, displayName })
       await updateGroupLobbySettings(groupCode, {
         displayName,
         publicId: publicId.trim() || groupCode,
@@ -100,7 +110,16 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
         visibility,
         joinPolicy,
       })
-      await refreshGroupStatsSnapshot(groupCode).catch(() => null)
+      if (visibility === 'public') {
+        await publishGroupDiscoverability(groupCode, {
+          displayName,
+          publicId: publicId.trim() || groupCode,
+          inviteSlug: inviteSlug.trim() ? normalizeInviteSlug(inviteSlug) : null,
+          description,
+          visibility,
+          joinPolicy,
+        })
+      }
       toast.success(t('groupLobby.saved'))
       void loadProfile()
     } catch (caught) {
