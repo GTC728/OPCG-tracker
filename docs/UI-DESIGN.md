@@ -9,6 +9,7 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 - Shared surfaces: `src/lib/uiSurface.ts`
 - Desktop scrollbar: `.scrollbar-subtle` in `src/index.css`
 - Overlay pager: `src/components/ui/FloatingSidePager.tsx` + `.ui-floating-pager-btn`
+- Frosted glass: `.ui-frost` / `.ui-frost-bar` / `.ui-frost-control` in `src/index.css`
 - Paginated lists: `src/components/ui/PagedList.tsx`
 - Layout constants: `src/lib/layout.ts`
 - App shell / bottom nav: `src/components/layout/AppShell.tsx`
@@ -28,6 +29,7 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 6. **Bottom chrome scope** — Assignment drawer registers via `useBottomChromePanel` **only when `activeTab === 'record'`** so hidden Record page does not leak the panel onto Stats/History.
 7. **Canonical chrome** — Desktop scrollbars always use `.scrollbar-subtle` (or `ScrollRegion`). Side page arrows always use `FloatingSidePager`. Do not invent one-off arrow columns or OS-default thick scrollbars.
 8. **Apple Music / App Store direction (V5.4+)** — Large in-page titles, grouped lists, hero metrics, pill filters, deck-cover rails. Dark `#000` / `#1c1c1e` / `#2c2c2e`; light `#f2f2f7` / `#ffffff` / `#d1d1d6`. Accent is user-chosen; **semantic colors stay fixed** (success/danger, and the blue `1st` badge).
+9. **Frosted glass is chrome, not data (V5.5.10+)** — Use `.ui-frost*` on bars, sheets, toasts, and floating controls. Keep match cards, table rows, heatmaps, and rank lists solid.
 
 ---
 
@@ -109,16 +111,60 @@ Used by `PagedList` and Stats player ranking. Parent must be `position: relative
 | Size | `2.25rem` (36px) square |
 | Shape | circle (`border-radius: 9999px`) |
 | Left / right inset | `0.25rem` (4px) |
-| Fill | black **15%** (`rgb(0 0 0 / 15%)`) |
-| Glyph | white **65%**, `1rem`, semibold, `‹` / `›` |
-| Ring | white **12%**, 1px (`box-shadow: 0 0 0 1px`) |
-| Blur | `1px` backdrop-filter (almost none, so cards stay readable) |
-| Shadow | none (only the 1px ring) |
-| Hover fill | black **30%**, glyph `#fff` |
+| Fill | `--ui-frost-fill-control` (elevated **42%** dark / **55%** light) |
+| Glyph | white **80%** (dark) / black **70%** (light), `1rem`, semibold, `‹` / `›` |
+| Ring | `--ui-frost-ring` (white **14%** dark) |
+| Blur | **24px** + saturate **1.2** (canonical frost) |
+| Shadow | 1px ring only |
+| Hover | mix control fill with **12%** white; glyph full white / black |
 | Disabled | `opacity: 0.2`, no pointer events |
 | Motion | 150ms ease on fill + glyph color |
 
-CSS: `.ui-floating-pager-btn`, `--prev`, `--next` in `src/index.css`.
+CSS: `.ui-floating-pager-btn` in `src/index.css` (uses frost control tokens).
+
+---
+
+## Frosted glass (canonical, V5.5.10+)
+
+Apple-style **vibrancy**: translucent fill + strong backdrop blur. Content behind is visible but frosted, not crystal-clear.
+
+### Tokens
+
+| Token | Dark | Light |
+|-------|------|--------|
+| `--ui-frost-blur` | `24px` | `24px` |
+| `--ui-frost-saturate` | `1.2` | `1.2` |
+| `--ui-frost-fill` (panels / glass cards) | elevated **62%** | elevated **78%** |
+| `--ui-frost-fill-bar` (header / tab bar / sheet title) | surface **72%** | elevated **78%** |
+| `--ui-frost-fill-control` (pills / overlay buttons) | elevated **42%** | elevated **55%** |
+| `--ui-frost-ring` | white **14%** | muted **50%** |
+
+### Classes
+
+| Class | Use |
+|-------|-----|
+| `.ui-frost` | Overlay panels: `BottomSheet` body, toasts |
+| `.ui-frost-bar` | Sticky header, bottom chrome, sheet title row |
+| `.ui-frost-control` | Workspace chip, other floating pills |
+| `.ui-floating-pager-btn` | Side page arrows (frost control + layout) |
+| `.ui-glass-card` | Profile / chart heroes — same blur tokens |
+| `.ui-sheet-backdrop` | Dim **40%** black + **12px** blur behind sheets |
+
+`prefers-reduced-transparency: reduce` turns frost into solid `surface-elevated`.
+
+### Where it is applied
+
+- App header (sticky over page scroll)
+- Bottom chrome (assignment drawer + nav) — drawer itself is transparent; chrome frosts
+- Bottom sheets (workspace, filters, profile panels) + title bar
+- Toasts
+- Floating page arrows
+- Workspace chip
+- Existing glass hero cards (`uiGlassCard`)
+
+### Where it is **not** applied
+
+Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped settings rows — those stay solid for contrast at the table.
 
 ---
 
@@ -155,8 +201,6 @@ CSS: `.ui-floating-pager-btn`, `--prev`, `--next` in `src/index.css`.
 
 ---
 
----
-
 ## V4 Glass & Radius (2026-07-07)
 
 ### Layering (selective glass — not global)
@@ -164,11 +208,11 @@ CSS: `.ui-floating-pager-btn`, `--prev`, `--next` in `src/index.css`.
 | Surface | Class / token | Where |
 |---------|---------------|--------|
 | **Standard card** | `uiCard` — `rounded-xl`, `bg-surface-elevated/88`, `backdrop-blur-xl` | Stats lists, settings rows |
-| **Glass hero** | `uiGlassCard` — `/72` opacity, `backdrop-blur-2xl`, deeper shadow | Profile header, charts, my-profile banner |
-| **Inset chip** | `uiCardInset` — `rounded-lg`, `/55` opacity | Profile link sheet options |
-| **Record / Table** | Solid surfaces (no blur) | Readability at the table |
+| **Glass hero** | `uiGlassCard` — canonical frost tokens (24px / 1.2) | Profile charts, deck pie, trend cards |
+| **Inset chip** | `uiCardInset` — `/55` opacity, 12px blur | Profile link sheet options |
+| **Record / Table** | Solid surfaces (no frost) | Readability at the table |
 
-**Rule:** Do not apply glass to Record page table rows or assignment drawer chips.
+**Rule:** Do not apply frost to Record page table rows, match cards, heatmaps, or rank lists. Use `.ui-frost*` for chrome only (V5.5.10).
 
 ### Border radius (V4)
 
@@ -365,6 +409,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.10: canonical frosted glass (24px / 1.2) on header, bottom chrome, sheets, toasts, overlay arrows, workspace chip |
 | 2026-08-26 | V5.5.9.x: canonical 4px desktop scrollbar; overlay `FloatingSidePager`; profile/match decisions (0W-0L, player-left, blue 1st, 3+10 paging); Apple Music/App Store palettes restated |
 | 2026-07-07 | V4 personal system: glass layering, smaller radius, 1st/2nd badges, theme/accent tokens, share cards |
 | 2026-07-07 | V2-inspired visual language; `uiSurface` + `SegmentedControl`; assignment drawer tab-gated + taller body; refined dark tokens |

@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.10 - 2026-08-26
+
+### Changed
+
+- **Frosted glass**: Canonical 24px / 1.2 saturate material on header, bottom chrome, sheets, toasts, overlay page arrows, and workspace chip. Record tables and match cards stay solid. Spec in `docs/UI-DESIGN.md`.
+
 ## V5.5.9.2 - 2026-08-26
 
 ### Changed

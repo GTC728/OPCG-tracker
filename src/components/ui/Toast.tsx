@@ -51,16 +51,16 @@ export function Toast({
   if (!visible) return null
 
   const toneClasses: Record<ToastType, string> = {
-    success: 'border-success/40 bg-success/15 text-text-primary',
-    error: 'border-danger/50 bg-danger/15 text-text-primary',
-    info: 'border-[var(--ui-border)] bg-surface-elevated/95 text-text-primary',
+    success: 'border-success/40',
+    error: 'border-danger/50',
+    info: 'border-[var(--glass-border)]',
   }
 
   return (
     <div className="app-above-bottom-chrome fixed inset-x-0 z-40 flex justify-center px-4">
       <div
         className={[
-          'ui-slide-up flex max-w-md items-center gap-3 rounded-2xl border px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-xl',
+          'ui-frost ui-slide-up flex max-w-md items-center gap-3 rounded-2xl border px-4 py-3 text-text-primary',
           toneClasses[type],
         ].join(' ')}
       >

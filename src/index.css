@@ -83,8 +83,14 @@ textarea:focus-visible {
   --glass-border: color-mix(in srgb, white 11%, transparent);
   --glass-shadow: 0 8px 28px rgba(0, 0, 0, 0.32), 0 1px 0 color-mix(in srgb, white 5%, transparent) inset;
   --glass-inset-bg: color-mix(in srgb, var(--color-surface) 58%, transparent);
-  --header-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
-  --nav-bg: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  --header-bg: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  --nav-bg: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  --ui-frost-blur: 24px;
+  --ui-frost-saturate: 1.2;
+  --ui-frost-fill: color-mix(in srgb, var(--color-surface-elevated) 62%, transparent);
+  --ui-frost-fill-bar: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  --ui-frost-fill-control: color-mix(in srgb, var(--color-surface-elevated) 42%, transparent);
+  --ui-frost-ring: color-mix(in srgb, white 14%, transparent);
 }
 
 [data-theme='light'] {
@@ -95,8 +101,14 @@ textarea:focus-visible {
   --glass-border: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
   --glass-shadow: 0 4px 18px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05);
   --glass-inset-bg: color-mix(in srgb, var(--color-surface-elevated) 82%, transparent);
-  --header-bg: color-mix(in srgb, var(--color-surface-elevated) 92%, transparent);
-  --nav-bg: color-mix(in srgb, var(--color-surface-elevated) 94%, transparent);
+  --header-bg: color-mix(in srgb, var(--color-surface-elevated) 78%, transparent);
+  --nav-bg: color-mix(in srgb, var(--color-surface-elevated) 78%, transparent);
+  --ui-frost-blur: 24px;
+  --ui-frost-saturate: 1.2;
+  --ui-frost-fill: color-mix(in srgb, var(--color-surface-elevated) 78%, transparent);
+  --ui-frost-fill-bar: color-mix(in srgb, var(--color-surface-elevated) 78%, transparent);
+  --ui-frost-fill-control: color-mix(in srgb, var(--color-surface-elevated) 55%, transparent);
+  --ui-frost-ring: color-mix(in srgb, var(--color-surface-muted) 50%, transparent);
 }
 
 [data-theme='light'] body {
@@ -189,7 +201,7 @@ textarea:focus-visible {
   background: var(--ui-scrollbar-thumb-hover);
 }
 
-/* Canonical overlay pager — docs/UI-DESIGN.md */
+/* Canonical overlay pager — frost control. See docs/UI-DESIGN.md */
 .ui-floating-pager-btn {
   position: absolute;
   top: 50%;
@@ -201,22 +213,22 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: rgb(0 0 0 / 15%);
-  color: rgb(255 255 255 / 65%);
+  background: var(--ui-frost-fill-control);
+  color: rgb(255 255 255 / 80%);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1;
   outline: none;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(1px);
+  box-shadow: 0 0 0 1px var(--ui-frost-ring);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
   transition:
     background-color 150ms ease,
     color 150ms ease;
 }
 
 .ui-floating-pager-btn:hover:not(:disabled) {
-  background: rgb(0 0 0 / 30%);
+  background: color-mix(in srgb, var(--ui-frost-fill-control) 70%, white 12%);
   color: #fff;
 }
 
@@ -229,8 +241,12 @@ textarea:focus-visible {
   left: 0.25rem;
 }
 
-.ui-floating-pager-btn--next {
-  right: 0.25rem;
+[data-theme='light'] .ui-floating-pager-btn {
+  color: rgb(0 0 0 / 70%);
+}
+
+[data-theme='light'] .ui-floating-pager-btn:hover:not(:disabled) {
+  color: #000;
 }
 
 /* Touch-friendly rails; show scrollbars + wheel works on desktop (see useWheelScroll). */
@@ -299,11 +315,52 @@ textarea:focus-visible {
 }
 
 .ui-glass-card {
-  background: color-mix(in srgb, var(--glass-bg) 92%, transparent);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  background: var(--ui-frost-fill);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+}
+
+.ui-frost {
+  background: var(--ui-frost-fill);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.ui-frost-bar {
+  background: var(--ui-frost-fill-bar);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+}
+
+.ui-frost-control {
+  background: var(--ui-frost-fill-control);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  box-shadow: 0 0 0 1px var(--ui-frost-ring);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ui-frost,
+  .ui-frost-bar,
+  .ui-frost-control,
+  .ui-glass-card,
+  .ui-floating-pager-btn,
+  .ui-header-bar,
+  .ui-bottom-nav,
+  .ui-sheet-panel,
+  .ui-sheet-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--color-surface-elevated);
+  }
+
+  .ui-sheet-backdrop {
+    background: rgb(0 0 0 / 55%);
+  }
 }
 
 .ui-card-inset {
@@ -465,17 +522,15 @@ textarea:focus-visible {
 }
 
 .ui-header-bar {
-  background: var(--header-bg);
+  background: var(--ui-frost-fill-bar);
   border-color: var(--ui-border);
-  backdrop-filter: blur(16px) saturate(1.1);
-  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
+  -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
 }
 
 .ui-bottom-nav {
-  background: var(--nav-bg);
-  border-color: var(--ui-border);
-  backdrop-filter: blur(16px) saturate(1.1);
-  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  background: transparent;
+  border-color: transparent;
 }
 
 .ui-list-row:hover {
@@ -710,6 +765,9 @@ textarea:focus-visible {
 
 .ui-sheet-backdrop {
   animation: ui-sheet-backdrop-in 200ms ease both;
+  background: rgb(0 0 0 / 40%);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
 }
 
 .ui-sheet-panel {

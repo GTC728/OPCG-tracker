@@ -64,6 +64,10 @@ export const uiHorizontalRail =
 
 export const uiHorizontalRailItem = 'w-[9.5rem] shrink-0 snap-start'
 
-export const uiHeaderBar = 'ui-header-bar sticky top-0 z-20 border-b px-5 py-3.5 backdrop-blur-md'
+export const uiHeaderBar = 'ui-header-bar ui-frost-bar sticky top-0 z-20 border-b px-5 py-3.5'
 
-export const uiBottomNav = 'ui-bottom-nav border-t backdrop-blur-md'
+export const uiBottomNav = 'ui-bottom-nav'
+
+export const uiFrost = 'ui-frost'
+export const uiFrostBar = 'ui-frost-bar'
+export const uiFrostControl = 'ui-frost-control'

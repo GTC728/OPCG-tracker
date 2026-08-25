@@ -34,19 +34,19 @@ export function BottomSheet({ open, title, onClose, children, manageScroll = fal
       <button
         type="button"
         aria-label="關閉"
-        className="ui-sheet-backdrop absolute inset-0 bg-black/60"
+        className="ui-sheet-backdrop absolute inset-0"
         onClick={onClose}
       />
       <div
         className={[
-          'ui-sheet-panel safe-bottom relative flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface-elevated shadow-2xl sm:rounded-2xl',
+          'ui-sheet-panel ui-frost safe-bottom relative flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl',
           'max-h-[min(calc(100dvh-var(--bottom-chrome-height,4.5rem)-0.5rem),88dvh)] sm:max-h-[min(88dvh,720px)]',
         ].join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bottom-sheet-title"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-surface-muted px-5 py-3.5">
+        <div className="ui-frost-bar flex shrink-0 items-center justify-between border-b border-[var(--ui-border)] px-5 py-3.5">
           <h2 id="bottom-sheet-title" className="text-lg font-semibold">
             {title}
           </h2>

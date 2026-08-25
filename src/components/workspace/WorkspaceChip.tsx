@@ -19,7 +19,7 @@ export function WorkspaceChip({ onClick }: WorkspaceChipProps) {
       className={[
         'max-w-[9rem] shrink-0 truncate rounded-full px-2.5 py-1 text-[10px] font-semibold',
         uiPressable,
-        lastGroupCode ? 'bg-brand-500/15 text-brand-100 ring-1 ring-brand-500/30' : 'bg-surface-muted text-text-secondary ring-1 ring-surface-muted',
+        lastGroupCode ? 'ui-frost-control text-brand-100' : 'ui-frost-control text-text-secondary',
       ].join(' ')}
       onClick={onClick}
       title={t('workspace.openHub')}
