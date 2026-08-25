@@ -9,6 +9,7 @@ export function HistoryMatchCard({
   match,
   players,
   decks,
+  perspectivePlayerId,
   onEdit,
   onCopy,
   onDelete,
@@ -16,6 +17,7 @@ export function HistoryMatchCard({
   match: Match
   players: Player[]
   decks: Deck[]
+  perspectivePlayerId?: string
   onEdit: () => void
   onCopy: () => void
   onDelete: () => void
@@ -29,6 +31,7 @@ export function HistoryMatchCard({
       match={match}
       players={players}
       decks={decks}
+      perspectivePlayerId={perspectivePlayerId}
       timeLabel={time}
       footerRight={
         <span className="text-[10px] text-text-secondary">

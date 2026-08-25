@@ -19,7 +19,9 @@ export function TurnOrderBadge({
     <span
       className={[
         uiPill,
-        isFirst ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/25' : 'bg-surface-muted/50 text-text-secondary ring-1 ring-white/[0.06]',
+        isFirst
+          ? 'bg-[#3b82f6]/20 text-[#60a5fa] ring-1 ring-[#3b82f6]/40'
+          : 'bg-surface-muted/50 text-text-secondary ring-1 ring-white/[0.06]',
       ].join(' ')}
     >
       {label}
@@ -47,7 +49,7 @@ export function FirstPlayerBadge({ label }: { label?: string }) {
 
   return (
     <span
-      className="inline-flex h-[22px] shrink-0 items-center justify-center rounded-md border border-brand-500/40 bg-brand-500/12 px-1 text-[9px] font-bold leading-none text-brand-400"
+      className="inline-flex h-[22px] shrink-0 items-center justify-center rounded-md border border-[#3b82f6]/50 bg-[#3b82f6]/20 px-1 text-[9px] font-bold leading-none text-[#60a5fa]"
       title={t('match.firstTurn')}
     >
       {label ?? t('match.firstTurn')}

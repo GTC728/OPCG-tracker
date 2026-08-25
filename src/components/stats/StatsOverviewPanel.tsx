@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
 import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
+import { FloatingSidePager } from '@/components/ui/FloatingSidePager'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
 import { RankListRow } from '@/components/ui/RankListRow'
@@ -40,26 +41,16 @@ function RankPager({
   }
 
   return (
-    <div className="flex items-stretch gap-1.5">
-      <button
-        type="button"
-        className="flex w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-inset-bg)] text-lg text-text-secondary outline-none disabled:opacity-30"
-        disabled={page <= 0}
-        aria-label={t('common.previous')}
-        onClick={onPrev}
-      >
-        ‹
-      </button>
-      <div className="min-w-0 flex-1 space-y-2">{children}</div>
-      <button
-        type="button"
-        className="flex w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-inset-bg)] text-lg text-text-secondary outline-none disabled:opacity-30"
-        disabled={page >= totalPages - 1}
-        aria-label={t('common.next')}
-        onClick={onNext}
-      >
-        ›
-      </button>
+    <div className="relative">
+      <div className="space-y-2">{children}</div>
+      <FloatingSidePager
+        canPrev={page > 0}
+        canNext={page < totalPages - 1}
+        onPrev={onPrev}
+        onNext={onNext}
+        prevLabel={t('common.previous')}
+        nextLabel={t('common.next')}
+      />
     </div>
   )
 }

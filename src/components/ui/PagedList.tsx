@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent, type WheelEvent } from 'react'
+import { FloatingSidePager } from '@/components/ui/FloatingSidePager'
 import { useI18n } from '@/lib/i18n'
 import {
   clampPage,
@@ -91,16 +92,7 @@ export function PagedList<T>({
 
   return (
     <div className={['flex min-h-0 flex-1 flex-col gap-3', className].filter(Boolean).join(' ')}>
-      <div className="flex min-h-0 flex-1 items-stretch gap-1.5">
-        <button
-          type="button"
-          className="flex w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-inset-bg)] text-lg text-text-secondary outline-none disabled:opacity-30"
-          disabled={safePage <= 1}
-          aria-label={t('common.previous')}
-          onClick={() => goTo(safePage - 1)}
-        >
-          ‹
-        </button>
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           ref={listRef}
           className="min-h-[12rem] min-w-0 flex-1 space-y-2 overflow-y-auto"
@@ -112,15 +104,16 @@ export function PagedList<T>({
             <div key={getItemKey(item, offset + index)}>{renderItem(item, offset + index)}</div>
           ))}
         </div>
-        <button
-          type="button"
-          className="flex w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-inset-bg)] text-lg text-text-secondary outline-none disabled:opacity-30"
-          disabled={safePage >= totalPages}
-          aria-label={t('common.next')}
-          onClick={() => goTo(safePage + 1)}
-        >
-          ›
-        </button>
+        {totalPages > 1 ? (
+          <FloatingSidePager
+            canPrev={safePage > 1}
+            canNext={safePage < totalPages}
+            onPrev={() => goTo(safePage - 1)}
+            onNext={() => goTo(safePage + 1)}
+            prevLabel={t('common.previous')}
+            nextLabel={t('common.next')}
+          />
+        ) : null}
       </div>
 
       {totalPages > 1 ? (

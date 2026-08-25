@@ -275,6 +275,7 @@ export function PlayerProfileHub({
                 match={match}
                 players={players}
                 decks={decks}
+                perspectivePlayerId={player.id}
                 timeLabel={formatDateTime(match.finishedAt).split(' ').slice(-1)[0]}
               />
             ))}
@@ -346,6 +347,7 @@ export function PlayerProfileHub({
               match={match}
               players={players}
               decks={decks}
+              perspectivePlayerId={player.id}
               timeLabel={formatDateTime(match.finishedAt)}
             />
           )}

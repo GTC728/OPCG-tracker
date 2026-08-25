@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.9 - 2026-08-26
+
+### Changed
+
+- **Paging arrows**: Side ‹ › controls overlay the list as floating pills so player ranks and profile matches keep full card width.
+- **Match cards**: The inspected / filtered player stays on the left in profile history and the History player filter.
+- **1st badge**: Always blue, independent of the accent color.
+
 ## V5.5.8 - 2026-08-26
 
 ### Changed

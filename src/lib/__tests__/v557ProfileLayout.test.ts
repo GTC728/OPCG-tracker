@@ -3,6 +3,7 @@ import { en } from '@/i18n/en'
 import { ja } from '@/i18n/ja'
 import { zhHans } from '@/i18n/zh-Hans'
 import { zhHant } from '@/i18n/zh-Hant'
+import { resolveMatchRecordSides } from '@/lib/matchRecordSides'
 import { clampPage, getPageCount, slicePage, visiblePageWindow } from '@/lib/pagination'
 import { formatWinLossRecord } from '@/lib/winLossRecord'
 
@@ -45,5 +46,26 @@ describe('i18n keys', () => {
     expect(Object.keys(en).sort()).toEqual(keys)
     expect(Object.keys(zhHans).sort()).toEqual(keys)
     expect(Object.keys(ja).sort()).toEqual(keys)
+  })
+})
+
+describe('resolveMatchRecordSides', () => {
+  const match = {
+    player1Id: 'p1',
+    player2Id: 'p2',
+    deck1Id: 'd1',
+    deck2Id: 'd2',
+  }
+
+  it('keeps table order without a perspective player', () => {
+    expect(resolveMatchRecordSides(match)).toEqual({
+      left: { playerId: 'p1', deckId: 'd1' },
+      right: { playerId: 'p2', deckId: 'd2' },
+    })
+  })
+
+  it('puts the inspected player on the left', () => {
+    expect(resolveMatchRecordSides(match, 'p2').left.playerId).toBe('p2')
+    expect(resolveMatchRecordSides(match, 'p1').left.playerId).toBe('p1')
   })
 })

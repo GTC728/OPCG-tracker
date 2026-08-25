@@ -393,6 +393,7 @@ export function HistoryPage() {
               match={match}
               players={allPlayers}
               decks={decks}
+              perspectivePlayerId={playerFilter || undefined}
               onEdit={() => setEditingMatch(match)}
               onCopy={() => setRematchMatch(match)}
               onDelete={() => setDeleteTarget(match)}

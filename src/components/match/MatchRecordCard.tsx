@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
 import { FirstPlayerBadge, WinLossBadge } from '@/components/match/TurnOrderBadge'
 import { getDeck, getPlayerName } from '@/lib/entities'
+import { resolveMatchRecordSides } from '@/lib/matchRecordSides'
 import { uiCard } from '@/lib/uiSurface'
 import type { Deck, Match, Player } from '@/types'
 
@@ -63,6 +64,7 @@ export function MatchRecordCard({
   onClick,
   className,
   children,
+  perspectivePlayerId,
 }: {
   match: Match
   players: Player[]
@@ -72,27 +74,29 @@ export function MatchRecordCard({
   onClick?: () => void
   className?: string
   children?: ReactNode
+  perspectivePlayerId?: string
 }) {
   const winnerId = match.winnerPlayerId
+  const { left, right } = resolveMatchRecordSides(match, perspectivePlayerId)
   const body = (
     <>
       <div className="flex items-stretch gap-2">
         <MatchRecordSide
-          playerId={match.player1Id}
-          deckId={match.deck1Id}
+          playerId={left.playerId}
+          deckId={left.deckId}
           players={players}
           decks={decks}
-          isWinner={winnerId === match.player1Id}
-          isFirst={match.firstPlayerId === match.player1Id}
+          isWinner={winnerId === left.playerId}
+          isFirst={match.firstPlayerId === left.playerId}
         />
         <div className="w-px shrink-0 bg-surface-muted" />
         <MatchRecordSide
-          playerId={match.player2Id}
-          deckId={match.deck2Id}
+          playerId={right.playerId}
+          deckId={right.deckId}
           players={players}
           decks={decks}
-          isWinner={winnerId === match.player2Id}
-          isFirst={match.firstPlayerId === match.player2Id}
+          isWinner={winnerId === right.playerId}
+          isFirst={match.firstPlayerId === right.playerId}
         />
       </div>
       {timeLabel || footerRight ? (
