@@ -111,10 +111,10 @@ Used by `PagedList` and Stats player ranking. Parent must be `position: relative
 | Size | `2.25rem` (36px) square |
 | Shape | circle (`border-radius: 9999px`) |
 | Left / right inset | `0.25rem` (4px) |
-| Fill | `--ui-frost-fill-control` (elevated **42%** dark / **55%** light) |
+| Fill | `--ui-frost-fill-control` (elevated **55%** dark / **68%** light) |
 | Glyph | white **80%** (dark) / black **70%** (light), `1rem`, semibold, `‹` / `›` |
 | Ring | `--ui-frost-ring` (white **14%** dark) |
-| Blur | **24px** + saturate **1.2** (canonical frost) |
+| Blur | **56px** Gaussian + saturate **1.4** (canonical frost) |
 | Shadow | 1px ring only |
 | Hover | mix control fill with **12%** white; glyph full white / black |
 | Disabled | `opacity: 0.2`, no pointer events |
@@ -126,17 +126,19 @@ CSS: `.ui-floating-pager-btn` in `src/index.css` (uses frost control tokens).
 
 ## Frosted glass (canonical, V5.5.10+)
 
-Apple-style **vibrancy**: translucent fill + strong backdrop blur. Content behind is visible but frosted, not crystal-clear.
+Apple-style **vibrancy**: translucent fill + Gaussian backdrop blur. CSS `backdrop-filter: blur()` is the web equivalent of iOS `UIBlurEffect` / Android `RenderEffect.createBlurEffect` — that *is* Gaussian blur. Do not add a JS/canvas Gaussian library.
+
+Behind text should read as color wash, not sharp letters. If overlay copy is hard to read, raise `--ui-frost-fill-bar` first, then blur.
 
 ### Tokens
 
 | Token | Dark | Light |
 |-------|------|--------|
-| `--ui-frost-blur` | `24px` | `24px` |
-| `--ui-frost-saturate` | `1.2` | `1.2` |
-| `--ui-frost-fill` (panels / glass cards) | elevated **62%** | elevated **78%** |
-| `--ui-frost-fill-bar` (header / tab bar / sheet title) | surface **72%** | elevated **78%** |
-| `--ui-frost-fill-control` (pills / overlay buttons) | elevated **42%** | elevated **55%** |
+| `--ui-frost-blur` | `56px` (Gaussian) | `56px` |
+| `--ui-frost-saturate` | `1.4` | `1.4` |
+| `--ui-frost-fill` (panels / glass cards) | elevated **78%** | elevated **88%** |
+| `--ui-frost-fill-bar` (header / tab bar / sheet title) | surface **88%** | elevated **90%** |
+| `--ui-frost-fill-control` (pills / overlay buttons) | elevated **55%** | elevated **68%** |
 | `--ui-frost-ring` | white **14%** | muted **50%** |
 
 ### Classes
@@ -148,7 +150,7 @@ Apple-style **vibrancy**: translucent fill + strong backdrop blur. Content behin
 | `.ui-frost-control` | Workspace chip, other floating pills |
 | `.ui-floating-pager-btn` | Side page arrows (frost control + layout) |
 | `.ui-glass-card` | Profile / chart heroes — same blur tokens |
-| `.ui-sheet-backdrop` | Dim **40%** black + **12px** blur behind sheets |
+| `.ui-sheet-backdrop` | Dim **40%** black + **20px** blur behind sheets |
 
 `prefers-reduced-transparency: reduce` turns frost into solid `surface-elevated`.
 
@@ -208,7 +210,7 @@ Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped setti
 | Surface | Class / token | Where |
 |---------|---------------|--------|
 | **Standard card** | `uiCard` — `rounded-xl`, `bg-surface-elevated/88`, `backdrop-blur-xl` | Stats lists, settings rows |
-| **Glass hero** | `uiGlassCard` — canonical frost tokens (24px / 1.2) | Profile charts, deck pie, trend cards |
+| **Glass hero** | `uiGlassCard` — canonical frost tokens (56px Gaussian / 1.4) | Profile charts, deck pie, trend cards |
 | **Inset chip** | `uiCardInset` — `/55` opacity, 12px blur | Profile link sheet options |
 | **Record / Table** | Solid surfaces (no frost) | Readability at the table |
 
@@ -409,7 +411,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
-| 2026-08-26 | V5.5.10: canonical frosted glass (24px / 1.2) on header, bottom chrome, sheets, toasts, overlay arrows, workspace chip |
+| 2026-08-26 | V5.5.11: frost blur 56px Gaussian + denser fills for overlay readability |
 | 2026-08-26 | V5.5.9.x: canonical 4px desktop scrollbar; overlay `FloatingSidePager`; profile/match decisions (0W-0L, player-left, blue 1st, 3+10 paging); Apple Music/App Store palettes restated |
 | 2026-07-07 | V4 personal system: glass layering, smaller radius, 1st/2nd badges, theme/accent tokens, share cards |
 | 2026-07-07 | V2-inspired visual language; `uiSurface` + `SegmentedControl`; assignment drawer tab-gated + taller body; refined dark tokens |

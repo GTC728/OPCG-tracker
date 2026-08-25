@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.11 - 2026-08-26
+
+### Changed
+
+- **Frosted glass**: Stronger Gaussian backdrop blur (`56px`, saturate 1.4) and more opaque fills so overlay chrome (assignment drawer, sheets) stays readable over busy content.
+
 ## V5.5.10 - 2026-08-26
 
 ### Changed
