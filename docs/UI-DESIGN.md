@@ -110,7 +110,8 @@ Used by `PagedList` and Stats player ranking. Parent must be `position: relative
 | Z-index | `10` |
 | Size | `2.25rem` (36px) square |
 | Shape | circle (`border-radius: 9999px`) |
-| Left / right inset | `0.25rem` (4px) |
+| Left / right inset | `0.25rem` (4px) — `--prev` uses `left`, `--next` uses `right` (both required) |
+| List inset | Parent list uses `px-11` when arrows are shown so card text is not under the 36px pills |
 | Fill | `--ui-frost-fill-control` (elevated **55%** dark / **68%** light) |
 | Glyph | white **80%** (dark) / black **70%** (light), `1rem`, semibold, `‹` / `›` |
 | Ring | `--ui-frost-ring` (white **14%** dark) |
@@ -137,7 +138,7 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 | `--ui-frost-blur` | `56px` (Gaussian) | `56px` |
 | `--ui-frost-saturate` | `1.4` | `1.4` |
 | `--ui-frost-fill` (panels / glass cards) | elevated **78%** | elevated **88%** |
-| `--ui-frost-fill-bar` (header / tab bar / sheet title) | surface **88%** | elevated **90%** |
+| `--ui-frost-fill-bar` (app header / bottom chrome only) | surface **88%** | elevated **90%** |
 | `--ui-frost-fill-control` (pills / overlay buttons) | elevated **55%** | elevated **68%** |
 | `--ui-frost-ring` | white **14%** | muted **50%** |
 
@@ -145,8 +146,8 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 
 | Class | Use |
 |-------|-----|
-| `.ui-frost` | Overlay panels: `BottomSheet` body, toasts |
-| `.ui-frost-bar` | Sticky header, bottom chrome, sheet title row |
+| `.ui-frost` | Overlay panels: `BottomSheet` (title + body, one layer), toasts |
+| `.ui-frost-bar` | Sticky app header and bottom chrome only — **do not nest** inside `.ui-frost` |
 | `.ui-frost-control` | Workspace chip, other floating pills |
 | `.ui-floating-pager-btn` | Side page arrows (frost control + layout) |
 | `.ui-glass-card` | Profile / chart heroes — same blur tokens |
@@ -158,7 +159,7 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 
 - App header (sticky over page scroll)
 - Bottom chrome (assignment drawer + nav) — drawer itself is transparent; chrome frosts
-- Bottom sheets (workspace, filters, profile panels) + title bar
+- Bottom sheets (workspace, filters, profile panels): **one** `.ui-frost` on the panel; title row is transparent (not a second frost-bar)
 - Toasts
 - Floating page arrows
 - Workspace chip
@@ -411,6 +412,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.11.1: sheet title shares panel frost (no nested frost-bar); overlay pager `--next` + list inset |
 | 2026-08-26 | V5.5.11: frost blur 56px Gaussian + denser fills for overlay readability |
 | 2026-08-26 | V5.5.9.x: canonical 4px desktop scrollbar; overlay `FloatingSidePager`; profile/match decisions (0W-0L, player-left, blue 1st, 3+10 paging); Apple Music/App Store palettes restated |
 | 2026-07-07 | V4 personal system: glass layering, smaller radius, 1st/2nd badges, theme/accent tokens, share cards |

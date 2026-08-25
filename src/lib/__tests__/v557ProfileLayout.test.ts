@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { en } from '@/i18n/en'
 import { ja } from '@/i18n/ja'
@@ -37,6 +39,12 @@ describe('pagination', () => {
     expect(visiblePageWindow(1, 3)).toEqual([1, 2, 3])
     expect(visiblePageWindow(4, 10, 5)).toEqual([2, 3, 4, 5, 6])
     expect(visiblePageWindow(10, 10, 5)).toEqual([6, 7, 8, 9, 10])
+  })
+
+  it('keeps overlay pager arrows on opposite sides', () => {
+    const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf8')
+    expect(css).toMatch(/\.ui-floating-pager-btn--prev\s*\{[^}]*left:\s*0\.25rem/)
+    expect(css).toMatch(/\.ui-floating-pager-btn--next\s*\{[^}]*right:\s*0\.25rem/)
   })
 })
 

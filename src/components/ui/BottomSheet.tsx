@@ -46,7 +46,7 @@ export function BottomSheet({ open, title, onClose, children, manageScroll = fal
         aria-modal="true"
         aria-labelledby="bottom-sheet-title"
       >
-        <div className="ui-frost-bar flex shrink-0 items-center justify-between border-b border-[var(--ui-border)] px-5 py-3.5">
+        <div className="relative z-[1] flex shrink-0 items-center justify-between border-b border-[var(--ui-border)] bg-transparent px-5 py-3.5">
           <h2 id="bottom-sheet-title" className="text-lg font-semibold">
             {title}
           </h2>

@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.11.1 - 2026-08-26
+
+### Fixed
+
+- **Overlay pager**: Restored `.ui-floating-pager-btn--next { right: 0.25rem }` so ‹ › sit on opposite sides instead of stacking on the left; list content uses `px-11` so names are not under the 36px pills.
+- **Sheet title bar**: Not a separate opaque bar. Nested `.ui-frost-bar` on a `.ui-frost` panel sampled the panel instead of the page, so the title looked solid black. Title row is now transparent and shares the panel frost.
+
 ## V5.5.11 - 2026-08-26
 
 ### Changed

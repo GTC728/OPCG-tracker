@@ -241,6 +241,10 @@ textarea:focus-visible {
   left: 0.25rem;
 }
 
+.ui-floating-pager-btn--next {
+  right: 0.25rem;
+}
+
 [data-theme='light'] .ui-floating-pager-btn {
   color: rgb(0 0 0 / 70%);
 }
@@ -331,7 +335,6 @@ textarea:focus-visible {
 }
 
 .ui-frost-bar {
-  isolation: isolate;
   background: var(--ui-frost-fill-bar);
   backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
   -webkit-backdrop-filter: blur(var(--ui-frost-blur)) saturate(var(--ui-frost-saturate));
