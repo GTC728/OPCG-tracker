@@ -221,6 +221,8 @@ export const zh = {
   'rematch.lastPrefix': '上次：',
   'rematch.winLabel': ' 勝',
   'record.matchSaved': '已記錄對局',
+  'record.confirmMatch': '確認對局',
+  'record.confirmMatchAction': '確認記錄',
   'record.winner': '勝方',
   'record.notesOptional': '備註（可選）',
   'record.notesPlaceholder': '例如：先攻 T6 結束',

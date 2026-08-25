@@ -1,4 +1,5 @@
 import { ColorDots } from '@/components/deck/ColorDots'
+import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { getLeaderDisplayName } from '@/lib/leaderDisplay'
 import { uiPopIn, uiPressable } from '@/lib/motion'
 import { formatPercent } from '@/lib/stats'
@@ -11,7 +12,8 @@ export function DeckPreviewCard({
   language,
   usagePercent,
   winRate,
-  record,
+  wins,
+  losses,
   accentFill,
   onClick,
   layout = 'rail',
@@ -20,7 +22,8 @@ export function DeckPreviewCard({
   language: Language
   usagePercent: number
   winRate: number | null
-  record: string
+  wins: number
+  losses: number
   accentFill?: string
   onClick: () => void
   layout?: 'rail' | 'grid'
@@ -46,8 +49,8 @@ export function DeckPreviewCard({
       </p>
       <p className="mt-3 text-xl font-bold tabular-nums leading-none">{usagePercent}%</p>
       <p className="mt-0.5 text-[10px] text-text-secondary">{t('stats.deckUsageShort')}</p>
-      <p className="mt-auto pt-2 text-[11px] tabular-nums text-text-secondary">
-        {formatPercent(winRate)} · {record}
+      <p className="mt-auto pt-2 text-[11px] text-text-secondary">
+        {formatPercent(winRate)} · <WinLossRecord wins={wins} losses={losses} />
       </p>
     </article>
   )

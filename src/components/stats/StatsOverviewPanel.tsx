@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
+import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { ColorMetaPieChart } from '@/components/stats/ColorMetaPieChart'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
@@ -133,7 +134,12 @@ export function StatsOverviewPanel({
                   {
                     label: t('stats.mvp'),
                     value: dashboard.topPlayer.name,
-                    detail: `${formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} · ${dashboard.topPlayer.wins}W-${dashboard.topPlayer.losses}L`,
+                    detail: (
+                      <>
+                        {formatPercent(getDisplayWinRate(dashboard.topPlayer.wins, dashboard.topPlayer.total))} ·{' '}
+                        <WinLossRecord wins={dashboard.topPlayer.wins} losses={dashboard.topPlayer.losses} />
+                      </>
+                    ),
                     accent: true,
                   },
                 ]
@@ -160,7 +166,12 @@ export function StatsOverviewPanel({
                 key={stat.id}
                 rank={playerPage * RANK_PAGE_SIZE + index + 1}
                 title={stat.name}
-                subtitle={`${stat.wins}W-${stat.losses}L · ${formatPercent(getDisplayWinRate(stat.wins, stat.total))}`}
+                subtitle={
+                  <>
+                    <WinLossRecord wins={stat.wins} losses={stat.losses} /> ·{' '}
+                    {formatPercent(getDisplayWinRate(stat.wins, stat.total))}
+                  </>
+                }
                 highlighted={playerPage === 0 && index === 0}
                 onClick={() => onOpenPlayer(stat.id)}
               />

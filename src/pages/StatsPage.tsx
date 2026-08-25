@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
 import { getLinkedPlayer } from '@/lib/profileClaim'
@@ -129,7 +130,7 @@ function StatRow({
             {deck ? <DeckLabel deck={deck} showCode className="inline-flex min-w-0" /> : stat.name}
           </h3>
           <p className="mt-1 text-sm text-text-secondary">
-            {stat.wins}W-{stat.losses}L · {getSampleLabel(stat.total)}
+            <WinLossRecord wins={stat.wins} losses={stat.losses} /> · {getSampleLabel(stat.total)}
           </p>
         </div>
         <span className="text-lg font-bold">{formatPercent(displayWinRate)}</span>
@@ -202,7 +203,7 @@ function HeatmapCell({
     <span className={['text-[10px] font-semibold leading-tight', reliable ? '' : 'text-text-secondary'].join(' ')}>
       {displayWinRate === null ? '—' : formatPercent(displayWinRate)}
       <span className="block font-normal text-text-secondary">
-        {wins}W-{losses}L
+        <WinLossRecord wins={wins} losses={losses} />
       </span>
     </span>
   )
@@ -616,7 +617,7 @@ function DeckListSection({
               <div className="min-w-0 flex-1">
                 <DeckLabel deck={deck} showCode compact className="inline-flex max-w-full line-clamp-2 leading-tight" />
                 <p className="mt-0.5 text-xs text-text-secondary">
-                  {stat.wins}W-{stat.losses}L · {getSampleLabel(stat.total)} · {tag}
+                  <WinLossRecord wins={stat.wins} losses={stat.losses} /> · {getSampleLabel(stat.total)} · {tag}
                 </p>
               </div>
               <div className="shrink-0 text-right tabular-nums">

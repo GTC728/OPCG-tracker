@@ -1,4 +1,5 @@
 import { uiPressable } from '@/lib/motion'
+import type { ReactNode } from 'react'
 
 export function RankListRow({
   rank,
@@ -9,7 +10,7 @@ export function RankListRow({
 }: {
   rank?: number
   title: string
-  subtitle?: string
+  subtitle?: ReactNode
   highlighted?: boolean
   onClick?: () => void
 }) {

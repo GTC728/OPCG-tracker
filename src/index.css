@@ -368,7 +368,22 @@ textarea:focus-visible {
 }
 
 .ui-deck-art-cover {
+  position: relative;
   height: 5.5rem;
+  overflow: hidden;
+}
+
+.ui-deck-art-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.16) 100%
+  );
+  pointer-events: none;
 }
 
 .ui-metric-hero {

@@ -6,6 +6,7 @@ import {
   getWinRate,
   MIN_RELIABLE_SAMPLE,
 } from '@/lib/stats'
+import { formatWinLossRecord } from '@/lib/winLossRecord'
 import { useAppStore } from '@/stores/appStore'
 
 export { MIN_RELIABLE_SAMPLE }
@@ -61,17 +62,16 @@ export function formatWinRateTooltip(
 ): string {
   const reliability = getReliabilityLabel(total, t)
   const raw = formatPercent(rawWinRate ?? getWinRate(wins, total))
+  const record = formatWinLossRecord(wins, losses)
   if (!isReliableSample(total)) {
     return t('stats.tooltip.standard')
       .replace('{reliability}', reliability)
       .replace('{smoothed}', raw)
       .replace('{raw}', raw)
-      .replace('{wins}', String(wins))
-      .replace('{losses}', String(losses))
+      .replace('{record}', record)
   }
   return t('stats.tooltip.standard')
     .replace('{reliability}', reliability)
     .replace('{smoothed}', raw)
-    .replace('{wins}', String(wins))
-    .replace('{losses}', String(losses))
+    .replace('{record}', record)
 }

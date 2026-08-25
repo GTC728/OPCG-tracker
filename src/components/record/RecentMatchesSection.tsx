@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { MatchListItem } from '@/components/match/MatchResultRow'
+import { MatchRecordCard } from '@/components/match/MatchRecordCard'
 import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection'
 import { useToast } from '@/components/ui/Toast'
@@ -54,13 +54,12 @@ export function RecentMatchesSection({
           {recentMatches.map((match) => {
             const timeLabel = formatDateTime(match.finishedAt).split(' ').slice(-1)[0]
             return (
-              <MatchListItem
+              <MatchRecordCard
                 key={match.id}
                 match={match}
                 players={players}
                 decks={decks}
-                meta={timeLabel}
-                showResultColors
+                timeLabel={timeLabel}
                 onClick={() =>
                   setPendingRematch({
                     player1Id: match.player1Id,

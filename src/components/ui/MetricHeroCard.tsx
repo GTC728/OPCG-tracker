@@ -5,7 +5,7 @@ export function MetricHeroCard({
   subtitle,
   split = false,
 }: {
-  metrics: Array<{ label: string; value: ReactNode; detail?: string; accent?: boolean }>
+  metrics: Array<{ label: string; value: ReactNode; detail?: ReactNode; accent?: boolean }>
   subtitle?: string
   /** Two-metric layout with center divider (Record / MVP row). */
   split?: boolean
@@ -42,7 +42,7 @@ export function MetricHeroCard({
 function MetricCell({
   metric,
 }: {
-  metric: { label: string; value: ReactNode; detail?: string; accent?: boolean }
+  metric: { label: string; value: ReactNode; detail?: ReactNode; accent?: boolean }
 }) {
   return (
     <div className="min-w-0">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { WinLossRecord } from '@/components/match/WinLossRecord'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
 import { RecentMatchesSection } from '@/components/record/RecentMatchesSection'
 import { SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
@@ -181,8 +182,8 @@ export function RecordPage() {
                       <>
                         <span className="block truncate">{dashboard.topPlayer.name}</span>
                         <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
-                          {formatPercent(dashboard.topPlayer.winRate)} · {dashboard.topPlayer.wins}W
-                          {dashboard.topPlayer.losses}L
+                          {formatPercent(dashboard.topPlayer.winRate)} ·{' '}
+                          <WinLossRecord wins={dashboard.topPlayer.wins} losses={dashboard.topPlayer.losses} />
                         </span>
                       </>
                     ) : (
@@ -197,8 +198,8 @@ export function RecordPage() {
                       <span className="block min-w-0 truncate">
                         <DeckLabel deck={decks.find((deck) => deck.id === dashboard.topDeck?.id)} showCode />
                         <span className="mt-0.5 block text-[10px] font-normal text-text-secondary">
-                          {formatPercent(dashboard.topDeck.winRate)} · {dashboard.topDeck.wins}W
-                          {dashboard.topDeck.losses}L
+                          {formatPercent(dashboard.topDeck.winRate)} ·{' '}
+                          <WinLossRecord wins={dashboard.topDeck.wins} losses={dashboard.topDeck.losses} />
                         </span>
                       </span>
                     ) : (

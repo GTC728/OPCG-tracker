@@ -123,7 +123,7 @@ interface AppStore extends AppState {
   createActiveMatch: (input: ActiveMatchInput) => ActiveMatch
   createActiveMatchOnEmptyTable: (input: ActiveMatchInput) => ActiveMatch
   setActiveMatchFirstPlayer: (id: string, firstPlayerId: string | null) => void
-  completeActiveMatch: (id: string, winnerPlayerId: string) => Match
+  completeActiveMatch: (id: string, winnerPlayerId: string, notes?: string | null) => Match
   updateMatch: (id: string, input: MatchEditInput) => void
   undoCompletedMatch: (matchId: string) => void
   undoMatchEdit: (matchId: string) => void
@@ -921,7 +921,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next })
   },
 
-  completeActiveMatch: (id, winnerPlayerId) => {
+  completeActiveMatch: (id, winnerPlayerId, notes) => {
     const current = getAppState()
     const activeMatch = current.activeMatches.find((match) => match.id === id)
     if (!activeMatch) {
@@ -960,7 +960,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       finishedAt: nowIso(),
       source: 'manual',
       deletedAt: null,
-      notes: activeMatch.notes,
+      notes: notes !== undefined ? notes : activeMatch.notes,
     }
 
     afterMatchAdded(match)

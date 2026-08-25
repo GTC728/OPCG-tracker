@@ -10,36 +10,43 @@ import { getListedPlayers } from '@/lib/entityVisibility'
 import { getSortedPlayersForSession } from '@/lib/selectors'
 import { uiCalloutWarning } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
-import type { Deck, Match, Player } from '@/types'
+import type { ActiveMatch, Deck, Player } from '@/types'
+
+type PendingCompletion = {
+  matchId: string
+  winnerPlayerId: string
+}
 
 function PostMatchSheet({
-  match,
+  activeMatch,
+  winnerPlayerId,
   players,
   decks,
   open,
-  onSkip,
-  onSave,
+  onCancel,
+  onConfirm,
 }: {
-  match: Match | null
+  activeMatch: ActiveMatch | null
+  winnerPlayerId: string | null
   players: Player[]
   decks: Deck[]
   open: boolean
-  onSkip: () => void
-  onSave: (notes: string | null) => void
+  onCancel: () => void
+  onConfirm: (notes: string | null) => void
 }) {
   const { t } = useI18n()
   const [notes, setNotes] = useState('')
 
-  if (!match) return null
+  if (!activeMatch || !winnerPlayerId) return null
 
-  const winnerName = getPlayerName(players, match.winnerPlayerId)
-  const leftPlayer = getPlayerName(players, match.player1Id)
-  const rightPlayer = getPlayerName(players, match.player2Id)
-  const leftDeck = getDeck(decks, match.deck1Id)
-  const rightDeck = getDeck(decks, match.deck2Id)
+  const winnerName = getPlayerName(players, winnerPlayerId)
+  const leftPlayer = getPlayerName(players, activeMatch.player1Id)
+  const rightPlayer = getPlayerName(players, activeMatch.player2Id)
+  const leftDeck = getDeck(decks, activeMatch.deck1Id)
+  const rightDeck = getDeck(decks, activeMatch.deck2Id)
 
   return (
-    <BottomSheet open={open} title={t('record.matchSaved')} onClose={onSkip}>
+    <BottomSheet open={open} title={t('record.confirmMatch')} onClose={onCancel}>
       <p className="text-sm text-text-secondary">
         {t('record.winner')}：<span className="font-semibold text-success">{winnerName}</span>
       </p>
@@ -60,11 +67,11 @@ function PostMatchSheet({
         />
       </label>
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <Button type="button" variant="ghost" onClick={onSkip}>
-          {t('record.skipNotes')}
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          {t('common.cancel')}
         </Button>
-        <Button type="button" onClick={() => onSave(notes.trim() || null)}>
-          {t('common.save')}
+        <Button type="button" onClick={() => onConfirm(notes.trim() || null)}>
+          {t('record.confirmMatchAction')}
         </Button>
       </div>
     </BottomSheet>
@@ -78,13 +85,12 @@ export function MatchRecorder() {
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
+  const activeMatches = useAppStore((state) => state.activeMatches)
   const currentSessionId = useAppStore((state) => state.currentSessionId)
   const setActiveMatchFirstPlayer = useAppStore((state) => state.setActiveMatchFirstPlayer)
   const completeActiveMatch = useAppStore((state) => state.completeActiveMatch)
-  const undoCompletedMatch = useAppStore((state) => state.undoCompletedMatch)
-  const setMatchNotes = useAppStore((state) => state.setMatchNotes)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
-  const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
+  const [pendingCompletion, setPendingCompletion] = useState<PendingCompletion | null>(null)
 
   const rosterPlayers = useMemo(() => {
     if (!currentSessionId) return getListedPlayers(appState)
@@ -94,18 +100,12 @@ export function MatchRecorder() {
   const activeDecks = decks.filter((deck) => !deck.archived)
   const canAssign = rosterPlayers.length >= 2 && activeDecks.length >= 1
 
+  const pendingActiveMatch = pendingCompletion
+    ? (activeMatches.find((match) => match.id === pendingCompletion.matchId) ?? null)
+    : null
+
   const handleComplete = (matchId: string, winnerPlayerId: string) => {
-    const completed = completeActiveMatch(matchId, winnerPlayerId)
-    setPendingNotesMatch(completed)
-    toast.showToast({
-      type: 'success',
-      message: t('record.matchSaved'),
-      actionLabel: t('common.restore'),
-      onAction: () => {
-        undoCompletedMatch(completed.id)
-        setPendingNotesMatch(null)
-      },
-    })
+    setPendingCompletion({ matchId, winnerPlayerId })
   }
 
   return (
@@ -143,16 +143,22 @@ export function MatchRecorder() {
       )}
 
       <PostMatchSheet
-        key={pendingNotesMatch?.id}
-        match={pendingNotesMatch}
+        key={pendingCompletion?.matchId}
+        activeMatch={pendingActiveMatch}
+        winnerPlayerId={pendingCompletion?.winnerPlayerId ?? null}
         players={players}
         decks={decks}
-        open={pendingNotesMatch !== null}
-        onSkip={() => setPendingNotesMatch(null)}
-        onSave={(notes) => {
-          if (pendingNotesMatch) setMatchNotes(pendingNotesMatch.id, notes)
-          setPendingNotesMatch(null)
-          toast.success(t('record.notesSaved'))
+        open={pendingCompletion !== null}
+        onCancel={() => setPendingCompletion(null)}
+        onConfirm={(notes) => {
+          if (!pendingCompletion) return
+          try {
+            completeActiveMatch(pendingCompletion.matchId, pendingCompletion.winnerPlayerId, notes)
+            setPendingCompletion(null)
+            toast.success(t('record.matchSaved'))
+          } catch (caught) {
+            toast.error(caught instanceof Error ? caught.message : t('rematch.failed'))
+          }
         }}
       />
     </>

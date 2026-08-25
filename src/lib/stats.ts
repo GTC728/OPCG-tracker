@@ -2,6 +2,7 @@ import { isDeletedPlayer } from '@/lib/entityVisibility'
 import { translate } from '@/lib/i18n'
 import type { Deck, Language, Match, Player } from '@/types'
 import { getDeckDisplayName } from '@/lib/leaderDisplay'
+import { formatWinLossRecord } from '@/lib/winLossRecord'
 
 export const MIN_RELIABLE_SAMPLE = 3
 /** Minimum games for pilot / leaderboard rows (same as reliable sample). */
@@ -526,8 +527,7 @@ export function buildInsightMessages(
         .replace('{player}', topPilot.playerName)
         .replace('{deck}', topPilot.deckName)
         .replace('{rate}', formatPercent(topPilot.winRate))
-        .replace('{wins}', String(topPilot.wins))
-        .replace('{losses}', String(topPilot.losses)),
+        .replace('{record}', formatWinLossRecord(topPilot.wins, topPilot.losses)),
     })
   }
 

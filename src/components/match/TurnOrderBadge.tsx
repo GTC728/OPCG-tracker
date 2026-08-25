@@ -47,7 +47,7 @@ export function FirstPlayerBadge({ label }: { label?: string }) {
 
   return (
     <span
-      className="inline-flex h-[22px] shrink-0 items-center justify-center rounded-md border border-danger/40 bg-danger/12 px-1 text-[9px] font-bold leading-none text-danger"
+      className="inline-flex h-[22px] shrink-0 items-center justify-center rounded-md border border-brand-500/40 bg-brand-500/12 px-1 text-[9px] font-bold leading-none text-brand-400"
       title={t('match.firstTurn')}
     >
       {label ?? t('match.firstTurn')}

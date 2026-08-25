@@ -17,6 +17,7 @@ import {
   buildMetaSummaryStats,
   buildEnvironmentDeckUsageSlices,
 } from '@/lib/stats'
+import { formatWinLossRecord } from '@/lib/winLossRecord'
 import {
   computeGlobalAchievementRates,
   computeAchievementSummary,
@@ -118,7 +119,7 @@ export function PlayerShareCard({
   return (
     <ShareCardFrame
       title={player.name}
-      subtitle={`${stat?.wins ?? 0}W-${stat?.losses ?? 0}L · ${formatPercent(stat?.winRate ?? null)} · ${stat?.total ?? 0} 場`}
+      subtitle={`${formatWinLossRecord(stat?.wins ?? 0, stat?.losses ?? 0)} · ${formatPercent(stat?.winRate ?? null)} · ${stat?.total ?? 0} 場`}
     >
       <ShareStatGrid
         items={[
@@ -140,7 +141,7 @@ export function PlayerShareCard({
           {
             label: '近5場',
             value: recent5?.total
-              ? `${recent5.wins}W · ${formatPercent(recent5.winRate)}`
+              ? `${formatWinLossRecord(recent5.wins, recent5.total - recent5.wins)} · ${formatPercent(recent5.winRate)}`
               : '—',
           },
         ]}
@@ -156,7 +157,7 @@ export function PlayerShareCard({
         title="對手戰績"
         rows={headToHead.slice(0, 4).map((item) => ({
           left: item.name,
-          right: `${item.wins}W-${item.losses}L`,
+          right: formatWinLossRecord(item.wins, item.losses),
         }))}
       />
       <ShareStatGrid
@@ -171,7 +172,7 @@ export function PlayerShareCard({
           },
           {
             label: '頭號對手',
-            value: topRival ? `${topRival.wins}W-${topRival.losses}L` : '—',
+            value: topRival ? formatWinLossRecord(topRival.wins, topRival.losses) : '—',
           },
         ]}
       />
@@ -250,7 +251,7 @@ export function SessionDashboardShareCard({
         title="玩家排行"
         rows={leaderboard.map((item, index) => ({
           left: `${index + 1}. ${item.name}`,
-          right: `${item.wins}W-${item.losses}L · ${formatPercent(item.winRate)}`,
+          right: `${formatWinLossRecord(item.wins, item.losses)} · ${formatPercent(item.winRate)}`,
         }))}
       />
       <ShareRowList
@@ -267,7 +268,7 @@ export function SessionDashboardShareCard({
       />
       {dashboard.topPlayer ? (
         <p className="text-center text-[10px] text-text-secondary">
-          MVP {dashboard.topPlayer.name} · {dashboard.topPlayer.wins}W-{dashboard.topPlayer.losses}L
+          MVP {dashboard.topPlayer.name} · {formatWinLossRecord(dashboard.topPlayer.wins, dashboard.topPlayer.losses)}
         </p>
       ) : null}
     </ShareCardFrame>
@@ -298,7 +299,7 @@ export function SessionShareCard({
       title={session.name}
       subtitle={
         player
-          ? `${player.name} · ${stat?.wins ?? 0}W-${stat?.losses ?? 0}L`
+          ? `${player.name} · ${formatWinLossRecord(stat?.wins ?? 0, stat?.losses ?? 0)}`
           : `${scoped.length} matches`
       }
     >

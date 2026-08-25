@@ -9,6 +9,25 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.8 - 2026-08-26
+
+### Changed
+
+- **Profile identity**: Adds session count; metric order is sessions, `0W-0L` record, win rate, streak.
+- **Record format**: Shared `WinLossRecord` / `formatWinLossRecord` so every W-L display uses `0W-0L`.
+- **Profile recent form**: Continuous W/L color band with win rate, wins, and losses.
+- **Profile decks**: Donut chart sits left of the existing deck cards; the cards act as the legend.
+- **Profile rivals**: Compact avatar + one-line record cards.
+- **Profile matches**: Preview shows 3 `MatchRecordCard`s; view-all uses reusable 10-per-page `PagedList` (side pager, page chips, jump input).
+
+## V5.5.7 - 2026-08-25
+
+### Changed
+
+- **Match records**: Shared `MatchRecordCard` for history and record recent matches; player order follows table assignment (not winner-first); `1st` badge is blue.
+- **Record**: Pressing W opens confirm sheet — match is saved only on「確認記錄」; cancel keeps the table active.
+- **Deck art**: Color covers use layered gradients and subtle texture for a richer Apple-style look.
+
 ## V5.5.6 - 2026-08-25
 
 ### Changed

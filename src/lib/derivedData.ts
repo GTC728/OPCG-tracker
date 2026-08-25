@@ -214,6 +214,7 @@ export interface PlayerProfileBundle {
   headToHead: ReturnType<typeof buildHeadToHeadStats>
   recentForm: RecentFormStat[]
   recentMatches: Match[]
+  sessionCount: number
 }
 
 const playerProfileCache = new Map<string, PlayerProfileBundle>()
@@ -248,6 +249,7 @@ export function getPlayerProfileBundle(
     recentMatches: [...playerMatches]
       .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
       .slice(0, 20),
+    sessionCount: new Set(playerMatches.map((match) => match.sessionId)).size,
   }
   playerProfileCache.set(key, bundle)
   if (playerProfileCache.size > 16) {
