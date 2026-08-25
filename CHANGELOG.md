@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.5 - 2026-08-25
+
+### Changed
+
+- **Record tables (layout C)**: Each table is one block with two stacked player blocks; tap a side to record win, W badge on title row, deck on second line.
+- **Assignment slots**: Player 1/4 + deck 3/4 per side; table menu moved beside timer to save height.
+- **Record header**:「點擊半區記勝」hint under the Tables section title.
+
 ## V5.5.4 - 2026-08-25
 
 ### Changed

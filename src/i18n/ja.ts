@@ -197,6 +197,7 @@ export const ja = {
   'table.title': '対戦テーブル',
   'table.tableCount': 'テーブル数',
   'table.label': '卓',
+  'table.tapHalfWin': '半分をタップして勝敗を記録',
   'table.rosterDrag': 'ドラッグで配置',
   'table.dragHint': 'プレイヤーまたはデッキを左右にドロップ',
   'table.sideLeft': '左',

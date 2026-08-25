@@ -78,6 +78,154 @@ function TableSideInline({
   )
 }
 
+function WinMark({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={[
+        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-success/40 bg-success/15 text-[11px] font-bold leading-none text-success',
+        className,
+      ].join(' ')}
+      aria-hidden
+    >
+      W
+    </span>
+  )
+}
+
+function EmbeddedTableHeader({
+  slot,
+  timer,
+  onDismiss,
+  onMenu,
+  dismissLabel,
+}: {
+  slot: number
+  timer?: string
+  onDismiss: () => void
+  onMenu?: () => void
+  dismissLabel: string
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <TableNumberBadge slot={slot} />
+      <div className="flex items-center gap-1">
+        {timer ? <span className="text-[10px] tabular-nums text-text-secondary">{timer}</span> : null}
+        {onMenu ? (
+          <button
+            type="button"
+            className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none active:bg-surface-muted"
+            aria-label={t('table.moreActions')}
+            onClick={(event) => {
+              event.stopPropagation()
+              onMenu()
+            }}
+          >
+            ⋯
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none hover:text-danger"
+          onClick={onDismiss}
+          aria-label={dismissLabel}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EmbeddedPlayerWinBlock({
+  playerId,
+  deckId,
+  players,
+  decks,
+  onWin,
+}: {
+  playerId: string
+  deckId: string
+  players: Player[]
+  decks: Deck[]
+  onWin: () => void
+}) {
+  const deck = deckId ? getDeck(decks, deckId) : null
+
+  return (
+    <button
+      type="button"
+      className="w-full rounded-xl border border-[var(--ui-border)] bg-surface/40 px-2.5 py-2 text-left outline-none transition active:border-success/40 active:bg-success/10 touch-manipulation"
+      onClick={onWin}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 flex-[1] truncate text-sm font-semibold">{getPlayerName(players, playerId)}</span>
+        <WinMark />
+      </div>
+      <div className="mt-1.5 min-w-0 pl-0">
+        {deck ? (
+          <DeckLabel deck={deck} showCode compact className="text-[11px] text-text-secondary" />
+        ) : (
+          <span className="text-[11px] text-text-secondary">—</span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function EmbeddedSideAssignBlock({
+  side,
+  playerId,
+  deckId,
+  players,
+  decks,
+  playerHighlight,
+  deckHighlight,
+  onAssign,
+  onTapPlayer,
+  onTapDeck,
+}: {
+  side: 'left' | 'right'
+  playerId: string
+  deckId: string
+  players: Player[]
+  decks: Deck[]
+  playerHighlight: boolean
+  deckHighlight: boolean
+  onAssign: (payload: TableDragPayload) => void
+  onTapPlayer: () => void
+  onTapDeck: () => void
+}) {
+  void side
+  return (
+    <div className="grid min-h-[3.25rem] grid-cols-[minmax(0,1fr)_minmax(0,3fr)] gap-1 rounded-xl border border-[var(--ui-border)] bg-surface/30 p-1">
+      <AssignFieldCell
+        field="player"
+        playerId={playerId}
+        deckId={deckId}
+        players={players}
+        decks={decks}
+        highlight={playerHighlight}
+        onDrop={onAssign}
+        onTap={onTapPlayer}
+        embedded="slot"
+      />
+      <AssignFieldCell
+        field="deck"
+        playerId={playerId}
+        deckId={deckId}
+        players={players}
+        decks={decks}
+        highlight={deckHighlight}
+        onDrop={onAssign}
+        onTap={onTapDeck}
+        embedded="slot"
+      />
+    </div>
+  )
+}
+
 function WinButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' | 'md' }) {
   return (
     <button
@@ -192,63 +340,32 @@ function CompactCompleteTable({
 
   const rollFirst = () => onSetFirstPlayer(Math.random() < 0.5 ? match.player1Id : match.player2Id)
 
-  const leftDeck = left.deckId ? getDeck(decks, left.deckId) : null
-  const rightDeck = right.deckId ? getDeck(decks, right.deckId) : null
-
   if (embedded) {
     return (
       <>
-        <article className={[uiRecordCard, 'flex min-h-[10.5rem] flex-col p-3.5'].join(' ')}>
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <TableNumberBadge slot={slot} />
-            <div className="flex items-center gap-2">
-              {elapsed ? (
-                <span className="text-[10px] tabular-nums text-text-secondary">{elapsed}</span>
-              ) : null}
-              <button
-                type="button"
-                className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none hover:text-danger"
-                onClick={onClear}
-                aria-label={t('table.clear')}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <p className="truncate text-sm font-semibold">{getPlayerName(players, left.playerId)}</p>
-              {leftDeck ? (
-                <DeckLabel deck={leftDeck} showCode compact className="text-xs text-text-secondary" />
-              ) : (
-                <p className="text-xs text-text-secondary">—</p>
-              )}
-              <WinButton size="md" onClick={() => onComplete(left.playerId)} />
-            </div>
-
-            <span className="px-0.5 text-[10px] font-semibold uppercase text-text-secondary">vs</span>
-
-            <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
-              <p className="truncate text-sm font-semibold">{getPlayerName(players, right.playerId)}</p>
-              {rightDeck ? (
-                <DeckLabel deck={rightDeck} showCode compact className="text-xs text-text-secondary" />
-              ) : (
-                <p className="text-xs text-text-secondary">—</p>
-              )}
-              <WinButton size="md" onClick={() => onComplete(right.playerId)} />
-            </div>
-          </div>
-
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-sm text-text-secondary outline-none active:bg-surface-muted"
-              aria-label={t('table.moreActions')}
-              onClick={() => setMenuOpen(true)}
-            >
-              ⋯
-            </button>
+        <article className={[uiRecordCard, 'flex flex-col p-3'].join(' ')}>
+          <EmbeddedTableHeader
+            slot={slot}
+            timer={elapsed ?? undefined}
+            dismissLabel={t('table.clear')}
+            onDismiss={onClear}
+            onMenu={() => setMenuOpen(true)}
+          />
+          <div className="space-y-2">
+            <EmbeddedPlayerWinBlock
+              playerId={left.playerId}
+              deckId={left.deckId}
+              players={players}
+              decks={decks}
+              onWin={() => onComplete(left.playerId)}
+            />
+            <EmbeddedPlayerWinBlock
+              playerId={right.playerId}
+              deckId={right.deckId}
+              players={players}
+              decks={decks}
+              onWin={() => onComplete(right.playerId)}
+            />
           </div>
         </article>
 
@@ -383,7 +500,7 @@ function AssignFieldCell({
   highlight: boolean
   onDrop: (payload: TableDragPayload) => void
   onTap: () => void
-  embedded?: boolean
+  embedded?: boolean | 'slot'
 }) {
   const { t } = useI18n()
   const [over, setOver] = useState(false)
@@ -399,12 +516,18 @@ function AssignFieldCell({
     if (payload) onDrop(payload)
   }
 
+  const isSlot = embedded === 'slot'
+
   return (
     <button
       type="button"
       className={[
-        'w-full rounded-lg px-2 text-left transition',
-        embedded ? 'flex min-h-[3.25rem] flex-1 flex-col justify-center py-2' : 'min-h-8 rounded-md px-1 py-0.5',
+        'w-full text-left transition',
+        isSlot
+          ? 'flex min-h-[2.75rem] items-center rounded-lg px-2 py-1.5'
+          : embedded
+            ? 'flex min-h-[3.25rem] flex-1 flex-col justify-center rounded-lg px-2 py-2'
+            : 'min-h-8 rounded-md px-1 py-0.5',
         selectSurfaceClass(
           highlight ? 'active' : filled ? 'filled' : 'empty',
         ),
@@ -419,15 +542,25 @@ function AssignFieldCell({
       onDrop={handleDrop}
     >
       {filled ? (
-        <div className={[embedded ? 'text-xs' : 'text-[10px]', 'leading-snug [overflow-wrap:anywhere]'].join(' ')}>
+        <div
+          className={[
+            isSlot ? 'min-w-0 truncate text-xs' : embedded ? 'text-xs' : 'text-[10px]',
+            'leading-snug [overflow-wrap:anywhere]',
+          ].join(' ')}
+        >
           {isPlayer ? (
             <span className="font-semibold">{getPlayerName(players, playerId)}</span>
           ) : deck ? (
-            <DeckLabel deck={deck} showCode compact className="inline-flex min-w-0 text-[10px] leading-none text-text-secondary" />
+            <DeckLabel
+              deck={deck}
+              showCode
+              compact
+              className="inline-flex min-w-0 max-w-full truncate text-[10px] leading-none text-text-secondary"
+            />
           ) : null}
         </div>
       ) : (
-        <span className={embedded ? 'text-[11px] text-text-secondary' : 'text-[9px] text-text-secondary'}>
+        <span className={isSlot ? 'text-[10px] text-text-secondary' : embedded ? 'text-[11px] text-text-secondary' : 'text-[9px] text-text-secondary'}>
           {isPlayer ? t('assignment.playersShort') : t('assignment.decksShort')}
         </span>
       )}
@@ -507,44 +640,27 @@ function TableSlotPanel({
     ]
 
     return (
-      <article className={[uiRecordCard, 'flex min-h-[10.5rem] flex-col p-3.5'].join(' ')}>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <TableNumberBadge slot={slot} />
-          <button
-            type="button"
-            className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none hover:text-danger"
-            onClick={onDismiss}
-            aria-label={match ? t('table.clear') : t('table.removeTable')}
-          >
-            ×
-          </button>
-        </div>
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">
+      <article className={[uiRecordCard, 'flex flex-col p-3'].join(' ')}>
+        <EmbeddedTableHeader
+          slot={slot}
+          dismissLabel={match ? t('table.clear') : t('table.removeTable')}
+          onDismiss={onDismiss}
+        />
+        <div className="space-y-2">
           {sides.map(({ side, playerId, deckId }) => (
-            <div key={side} className="flex min-h-0 flex-col gap-2">
-              <AssignFieldCell
-                field="player"
-                playerId={playerId}
-                deckId={deckId}
-                players={players}
-                decks={decks}
-                highlight={fieldHighlight(side, 'player')}
-                onDrop={(payload) => onAssign(side, payload)}
-                onTap={() => onTapField(side, 'player')}
-                embedded
-              />
-              <AssignFieldCell
-                field="deck"
-                playerId={playerId}
-                deckId={deckId}
-                players={players}
-                decks={decks}
-                highlight={fieldHighlight(side, 'deck')}
-                onDrop={(payload) => onAssign(side, payload)}
-                onTap={() => onTapField(side, 'deck')}
-                embedded
-              />
-            </div>
+            <EmbeddedSideAssignBlock
+              key={side}
+              side={side}
+              playerId={playerId}
+              deckId={deckId}
+              players={players}
+              decks={decks}
+              playerHighlight={fieldHighlight(side, 'player')}
+              deckHighlight={fieldHighlight(side, 'deck')}
+              onAssign={(payload) => onAssign(side, payload)}
+              onTapPlayer={() => onTapField(side, 'player')}
+              onTapDeck={() => onTapField(side, 'deck')}
+            />
           ))}
         </div>
       </article>

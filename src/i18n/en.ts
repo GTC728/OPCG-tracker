@@ -197,6 +197,7 @@ export const en = {
   'table.title': 'Match Tables',
   'table.tableCount': 'Tables',
   'table.label': 'Table',
+  'table.tapHalfWin': 'Tap a side to record the win',
   'table.rosterDrag': 'Drag to assign',
   'table.dragHint': 'Drop players or decks on each side',
   'table.sideLeft': 'Left',

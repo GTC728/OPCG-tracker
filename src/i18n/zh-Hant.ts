@@ -197,6 +197,7 @@ export const zhHant = {
   'table.title': '對局桌子',
   'table.tableCount': '牌桌數',
   'table.label': '桌',
+  'table.tapHalfWin': '點擊半區記勝',
   'table.rosterDrag': '拖曳分配',
   'table.dragHint': '拖玩家或牌組到左右側',
   'table.sideLeft': '左側',

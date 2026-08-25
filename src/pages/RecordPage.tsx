@@ -136,7 +136,12 @@ export function RecordPage() {
         </section>
       ) : (
         <section className="space-y-3">
-          <SectionHeader title={t('record.tableSection')} action={t('lobby.manage')} onAction={openSessionManage} />
+          <SectionHeader
+            title={t('record.tableSection')}
+            subtitle={t('table.tapHalfWin')}
+            action={t('lobby.manage')}
+            onAction={openSessionManage}
+          />
           <MatchRecorder />
         </section>
       )}
