@@ -5,6 +5,11 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 **Related code**
 
 - Theme tokens: `src/index.css` (`@theme`)
+- Runtime Apple palettes: `src/lib/theme.ts`
+- Shared surfaces: `src/lib/uiSurface.ts`
+- Desktop scrollbar: `.scrollbar-subtle` in `src/index.css`
+- Overlay pager: `src/components/ui/FloatingSidePager.tsx` + `.ui-floating-pager-btn`
+- Paginated lists: `src/components/ui/PagedList.tsx`
 - Layout constants: `src/lib/layout.ts`
 - App shell / bottom nav: `src/components/layout/AppShell.tsx`
 - Sync status banner: `src/components/layout/SyncStatusBanner.tsx`
@@ -21,6 +26,8 @@ Living document for OPCG Tracker UI decisions: sizing, spacing, color usage, lay
 4. **V2-inspired clarity (V3.10.6+)** — Reference OPCG Tracker V2 and modern mobile dashboards: clear hierarchy (title → subtitle → data), card-based grouping, segmented filters instead of heavy button grids, left-aligned labels without excessive uppercase tracking.
 5. **Shared surfaces** — Use `src/lib/uiSurface.ts` + `.ui-segment` CSS for cards and toggles; avoid one-off `bg-surface-elevated` without ring/shadow.
 6. **Bottom chrome scope** — Assignment drawer registers via `useBottomChromePanel` **only when `activeTab === 'record'`** so hidden Record page does not leak the panel onto Stats/History.
+7. **Canonical chrome** — Desktop scrollbars always use `.scrollbar-subtle` (or `ScrollRegion`). Side page arrows always use `FloatingSidePager`. Do not invent one-off arrow columns or OS-default thick scrollbars.
+8. **Apple Music / App Store direction (V5.4+)** — Large in-page titles, grouped lists, hero metrics, pill filters, deck-cover rails. Dark `#000` / `#1c1c1e` / `#2c2c2e`; light `#f2f2f7` / `#ffffff` / `#d1d1d6`. Accent is user-chosen; **semantic colors stay fixed** (success/danger, and the blue `1st` badge).
 
 ---
 
@@ -57,9 +64,96 @@ Inspired by V2 (light, airy lists) adapted to our dark theme:
 | `success` | Win button (`W`) tint |
 | `danger` | Clear / remove actions on hover |
 
-Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead of heavy gray borders for depth on dark bg.
+Card edges use **`ring` / `--ui-border`** instead of heavy gray borders.
 
 **V4.0+:** Theme is user-configurable via `src/lib/theme.ts` — `dark` / `light` / `system` plus accent presets. CSS variables on `:root` / `[data-theme]` override `@theme` defaults at runtime.
+
+**V5.4+ Apple palettes (runtime, not `@theme` defaults):**
+
+| Mode | page | elevated | muted | text |
+|------|------|----------|-------|------|
+| Dark | `#000000` | `#1c1c1e` | `#2c2c2e` | `#ffffff` / `#98989d` |
+| Light | `#f2f2f7` | `#ffffff` | `#d1d1d6` | `#000000` / `#6c6c70` |
+
+---
+
+## Desktop scrollbar (canonical, V5.5.9.1+)
+
+**Always** `.scrollbar-subtle` on overflow lists, or `ScrollRegion` (which applies the same tokens). Horizontal rails (`.ui-scroll-region-x`) hide the bar on touch and show this bar on mouse/trackpad.
+
+| Token / property | Value |
+|------------------|--------|
+| Width / height | `4px` (`--ui-scrollbar-size`) |
+| Track | transparent |
+| Thumb (dark) | `white` at **16%** |
+| Thumb hover (dark) | `white` at **32%** |
+| Thumb (light) | `black` at **18%** |
+| Thumb hover (light) | `black` at **32%** |
+| Shape | pill (`border-radius: 999px`) |
+| Firefox | `scrollbar-width: thin` |
+
+Do **not** use the default Windows/Chrome thick light scrollbar.
+
+---
+
+## Floating side pager (canonical, V5.5.9+)
+
+**Component:** `FloatingSidePager` — overlay pills, never layout columns (those compress card width).
+
+Used by `PagedList` and Stats player ranking. Parent must be `position: relative`.
+
+| Setting | Value |
+|---------|--------|
+| Position | `absolute`, vertically centered (`top: 50%` + `translateY(-50%)`) |
+| Z-index | `10` |
+| Size | `2.25rem` (36px) square |
+| Shape | circle (`border-radius: 9999px`) |
+| Left / right inset | `0.25rem` (4px) |
+| Fill | black **15%** (`rgb(0 0 0 / 15%)`) |
+| Glyph | white **65%**, `1rem`, semibold, `‹` / `›` |
+| Ring | white **12%**, 1px (`box-shadow: 0 0 0 1px`) |
+| Blur | `1px` backdrop-filter (almost none, so cards stay readable) |
+| Shadow | none (only the 1px ring) |
+| Hover fill | black **30%**, glyph `#fff` |
+| Disabled | `opacity: 0.2`, no pointer events |
+| Motion | 150ms ease on fill + glyph color |
+
+CSS: `.ui-floating-pager-btn`, `--prev`, `--next` in `src/index.css`.
+
+---
+
+## Match records & profile (V5.5.7–V5.5.9.1, 2026-08-26)
+
+### Shared match card
+
+- `MatchRecordCard` for History, Record recent matches, and Profile.
+- Table assignment order by default (player1 left). **When viewing / filtering a player, that player is always on the left** (`perspectivePlayerId` → `resolveMatchRecordSides`).
+- Winner: green left bar + `W`; loser: muted + `L`.
+- **`1st` badge is always blue** (`#3b82f6` fill/border, `#60a5fa` text) — **not** the accent color (green accent must not turn `1st` green).
+
+### Win–loss text
+
+- Always `nW-nL` (including `0W-0L`).
+- UI: `WinLossRecord`; strings: `formatWinLossRecord`.
+
+### Profile hub
+
+| Block | Decision |
+|-------|----------|
+| Identity | Keep original layout; metrics **場次 → 戰績 → 勝率 → 連勝** |
+| Recent form | Continuous W/L color band + 勝率 / 勝 / 敗 |
+| Decks | Pie chart **left** of original `DeckPreviewCard`s; cards are the legend |
+| Achievements | Unchanged |
+| Rivals | Avatar initial + one-line name / `0W-0L` |
+| Trends | Unchanged |
+| Matches | Preview **3** `MatchRecordCard`s; view-all uses `PagedList` **10 per page** (overlay arrows, page chips, jump input) |
+
+### Pagination
+
+- Reuse `PagedList` (`DEFAULT_PAGE_SIZE = 10`) for any long list that needs paging.
+- Side arrows: `FloatingSidePager` only. Bottom: page chips + number input +「前往」.
+
+---
 
 ---
 
@@ -88,9 +182,9 @@ Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead o
 
 ### Turn order & result badges
 
-- **`TurnOrderBadge`**: `1st` / `2nd` from player perspective (`match.firstTurn` / `match.secondTurn` i18n keys).
-- **`WinLossBadge`**: compact `W` / `L` square badge for profile match lists and share cards.
-- Use on Profile recent matches and ShareExport cards — not required on History unless scoped to linked player.
+- **`FirstPlayerBadge` / `TurnOrderBadge` (1st)**: always blue (`#3b82f6` / `#60a5fa`), independent of accent.
+- **`WinLossBadge`**: compact `W` / `L` square badge.
+- Use on match record cards, profile lists, and share cards.
 
 ### Share export cards
 
@@ -98,10 +192,10 @@ Dark theme only for now. Card edges use **`ring-white/[0.06–0.08]`** instead o
 - Trigger: Profile header「輸出」、Stats my-profile「場次卡」.
 - PNG via `html-to-image`; Web Share API when available.
 
-### Personal profile UX (V4.1)
+### Personal profile UX (V4.1, updated V5.5.8)
 
-- **Hub page**: horizontal `ProfilePreviewCard` rail — each section shows 1–2 metrics; tap opens `BottomSheet` with full content.
-- **Never stack** all charts + lists on one scroll on the hub; keep hub ≤ header + rail + achievements preview + 4 recent matches.
+- **Hub page**: identity hero + recent form + deck rail (pie + cards) + achievements + rivals + trends + 3 recent matches.
+- Detail sheets for overview / decks / achievements / rivals / trends; **matches sheet** uses `PagedList`.
 - **Achievements**: one card per achievement family showing `Lv.X/Y`; detail sheet lists all tiers.
 
 ### Achievement icons (V4.1)
@@ -271,6 +365,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.9.x: canonical 4px desktop scrollbar; overlay `FloatingSidePager`; profile/match decisions (0W-0L, player-left, blue 1st, 3+10 paging); Apple Music/App Store palettes restated |
 | 2026-07-07 | V4 personal system: glass layering, smaller radius, 1st/2nd badges, theme/accent tokens, share cards |
 | 2026-07-07 | V2-inspired visual language; `uiSurface` + `SegmentedControl`; assignment drawer tab-gated + taller body; refined dark tokens |
 | 2026-07-05 | Initial preferences from V3.8 mobile assignment drawer + compact table board work |

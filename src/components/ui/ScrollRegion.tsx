@@ -5,8 +5,8 @@ type Axis = 'x' | 'y' | 'both'
 
 const axisClass: Record<Axis, string> = {
   x: 'overflow-x-auto overflow-y-hidden ui-scroll-region-x',
-  y: 'overflow-y-auto overflow-x-hidden ui-scroll-region-y',
-  both: 'overflow-auto ui-scroll-region-y ui-scroll-region-x',
+  y: 'overflow-y-auto overflow-x-hidden ui-scroll-region-y scrollbar-subtle',
+  both: 'overflow-auto ui-scroll-region-y ui-scroll-region-x scrollbar-subtle',
 }
 
 export function ScrollRegion({

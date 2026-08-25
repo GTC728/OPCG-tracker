@@ -44,7 +44,7 @@ export function SyncQueuePanel() {
         <p className="mt-2 text-text-secondary">{t('syncQueue.empty')}</p>
       ) : null}
       {items.length ? (
-        <ol className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+        <ol className="scrollbar-subtle mt-2 max-h-48 space-y-2 overflow-y-auto">
           {items.map((item) => (
             <li key={item.id} className="rounded-lg bg-surface-elevated p-2">
               <p className="font-medium text-text-primary">{describeSyncOp(item.op, t)}</p>

@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.9.2 - 2026-08-26
+
+### Changed
+
+- **UI spec**: Canonical desktop scrollbar tokens and overlay pager CSS recorded in `docs/UI-DESIGN.md`; remaining overflow lists and rails use the same 4px low-contrast bar.
+
 ## V5.5.9.1 - 2026-08-26
 
 ### Changed

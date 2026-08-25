@@ -140,7 +140,7 @@ export function DeckSearchField({
         </div>
       )}
       {panelOpen && panelLabel ? (
-        <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-xl border border-surface-muted bg-surface p-2">
+        <div className="scrollbar-subtle mt-2 max-h-44 space-y-1 overflow-y-auto rounded-xl border border-surface-muted bg-surface p-2">
           <p className="px-2 py-1 text-[11px] font-semibold text-text-secondary">{panelLabel}</p>
           {panelDecks.length ? (
             panelDecks.map((deck) => (

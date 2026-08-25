@@ -151,14 +151,28 @@ textarea:focus-visible {
   display: none;
 }
 
+/* Canonical desktop scrollbar (V5.5.9.1+). Always use `.scrollbar-subtle` or `ScrollRegion`. See docs/UI-DESIGN.md */
+:root,
+[data-theme='dark'] {
+  --ui-scrollbar-size: 4px;
+  --ui-scrollbar-thumb: color-mix(in srgb, white 16%, transparent);
+  --ui-scrollbar-thumb-hover: color-mix(in srgb, white 32%, transparent);
+}
+
+[data-theme='light'] {
+  --ui-scrollbar-size: 4px;
+  --ui-scrollbar-thumb: color-mix(in srgb, black 18%, transparent);
+  --ui-scrollbar-thumb-hover: color-mix(in srgb, black 32%, transparent);
+}
+
 .scrollbar-subtle {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, white 16%, transparent) transparent;
+  scrollbar-color: var(--ui-scrollbar-thumb) transparent;
 }
 
 .scrollbar-subtle::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: var(--ui-scrollbar-size);
+  height: var(--ui-scrollbar-size);
 }
 
 .scrollbar-subtle::-webkit-scrollbar-track {
@@ -166,13 +180,57 @@ textarea:focus-visible {
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, white 16%, transparent);
+  background: var(--ui-scrollbar-thumb);
   border-radius: 999px;
   border: none;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, white 32%, transparent);
+  background: var(--ui-scrollbar-thumb-hover);
+}
+
+/* Canonical overlay pager — docs/UI-DESIGN.md */
+.ui-floating-pager-btn {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgb(0 0 0 / 15%);
+  color: rgb(255 255 255 / 65%);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  outline: none;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.ui-floating-pager-btn:hover:not(:disabled) {
+  background: rgb(0 0 0 / 30%);
+  color: #fff;
+}
+
+.ui-floating-pager-btn:disabled {
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+.ui-floating-pager-btn--prev {
+  left: 0.25rem;
+}
+
+.ui-floating-pager-btn--next {
+  right: 0.25rem;
 }
 
 /* Touch-friendly rails; show scrollbars + wheel works on desktop (see useWheelScroll). */
@@ -193,46 +251,41 @@ textarea:focus-visible {
 @media (hover: hover) and (pointer: fine) {
   .ui-scroll-region-x {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+    scrollbar-color: var(--ui-scrollbar-thumb) transparent;
   }
 
   .ui-scroll-region-x::-webkit-scrollbar {
     display: block;
-    height: 8px;
+    height: var(--ui-scrollbar-size);
   }
 
   .ui-scroll-region-x::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+    background: var(--ui-scrollbar-thumb);
     border-radius: 999px;
+  }
+
+  .ui-scroll-region-x::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-scrollbar-thumb-hover);
   }
 }
 
 .ui-scroll-region-y {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--color-surface-muted) 85%, transparent) transparent;
+  scrollbar-color: var(--ui-scrollbar-thumb) transparent;
 }
 
 .ui-scroll-region-y::-webkit-scrollbar {
-  width: 8px;
+  width: var(--ui-scrollbar-size);
 }
 
 .ui-scroll-region-y::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  background: var(--ui-scrollbar-thumb);
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: none;
 }
 
-[data-theme='light'] .scrollbar-subtle {
-  scrollbar-color: color-mix(in srgb, black 18%, transparent) transparent;
-}
-
-[data-theme='light'] .scrollbar-subtle::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, black 18%, transparent);
-}
-
-[data-theme='light'] .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, black 32%, transparent);
+.ui-scroll-region-y::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-scrollbar-thumb-hover);
 }
 
 /* ── Glass / card surfaces ── */

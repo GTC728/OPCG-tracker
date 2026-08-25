@@ -115,7 +115,7 @@ export function OperationHistoryPanel() {
       <h3 className="text-sm font-semibold">{t('audit.historyTitle')}</h3>
       <p className="mt-1 text-[11px] text-text-secondary">{t('audit.historyDescV5')}</p>
       {history.length ? (
-        <ol className="mt-2 max-h-80 overflow-y-auto">
+        <ol className="scrollbar-subtle mt-2 max-h-80 overflow-y-auto">
           {history.map((item) => (
             <HistoryRow key={item.id} item={item} onUndo={handleUndo} />
           ))}
