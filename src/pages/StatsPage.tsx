@@ -8,7 +8,7 @@ import { getLinkedPlayer } from '@/lib/profileClaim'
 import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { PillTabBar } from '@/components/ui/PillTabBar'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection'
 import { Button } from '@/components/ui/Button'
 import { useI18n, type TranslationKey } from '@/lib/i18n'
 import { StatsOverviewPanel } from '@/components/stats/StatsOverviewPanel'
@@ -1160,8 +1160,7 @@ export function StatsPage() {
         </section>
       )}
 
-      <SegmentedControl
-        className="grid-cols-2"
+      <PillTabBar
         value={scope}
         onChange={(value) => {
           setScope(value)
@@ -1195,15 +1194,17 @@ export function StatsPage() {
             onViewAllPlayers={() => changeSection('players')}
             onViewAllDecks={() => changeSection('decks')}
           />
-          {insights.length ? <InsightsSection insights={insights} /> : null}
-          <FirstSecondSection stats={firstSecondStats} />
-          <MetaTransferChart
-            stats={weeklyDeckMetaStats}
-            title={t('stats.metaTransfer')}
-            compact
-            onOpenDetail={() => setMetaDetailOpen(true)}
-          />
-          <StatsReadingGuide />
+          <CollapsibleSection title={t('stats.advanced')}>
+            {insights.length ? <InsightsSection insights={insights} /> : null}
+            <FirstSecondSection stats={firstSecondStats} />
+            <MetaTransferChart
+              stats={weeklyDeckMetaStats}
+              title={t('stats.metaTransfer')}
+              compact
+              onOpenDetail={() => setMetaDetailOpen(true)}
+            />
+            <StatsReadingGuide />
+          </CollapsibleSection>
         </>
       ) : null}
 

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { flushGroupCollabSyncNow, isGroupCollabPushEnabled } from '@/lib/groupSync'
 import { useI18n } from '@/lib/i18n'
 import { getCachedSyncPendingCount } from '@/lib/syncQueue'
-import { uiCard } from '@/lib/uiSurface'
+import { uiMetricHero } from '@/lib/uiSurface'
 import { SyncQueuePanel } from '@/components/settings/SyncQueuePanel'
 import { useAppStore } from '@/stores/appStore'
 
@@ -63,9 +63,9 @@ export function GroupSyncSection({ compact = false }: GroupSyncSectionProps) {
   const pushEnabled = isGroupCollabPushEnabled(state)
 
   return (
-    <section className={[uiCard, compact ? 'space-y-2 p-3' : 'space-y-2 p-3'].join(' ')}>
-      <h3 className="text-sm font-semibold">{t('systemStatus.syncTitle')}</h3>
-      <p className="text-xs text-text-secondary">{statusLine}</p>
+    <section className={[uiMetricHero, compact ? 'space-y-2 p-3' : 'space-y-3 p-4'].join(' ')}>
+      <h3 className="text-base font-semibold">{t('systemStatus.syncTitle')}</h3>
+      <p className="text-sm text-text-secondary">{statusLine}</p>
       {!compact ? (
         <p className="text-[11px] leading-relaxed text-text-secondary">{t('systemStatus.syncModel')}</p>
       ) : null}

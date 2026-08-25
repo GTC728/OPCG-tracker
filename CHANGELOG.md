@@ -9,6 +9,19 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.2 - 2026-08-25
+
+### Changed
+
+- **Record**: Canvas-style 2×2 table cards with W/L pills; table count moved to session manage sheet.
+- **Stats**: Scope switch uses accent pill tabs; insights/meta/reading guide collapsed under「進階分析」.
+- **History**: Compact pill filters (date, session, player); removed heavy filter card.
+- **Lobby / Sync / Account**: Workspace hero + metric cards in lobby; sync panel and account callout aligned with Apple UI.
+
+### Fixed
+
+- **Supabase login**: Clearer「專案無法連線」message when project is paused or deleted.
+
 ## V5.5.1 - 2026-08-25
 
 ### Changed

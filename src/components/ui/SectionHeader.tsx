@@ -5,10 +5,12 @@ export function SectionHeader({
   title,
   action,
   onAction,
+  meta,
 }: {
   title: string
   action?: string
   onAction?: () => void
+  meta?: string
 }) {
   return (
     <div className="flex items-center justify-between gap-3 px-0.5">
@@ -24,6 +26,8 @@ export function SectionHeader({
         >
           {action} ›
         </button>
+      ) : meta ? (
+        <span className="shrink-0 text-xs tabular-nums text-text-secondary">{meta}</span>
       ) : null}
     </div>
   )

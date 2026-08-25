@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { MetricHeroCard } from '@/components/ui/MetricHeroCard'
+import { WorkspaceHeroCard } from '@/components/ui/WorkspaceHeroCard'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { IconButton } from '@/components/ui/IconButton'
 import {
@@ -106,19 +108,14 @@ function GroupClanInfoCard({
   ])
 
   return (
-    <section className="rounded-xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand-100">{t('lobby.currentClan')}</p>
-          <p className="mt-1 truncate text-lg font-bold">{activeGroup.displayName}</p>
-          {activeGroup.role ? (
-            <p className="mt-0.5 text-xs text-text-secondary">{groupRoleLabel(activeGroup.role)}</p>
-          ) : null}
-          {activeGroup.inviteSlug ? (
-            <p className="mt-1 font-mono text-[11px] text-brand-300">@{activeGroup.inviteSlug}</p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 gap-0.5">
+    <section className="space-y-3">
+      <div className="relative">
+        <WorkspaceHeroCard
+          title={activeGroup.displayName}
+          subtitle={syncLine}
+          pillLabel={activeGroup.role ? groupRoleLabel(activeGroup.role) : t('lobby.title')}
+        />
+        <div className="absolute right-3 top-3 flex shrink-0 gap-0.5">
           <IconButton label={t('lobby.settings')} variant="brand" onClick={onOpenSettings}>
             <IconSettings />
           </IconButton>
@@ -140,33 +137,23 @@ function GroupClanInfoCard({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-surface/60 p-2">
-          <p className="text-[10px] text-text-secondary">{t('groupLobby.statPlayers')}</p>
-          <p className="text-lg font-bold tabular-nums">{stats.players}</p>
-        </div>
-        <div className="rounded-lg bg-surface/60 p-2">
-          <p className="text-[10px] text-text-secondary">{t('groupLobby.statMatches')}</p>
-          <p className="text-lg font-bold tabular-nums">{stats.matches}</p>
-        </div>
-        <div className="rounded-lg bg-surface/60 p-2">
-          <p className="text-[10px] text-text-secondary">{t('groupLobby.statSessions')}</p>
-          <p className="text-lg font-bold tabular-nums">{stats.sessions}</p>
-        </div>
-      </div>
+      <MetricHeroCard
+        metrics={[
+          { label: t('groupLobby.statPlayers'), value: String(stats.players) },
+          { label: t('groupLobby.statMatches'), value: String(stats.matches) },
+          { label: t('groupLobby.statSessions'), value: String(stats.sessions) },
+        ]}
+      />
 
-      <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-surface/50 px-2.5 py-2">
-        <p className="min-w-0 truncate text-[11px] text-text-secondary">{syncLine}</p>
-        {pendingCount > 0 || settings.lastGroupSyncError ? (
-          <Button
-            variant="ghost"
-            className="min-h-7 shrink-0 px-2 text-[10px]"
-            onClick={() => settings.lastGroupCode && flushGroupCollabSyncNow(settings.lastGroupCode)}
-          >
-            {t('systemStatus.retrySync')}
-          </Button>
-        ) : null}
-      </div>
+      {pendingCount > 0 || settings.lastGroupSyncError ? (
+        <Button
+          variant="secondary"
+          className="min-h-9 w-full text-xs"
+          onClick={() => settings.lastGroupCode && flushGroupCollabSyncNow(settings.lastGroupCode)}
+        >
+          {t('systemStatus.retrySync')}
+        </Button>
+      ) : null}
     </section>
   )
 }

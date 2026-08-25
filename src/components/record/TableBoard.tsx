@@ -12,6 +12,7 @@ import { useI18n } from '@/lib/i18n'
 import { useLiveMatchDuration } from '@/lib/matchTimer'
 import { getOrderedMatchSides } from '@/lib/matchDisplay'
 import { selectSurfaceClass } from '@/lib/selectSurface'
+import { uiRecordCard } from '@/lib/uiSurface'
 import {
   decodeTableDragPayload,
   getActiveMatchForTableSlot,
@@ -77,11 +78,14 @@ function TableSideInline({
   )
 }
 
-function WinButton({ onClick }: { onClick: () => void }) {
+function WinButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' | 'md' }) {
   return (
     <button
       type="button"
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-success/40 bg-success/15 text-[9px] font-bold leading-none text-success outline-none active:bg-success/30 touch-manipulation"
+      className={[
+        'flex shrink-0 items-center justify-center rounded-md border border-success/40 bg-success/15 font-bold leading-none text-success outline-none active:bg-success/30 touch-manipulation',
+        size === 'md' ? 'h-7 min-w-9 px-2.5 text-xs' : 'h-5 w-5 text-[9px]',
+      ].join(' ')}
       onClick={(event) => {
         event.stopPropagation()
         onClick()
@@ -89,6 +93,25 @@ function WinButton({ onClick }: { onClick: () => void }) {
       aria-label="W"
     >
       W
+    </button>
+  )
+}
+
+function LossButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' | 'md' }) {
+  return (
+    <button
+      type="button"
+      className={[
+        'flex shrink-0 items-center justify-center rounded-md border border-danger/35 bg-danger/12 font-bold leading-none text-danger outline-none active:bg-danger/25 touch-manipulation',
+        size === 'md' ? 'h-7 min-w-9 px-2.5 text-xs' : 'h-5 w-5 text-[9px]',
+      ].join(' ')}
+      onClick={(event) => {
+        event.stopPropagation()
+        onClick()
+      }}
+      aria-label="L"
+    >
+      L
     </button>
   )
 }
@@ -167,6 +190,7 @@ function CompactCompleteTable({
   onClear,
   onComplete,
   onSetFirstPlayer,
+  embedded = false,
 }: {
   slot: number
   match: ActiveMatch
@@ -176,6 +200,7 @@ function CompactCompleteTable({
   onClear: () => void
   onComplete: (winnerPlayerId: string) => void
   onSetFirstPlayer: (firstPlayerId: string | null) => void
+  embedded?: boolean
 }) {
   const { t } = useI18n()
   const updateActiveMatch = useAppStore((state) => state.updateActiveMatch)
@@ -185,6 +210,91 @@ function CompactCompleteTable({
   const elapsed = useLiveMatchDuration(match.startedAt)
 
   const rollFirst = () => onSetFirstPlayer(Math.random() < 0.5 ? match.player1Id : match.player2Id)
+
+  const leftDeck = left.deckId ? getDeck(decks, left.deckId) : null
+  const rightDeck = right.deckId ? getDeck(decks, right.deckId) : null
+
+  if (embedded) {
+    return (
+      <>
+        <article className={[uiRecordCard, 'flex min-h-[5.75rem] flex-col justify-between p-3.5'].join(' ')}>
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <TableNumberBadge slot={slot} />
+              {elapsed ? (
+                <span className="text-[10px] tabular-nums text-text-secondary">{elapsed}</span>
+              ) : null}
+            </div>
+            <div>
+              <p className="truncate text-sm font-semibold">{getPlayerName(players, left.playerId)}</p>
+              {leftDeck ? (
+                <DeckLabel deck={leftDeck} showCode compact className="mt-0.5 text-xs text-text-secondary" />
+              ) : (
+                <p className="mt-0.5 text-xs text-text-secondary">—</p>
+              )}
+            </div>
+            <div>
+              <p className="truncate text-sm font-semibold">{getPlayerName(players, right.playerId)}</p>
+              {rightDeck ? (
+                <DeckLabel deck={rightDeck} showCode compact className="mt-0.5 text-xs text-text-secondary" />
+              ) : (
+                <p className="mt-0.5 text-xs text-text-secondary">—</p>
+              )}
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <WinButton size="md" onClick={() => onComplete(left.playerId)} />
+              <LossButton size="md" onClick={() => onComplete(right.playerId)} />
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-sm text-text-secondary outline-none active:bg-surface-muted"
+              aria-label={t('table.moreActions')}
+              onClick={() => setMenuOpen(true)}
+            >
+              ⋯
+            </button>
+          </div>
+        </article>
+
+        <TableActionsSheet
+          open={menuOpen}
+          slot={slot}
+          match={match}
+          onClose={() => setMenuOpen(false)}
+          onRoll={rollFirst}
+          onSetFirstPlayer={onSetFirstPlayer}
+          onEdit={() => {
+            setMenuOpen(false)
+            setEditing(true)
+          }}
+          onClear={onClear}
+        />
+
+        <BottomSheet open={editing} title={t('table.editMatch')} onClose={() => setEditing(false)}>
+          <MatchForm
+            initial={{
+              player1Id: match.player1Id,
+              deck1Id: match.deck1Id,
+              player2Id: match.player2Id,
+              deck2Id: match.deck2Id,
+              firstPlayerId: match.firstPlayerId,
+              notes: match.notes,
+            }}
+            players={players}
+            decks={decks}
+            matches={matches}
+            onCancel={() => setEditing(false)}
+            onSave={(input) => {
+              updateActiveMatch(match.id, input)
+              setEditing(false)
+            }}
+          />
+        </BottomSheet>
+      </>
+    )
+  }
 
   return (
     <>
@@ -339,6 +449,7 @@ function TableSlotPanel({
   onDismiss,
   onComplete,
   onSetFirstPlayer,
+  embedded = false,
 }: {
   slot: number
   match?: ActiveMatch
@@ -352,6 +463,7 @@ function TableSlotPanel({
   onDismiss: () => void
   onComplete: (winnerPlayerId: string) => void
   onSetFirstPlayer: (firstPlayerId: string | null) => void
+  embedded?: boolean
 }) {
   const isComplete = Boolean(
     match?.player1Id && match?.player2Id && match?.deck1Id && match?.deck2Id,
@@ -376,6 +488,7 @@ function TableSlotPanel({
   if (match && isComplete) {
     return (
       <CompactCompleteTable
+        embedded={embedded}
         slot={slot}
         match={match}
         players={players}
@@ -385,6 +498,46 @@ function TableSlotPanel({
         onComplete={onComplete}
         onSetFirstPlayer={onSetFirstPlayer}
       />
+    )
+  }
+
+  if (embedded) {
+    return (
+      <article className={[uiRecordCard, 'flex min-h-[5.75rem] flex-col p-3.5'].join(' ')}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <TableNumberBadge slot={slot} />
+          <button
+            type="button"
+            className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none hover:text-danger"
+            onClick={onDismiss}
+            aria-label={match ? t('table.clear') : t('table.removeTable')}
+          >
+            ×
+          </button>
+        </div>
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+          <AssignFieldCell
+            field="player"
+            playerId={match?.player1Id ?? ''}
+            deckId={match?.deck1Id ?? ''}
+            players={players}
+            decks={decks}
+            highlight={fieldHighlight('left', 'player')}
+            onDrop={(payload) => onAssign('left', payload)}
+            onTap={() => onTapField('left', 'player')}
+          />
+          <AssignFieldCell
+            field="player"
+            playerId={match?.player2Id ?? ''}
+            deckId={match?.deck2Id ?? ''}
+            players={players}
+            decks={decks}
+            highlight={fieldHighlight('right', 'player')}
+            onDrop={(payload) => onAssign('right', payload)}
+            onTap={() => onTapField('right', 'player')}
+          />
+        </div>
+      </article>
     )
   }
 
@@ -585,6 +738,7 @@ export function TableBoard({
           return (
             <TableSlotPanel
               key={slot}
+              embedded={embedded}
               slot={slot}
               match={match}
               players={players}
@@ -608,6 +762,7 @@ export function TableBoard({
           {overflowMatches.map((match) => (
             <CompactCompleteTable
               key={match.id}
+              embedded={embedded}
               slot={match.matchNumber}
               match={match}
               players={players}

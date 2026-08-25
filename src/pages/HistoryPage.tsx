@@ -6,8 +6,6 @@ import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import {
-  DateRangeFilter,
-  FilterPickerRow,
   OptionPickerSheet,
   useFilterSheet,
 } from '@/components/ui/FilterPicker'
@@ -17,6 +15,7 @@ import { activeListedSessions, getListedPlayers } from '@/lib/entityVisibility'
 import { getMatchFilterPlayers } from '@/lib/importRoster'
 import { useI18n } from '@/lib/i18n'
 import { PageHero } from '@/components/ui/PageHero'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { uiCard } from '@/lib/uiSurface'
 import { uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
 import { playInteractionSound } from '@/lib/motion'
@@ -367,52 +366,62 @@ export function HistoryPage() {
             {option.label}
           </button>
         ))}
+        <button
+          type="button"
+          className={sessionFilter ? uiPillFilterActive : uiPillFilter}
+          onClick={() => filterSheet.open('session')}
+        >
+          {sessionLabel || t('history.sessionFilter')}
+        </button>
+        <button
+          type="button"
+          className={playerFilter ? uiPillFilterActive : uiPillFilter}
+          onClick={() => filterSheet.open('player')}
+        >
+          {playerLabel || t('history.playerFilter')}
+        </button>
+        {deckFilter ? (
+          <button
+            type="button"
+            className={uiPillFilterActive}
+            onClick={() => setDeckFilter('')}
+          >
+            {t('history.clearDeckFilter')}
+          </button>
+        ) : null}
       </div>
 
-      <section className={[uiCard, 'p-4'].join(' ')}>
-        <h2 className="text-lg font-semibold">{t('history.filters')}</h2>
-        <div className="mt-3 space-y-3">
-          <DateRangeFilter
-            presetLabel={t('history.dateFilter')}
-            presetOptions={datePresetOptions}
-            preset={datePreset}
-            onPresetChange={(value) => setDatePreset(value as DatePreset)}
-            fromLabel={t('history.dateFrom')}
-            toLabel={t('history.dateTo')}
-            from={dateFrom}
-            to={dateTo}
-            onFromChange={setDateFrom}
-            onToChange={setDateTo}
-          />
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <FilterPickerRow
-              label={t('history.sessionFilter')}
-              value={sessionLabel}
-              placeholder={t('history.sessionAll')}
-              onClick={() => filterSheet.open('session')}
+      {datePreset === 'custom' ? (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-xs text-text-secondary">{t('history.dateFrom')}</span>
+            <input
+              type="date"
+              className="mt-1 min-h-10 w-full rounded-xl border border-surface-muted bg-surface px-3 text-sm"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
             />
-            <FilterPickerRow
-              label={t('history.playerFilter')}
-              value={playerLabel}
-              placeholder={t('history.playerAll')}
-              onClick={() => filterSheet.open('player')}
+          </label>
+          <label className="block">
+            <span className="text-xs text-text-secondary">{t('history.dateTo')}</span>
+            <input
+              type="date"
+              className="mt-1 min-h-10 w-full rounded-xl border border-surface-muted bg-surface px-3 text-sm"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
             />
-          </div>
-          <DeckSearchField
-            label={t('history.deckFilter')}
-            value={deckFilter}
-            decks={decks}
-            onChange={setDeckFilter}
-            placeholder={t('history.deckFilterPlaceholder')}
-            showResultsWhenEmpty={false}
-          />
-          {deckFilter ? (
-            <Button className="min-h-10 py-2 text-sm" variant="ghost" fullWidth onClick={() => setDeckFilter('')}>
-              {t('history.clearDeckFilter')}
-            </Button>
-          ) : null}
+          </label>
         </div>
-      </section>
+      ) : null}
+
+      <DeckSearchField
+        label={t('history.deckFilter')}
+        value={deckFilter}
+        decks={decks}
+        onChange={setDeckFilter}
+        placeholder={t('history.deckFilterPlaceholder')}
+        showResultsWhenEmpty={false}
+      />
 
       <OptionPickerSheet
         open={filterSheet.isOpen('session')}
@@ -444,13 +453,11 @@ export function HistoryPage() {
         </section>
       ) : null}
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t('history.completed')}</h2>
-          <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs text-text-secondary">
-            {filteredMatches.length} 場
-          </span>
-        </div>
+      <section className="space-y-2">
+        <SectionHeader
+          title={t('history.completed')}
+          meta={`${filteredMatches.length} ${t('stats.matchesUnit')}`}
+        />
 
         {filteredMatches.length ? (
           filteredMatches.map((match) => (

@@ -18,6 +18,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { uiCard } from '@/lib/uiSurface'
 import { formatDateTime } from '@/lib/utils'
 import { canRecordMatchesEffective } from '@/lib/groupPermissions'
+import { getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import { useAppStore } from '@/stores/appStore'
 import type { Match } from '@/types'
 
@@ -45,6 +46,8 @@ export function RecordPage() {
   const endCurrentSession = useAppStore((s) => s.endCurrentSession)
   const createNewSession = useAppStore((s) => s.createNewSession)
   const openSessionRosterPrompt = useAppStore((s) => s.openSessionRosterPrompt)
+  const setSessionTableCount = useAppStore((s) => s.setSessionTableCount)
+  const appState = useAppStore()
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const [sessionManageOpen, setSessionManageOpen] = useState(false)
   const [sessionShareOpen, setSessionShareOpen] = useState(false)
@@ -56,6 +59,16 @@ export function RecordPage() {
     () => (currentSessionId ? recentSessionMatches(matches, currentSessionId) : []),
     [matches, currentSessionId],
   )
+  const tableCount = currentSessionId ? getSessionTableCount(appState, currentSessionId) : 0
+
+  const changeTableCount = (delta: number) => {
+    if (!currentSessionId) return
+    try {
+      setSessionTableCount(currentSessionId, tableCount + delta)
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : t('table.countFailed'))
+    }
+  }
 
   const openSessionManage = () => {
     if (currentSession) {
@@ -204,6 +217,29 @@ export function RecordPage() {
                 </div>
               </dl>
             ) : null}
+
+            <div className="flex items-center justify-between rounded-xl bg-surface px-3 py-2.5">
+              <span className="text-sm font-semibold">{t('table.tableCount')}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="min-h-8 w-8 px-0"
+                  disabled={tableCount <= 1}
+                  onClick={() => changeTableCount(-1)}
+                >
+                  −
+                </Button>
+                <span className="min-w-6 text-center text-sm font-bold tabular-nums">{tableCount}</span>
+                <Button
+                  variant="ghost"
+                  className="min-h-8 w-8 px-0"
+                  disabled={tableCount >= MAX_TABLE_COUNT}
+                  onClick={() => changeTableCount(1)}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
 
             <GroupedListSection>
               <GroupedListRow

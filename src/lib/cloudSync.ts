@@ -98,7 +98,45 @@ export async function getCloudSession(): Promise<{ session: Session | null; user
   }
 }
 
+export function getSupabaseProjectHost(): string | null {
+  const config = getSupabaseConfig()
+  if (!config) return null
+  try {
+    return new URL(config.url).hostname
+  } catch {
+    return null
+  }
+}
+
+export type SupabaseReachability =
+  | { ok: true }
+  | { ok: false; reason: 'not_configured' | 'unreachable' | 'auth_unhealthy' }
+
+export async function probeSupabaseReachable(): Promise<SupabaseReachability> {
+  const config = getSupabaseConfig()
+  if (!config) return { ok: false, reason: 'not_configured' }
+
+  try {
+    const response = await fetch(`${config.url}/auth/v1/health`, {
+      headers: { apikey: config.key },
+    })
+    if (!response.ok) return { ok: false, reason: 'auth_unhealthy' }
+    return { ok: true }
+  } catch {
+    return { ok: false, reason: 'unreachable' }
+  }
+}
+
 export async function signInWithEmail(email: string): Promise<void> {
+  const reachability = await probeSupabaseReachable()
+  if (!reachability.ok) {
+    throw new Error(
+      reachability.reason === 'not_configured'
+        ? '尚未設定 Supabase'
+        : 'SUPABASE_UNREACHABLE',
+    )
+  }
+
   const supabase = await requireClient()
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),

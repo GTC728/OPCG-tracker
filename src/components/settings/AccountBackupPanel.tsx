@@ -6,12 +6,14 @@ import {
   getCloudSession,
   isCloudConfigured,
   loadLatestCloudSnapshot,
+  probeSupabaseReachable,
   signInWithEmail,
   signOutCloud,
 } from '@/lib/cloudSync'
 import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
 import { backupAgeDays, needsBackupReminder, runAutoCloudBackup, shouldAutoBackupOnLogin } from '@/lib/autoBackup'
 import { syncAchievementLedger } from '@/lib/achievementLedgerSync'
+import { uiCalloutWarning } from '@/lib/uiSurface'
 import { prepareRestoredAppState } from '@/lib/restoreState'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
@@ -37,6 +39,7 @@ export function AccountBackupPanel() {
   const [versionRefreshKey, setVersionRefreshKey] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [projectUnreachable, setProjectUnreachable] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const configured = isCloudConfigured()
   const loginCooldownSeconds = settings.lastLoginLinkSentAt
@@ -55,9 +58,10 @@ export function AccountBackupPanel() {
       lowered.includes('failed to fetch') ||
       lowered.includes('networkerror') ||
       lowered.includes('load failed') ||
-      lowered.includes('network request failed')
+      lowered.includes('network request failed') ||
+      lowered.includes('supabase_unreachable')
     ) {
-      return t('cloud.networkError')
+      return t('cloud.projectUnreachable')
     }
     return rawMessage
   }
@@ -100,6 +104,13 @@ export function AccountBackupPanel() {
   }
 
   useEffect(() => {
+    if (!configured) return
+    void probeSupabaseReachable().then((result) => {
+      setProjectUnreachable(!result.ok && result.reason !== 'not_configured')
+    })
+  }, [configured])
+
+  useEffect(() => {
     void refreshCloudStatus()
   }, [])
 
@@ -129,6 +140,10 @@ export function AccountBackupPanel() {
           {userEmail ? t('cloud.loggedIn') : t('cloud.loggedOut')}
         </span>
       </div>
+
+      {projectUnreachable ? (
+        <p className="rounded-xl bg-danger/10 p-3 text-sm text-red-100">{t('cloud.projectUnreachable')}</p>
+      ) : null}
 
       {userEmail ? (
         <div className="mt-4 space-y-3">
@@ -251,8 +266,8 @@ export function AccountBackupPanel() {
           </Button>
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
-          <p className="rounded-xl bg-warning/10 p-3 text-sm text-yellow-100">{t('cloud.emailLimitNote')}</p>
+        <div className="space-y-3">
+          <p className={[uiCalloutWarning, 'p-3 text-sm'].join(' ')}>{t('cloud.emailLimitNote')}</p>
           <input
             className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
             placeholder="Email"
