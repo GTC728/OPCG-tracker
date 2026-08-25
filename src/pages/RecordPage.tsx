@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
-import { MatchSummaryCard } from '@/components/match/MatchSummaryCard'
 import { MatchRecorder } from '@/components/record/MatchRecorder'
+import { RecentMatchesSection } from '@/components/record/RecentMatchesSection'
 import { SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { SessionManager } from '@/components/session/SessionManager'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -20,14 +20,6 @@ import { formatDateTime } from '@/lib/utils'
 import { canRecordMatchesEffective } from '@/lib/groupPermissions'
 import { getSessionTableCount, MAX_TABLE_COUNT } from '@/lib/tableMode'
 import { useAppStore } from '@/stores/appStore'
-import type { Match } from '@/types'
-
-function recentSessionMatches(matches: Match[], sessionId: string, limit = 4): Match[] {
-  return matches
-    .filter((match) => match.sessionId === sessionId && match.finishedAt)
-    .sort((a, b) => new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime())
-    .slice(0, limit)
-}
 
 export function RecordPage() {
   const { t, language } = useI18n()
@@ -55,10 +47,6 @@ export function RecordPage() {
   const currentSession = sessions.find((session) => session.id === currentSessionId)
   const sessionActiveMatches = activeMatches.filter((match) => match.sessionId === currentSessionId)
   const dashboard = useSessionDashboard(currentSessionId ?? null, language)
-  const recentMatches = useMemo(
-    () => (currentSessionId ? recentSessionMatches(matches, currentSessionId) : []),
-    [matches, currentSessionId],
-  )
   const tableCount = currentSessionId ? getSessionTableCount(appState, currentSessionId) : 0
 
   const changeTableCount = (delta: number) => {
@@ -153,15 +141,13 @@ export function RecordPage() {
         </section>
       )}
 
-      {currentSession && recentMatches.length ? (
-        <section className="space-y-2">
-          <SectionHeader title={t('record.recentMatches')} />
-          <div className="space-y-2">
-            {recentMatches.map((match) => (
-              <MatchSummaryCard key={match.id} match={match} players={players} decks={decks} />
-            ))}
-          </div>
-        </section>
+      {currentSession ? (
+        <RecentMatchesSection
+          sessionId={currentSession.id}
+          matches={matches}
+          players={players}
+          decks={decks}
+        />
       ) : null}
 
       <BottomSheet

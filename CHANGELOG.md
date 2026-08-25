@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.4 - 2026-08-25
+
+### Changed
+
+- **Record**: Merged recent matches into one collapsible section with rematch; embedded table cards use full block layout with per-player W buttons.
+- **Stats overview**: Player rankings show 5 per page with side arrows; deck rankings use horizontal scroll; titles renamed to「排名」.
+
 ## V5.5.3 - 2026-08-25
 
 ### Changed

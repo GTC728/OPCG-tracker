@@ -1,69 +1,16 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
-import { MatchListItem } from '@/components/match/MatchResultRow'
-import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { TableBoard } from '@/components/record/TableBoard'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
-import { getListedPlayers, isSelectablePlayer } from '@/lib/entityVisibility'
-import {
-  getSortedPlayersForSession,
-} from '@/lib/selectors'
-import { formatDateTime } from '@/lib/utils'
+import { getListedPlayers } from '@/lib/entityVisibility'
+import { getSortedPlayersForSession } from '@/lib/selectors'
 import { uiCalloutWarning } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
-import type { ActiveMatchInput, Deck, Match, Player, RecentCombo } from '@/types'
-
-interface RecentComboWithMeta extends RecentCombo {
-  lastMatchId: string
-  winnerPlayerId: string
-}
-
-function getRecentCombosWithMeta(
-  matches: Match[],
-  players: Player[],
-  decks: Deck[],
-  sessionId: string | null,
-): RecentComboWithMeta[] {
-  const activePlayers = new Set(players.filter(isSelectablePlayer).map((player) => player.id))
-  const activeDecks = new Set(decks.filter((deck) => !deck.archived).map((deck) => deck.id))
-  const seen = new Set<string>()
-  const combos: RecentComboWithMeta[] = []
-
-  for (const match of matches) {
-    if (match.deletedAt !== null) continue
-    if (sessionId && match.sessionId !== sessionId) continue
-    if (
-      !activePlayers.has(match.player1Id) ||
-      !activePlayers.has(match.player2Id) ||
-      !activeDecks.has(match.deck1Id) ||
-      !activeDecks.has(match.deck2Id)
-    ) {
-      continue
-    }
-
-    const key = [match.player1Id, match.deck1Id, match.player2Id, match.deck2Id].join(':')
-    if (seen.has(key)) continue
-
-    seen.add(key)
-    combos.push({
-      player1Id: match.player1Id,
-      deck1Id: match.deck1Id,
-      player2Id: match.player2Id,
-      deck2Id: match.deck2Id,
-      lastUsedAt: match.finishedAt,
-      lastMatchId: match.id,
-      winnerPlayerId: match.winnerPlayerId,
-    })
-
-    if (combos.length >= 3) break
-  }
-
-  return combos
-}
+import type { Deck, Match, Player } from '@/types'
 
 function PostMatchSheet({
   match,
@@ -124,51 +71,6 @@ function PostMatchSheet({
   )
 }
 
-function RecentMatchRow({
-  combo,
-  players,
-  decks,
-  sessionId,
-  onRematch,
-}: {
-  combo: RecentComboWithMeta
-  players: Player[]
-  decks: Deck[]
-  sessionId: string
-  onRematch: () => void
-}) {
-  const timeLabel = formatDateTime(combo.lastUsedAt).split(' ').slice(-1)[0]
-  const match: Match = {
-    id: combo.lastMatchId,
-    sessionId,
-    matchNumber: 0,
-    player1Id: combo.player1Id,
-    deck1Id: combo.deck1Id,
-    player2Id: combo.player2Id,
-    deck2Id: combo.deck2Id,
-    winnerPlayerId: combo.winnerPlayerId,
-    winnerDeckId: combo.winnerPlayerId === combo.player1Id ? combo.deck1Id : combo.deck2Id,
-    firstPlayerId: null,
-    resultType: 'normal',
-    startedAt: combo.lastUsedAt,
-    finishedAt: combo.lastUsedAt,
-    source: 'manual',
-    deletedAt: null,
-    notes: null,
-  }
-
-  return (
-    <MatchListItem
-      match={match}
-      players={players}
-      decks={decks}
-      meta={timeLabel}
-      showResultColors
-      onClick={onRematch}
-    />
-  )
-}
-
 export function MatchRecorder() {
   const { t } = useI18n()
   const toast = useToast()
@@ -177,23 +79,12 @@ export function MatchRecorder() {
   const decks = useAppStore((state) => state.decks)
   const matches = useAppStore((state) => state.matches)
   const currentSessionId = useAppStore((state) => state.currentSessionId)
-  const createActiveMatchOnEmptyTable = useAppStore((state) => state.createActiveMatchOnEmptyTable)
   const setActiveMatchFirstPlayer = useAppStore((state) => state.setActiveMatchFirstPlayer)
   const completeActiveMatch = useAppStore((state) => state.completeActiveMatch)
   const undoCompletedMatch = useAppStore((state) => state.undoCompletedMatch)
   const setMatchNotes = useAppStore((state) => state.setMatchNotes)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [pendingNotesMatch, setPendingNotesMatch] = useState<Match | null>(null)
-  const [pendingRematch, setPendingRematch] = useState<ActiveMatchInput | null>(null)
-
-  const placeRematch = (input: ActiveMatchInput) => {
-    try {
-      createActiveMatchOnEmptyTable({ ...input, notes: null })
-      toast.success(t('rematch.placed'))
-    } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : t('rematch.failed'))
-    }
-  }
 
   const rosterPlayers = useMemo(() => {
     if (!currentSessionId) return getListedPlayers(appState)
@@ -201,10 +92,6 @@ export function MatchRecorder() {
   }, [appState, currentSessionId])
 
   const activeDecks = decks.filter((deck) => !deck.archived)
-  const recentCombos = useMemo(
-    () => getRecentCombosWithMeta(matches, players, decks, currentSessionId),
-    [currentSessionId, decks, matches, players],
-  )
   const canAssign = rosterPlayers.length >= 2 && activeDecks.length >= 1
 
   const handleComplete = (matchId: string, winnerPlayerId: string) => {
@@ -254,41 +141,6 @@ export function MatchRecorder() {
           {t('record.needSession')}
         </section>
       )}
-
-      {recentCombos.length && currentSessionId ? (
-        <section className="space-y-1.5">
-          <h2 className="text-sm font-semibold">{t('record.recentMatches')}</h2>
-          {recentCombos.map((combo) => (
-            <RecentMatchRow
-              key={[combo.player1Id, combo.deck1Id, combo.player2Id, combo.deck2Id].join(':')}
-              combo={combo}
-              players={players}
-              decks={decks}
-              sessionId={currentSessionId}
-              onRematch={() =>
-                setPendingRematch({
-                  player1Id: combo.player1Id,
-                  deck1Id: combo.deck1Id,
-                  player2Id: combo.player2Id,
-                  deck2Id: combo.deck2Id,
-                  firstPlayerId: null,
-                  notes: null,
-                })
-              }
-            />
-          ))}
-        </section>
-      ) : null}
-
-      <RematchConfirmSheet
-        open={pendingRematch !== null}
-        input={pendingRematch}
-        players={players}
-        decks={decks}
-        confirmLabel={t('rematch.confirmPlace')}
-        onClose={() => setPendingRematch(null)}
-        onConfirm={placeRematch}
-      />
 
       <PostMatchSheet
         key={pendingNotesMatch?.id}

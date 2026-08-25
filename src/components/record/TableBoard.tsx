@@ -97,25 +97,6 @@ function WinButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' 
   )
 }
 
-function LossButton({ onClick, size = 'sm' }: { onClick: () => void; size?: 'sm' | 'md' }) {
-  return (
-    <button
-      type="button"
-      className={[
-        'flex shrink-0 items-center justify-center rounded-md border border-danger/35 bg-danger/12 font-bold leading-none text-danger outline-none active:bg-danger/25 touch-manipulation',
-        size === 'md' ? 'h-7 min-w-9 px-2.5 text-xs' : 'h-5 w-5 text-[9px]',
-      ].join(' ')}
-      onClick={(event) => {
-        event.stopPropagation()
-        onClick()
-      }}
-      aria-label="L"
-    >
-      L
-    </button>
-  )
-}
-
 function TableActionsSheet({
   open,
   slot,
@@ -217,36 +198,49 @@ function CompactCompleteTable({
   if (embedded) {
     return (
       <>
-        <article className={[uiRecordCard, 'flex min-h-[5.75rem] flex-col justify-between p-3.5'].join(' ')}>
-          <div className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <TableNumberBadge slot={slot} />
+        <article className={[uiRecordCard, 'flex min-h-[10.5rem] flex-col p-3.5'].join(' ')}>
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <TableNumberBadge slot={slot} />
+            <div className="flex items-center gap-2">
               {elapsed ? (
                 <span className="text-[10px] tabular-nums text-text-secondary">{elapsed}</span>
               ) : null}
-            </div>
-            <div>
-              <p className="truncate text-sm font-semibold">{getPlayerName(players, left.playerId)}</p>
-              {leftDeck ? (
-                <DeckLabel deck={leftDeck} showCode compact className="mt-0.5 text-xs text-text-secondary" />
-              ) : (
-                <p className="mt-0.5 text-xs text-text-secondary">—</p>
-              )}
-            </div>
-            <div>
-              <p className="truncate text-sm font-semibold">{getPlayerName(players, right.playerId)}</p>
-              {rightDeck ? (
-                <DeckLabel deck={rightDeck} showCode compact className="mt-0.5 text-xs text-text-secondary" />
-              ) : (
-                <p className="mt-0.5 text-xs text-text-secondary">—</p>
-              )}
+              <button
+                type="button"
+                className="flex h-6 w-6 items-center justify-center text-sm text-text-secondary outline-none hover:text-danger"
+                onClick={onClear}
+                aria-label={t('table.clear')}
+              >
+                ×
+              </button>
             </div>
           </div>
-          <div className="mt-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
+
+          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="truncate text-sm font-semibold">{getPlayerName(players, left.playerId)}</p>
+              {leftDeck ? (
+                <DeckLabel deck={leftDeck} showCode compact className="text-xs text-text-secondary" />
+              ) : (
+                <p className="text-xs text-text-secondary">—</p>
+              )}
               <WinButton size="md" onClick={() => onComplete(left.playerId)} />
-              <LossButton size="md" onClick={() => onComplete(right.playerId)} />
             </div>
+
+            <span className="px-0.5 text-[10px] font-semibold uppercase text-text-secondary">vs</span>
+
+            <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
+              <p className="truncate text-sm font-semibold">{getPlayerName(players, right.playerId)}</p>
+              {rightDeck ? (
+                <DeckLabel deck={rightDeck} showCode compact className="text-xs text-text-secondary" />
+              ) : (
+                <p className="text-xs text-text-secondary">—</p>
+              )}
+              <WinButton size="md" onClick={() => onComplete(right.playerId)} />
+            </div>
+          </div>
+
+          <div className="mt-2 flex justify-end">
             <button
               type="button"
               className="flex h-7 w-7 items-center justify-center rounded-md text-sm text-text-secondary outline-none active:bg-surface-muted"
@@ -379,6 +373,7 @@ function AssignFieldCell({
   highlight,
   onDrop,
   onTap,
+  embedded = false,
 }: {
   field: 'player' | 'deck'
   playerId: string
@@ -388,6 +383,7 @@ function AssignFieldCell({
   highlight: boolean
   onDrop: (payload: TableDragPayload) => void
   onTap: () => void
+  embedded?: boolean
 }) {
   const { t } = useI18n()
   const [over, setOver] = useState(false)
@@ -407,7 +403,8 @@ function AssignFieldCell({
     <button
       type="button"
       className={[
-        'min-h-8 rounded-md px-1 py-0.5 text-left transition',
+        'w-full rounded-lg px-2 text-left transition',
+        embedded ? 'flex min-h-[3.25rem] flex-1 flex-col justify-center py-2' : 'min-h-8 rounded-md px-1 py-0.5',
         selectSurfaceClass(
           highlight ? 'active' : filled ? 'filled' : 'empty',
         ),
@@ -422,7 +419,7 @@ function AssignFieldCell({
       onDrop={handleDrop}
     >
       {filled ? (
-        <div className="text-[10px] leading-snug [overflow-wrap:anywhere]">
+        <div className={[embedded ? 'text-xs' : 'text-[10px]', 'leading-snug [overflow-wrap:anywhere]'].join(' ')}>
           {isPlayer ? (
             <span className="font-semibold">{getPlayerName(players, playerId)}</span>
           ) : deck ? (
@@ -430,7 +427,9 @@ function AssignFieldCell({
           ) : null}
         </div>
       ) : (
-        <span className="text-[9px] text-text-secondary">{isPlayer ? t('assignment.playersShort') : t('assignment.decksShort')}</span>
+        <span className={embedded ? 'text-[11px] text-text-secondary' : 'text-[9px] text-text-secondary'}>
+          {isPlayer ? t('assignment.playersShort') : t('assignment.decksShort')}
+        </span>
       )}
     </button>
   )
@@ -508,7 +507,7 @@ function TableSlotPanel({
     ]
 
     return (
-      <article className={[uiRecordCard, 'flex min-h-[5.75rem] flex-col p-3.5'].join(' ')}>
+      <article className={[uiRecordCard, 'flex min-h-[10.5rem] flex-col p-3.5'].join(' ')}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <TableNumberBadge slot={slot} />
           <button
@@ -520,9 +519,9 @@ function TableSlotPanel({
             ×
           </button>
         </div>
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5">
           {sides.map(({ side, playerId, deckId }) => (
-            <div key={side} className="space-y-1">
+            <div key={side} className="flex min-h-0 flex-col gap-2">
               <AssignFieldCell
                 field="player"
                 playerId={playerId}
@@ -532,6 +531,7 @@ function TableSlotPanel({
                 highlight={fieldHighlight(side, 'player')}
                 onDrop={(payload) => onAssign(side, payload)}
                 onTap={() => onTapField(side, 'player')}
+                embedded
               />
               <AssignFieldCell
                 field="deck"
@@ -542,6 +542,7 @@ function TableSlotPanel({
                 highlight={fieldHighlight(side, 'deck')}
                 onDrop={(payload) => onAssign(side, payload)}
                 onTap={() => onTapField(side, 'deck')}
+                embedded
               />
             </div>
           ))}
