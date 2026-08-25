@@ -129,7 +129,9 @@ CSS: `.ui-floating-pager-btn` in `src/index.css` (uses frost control tokens).
 
 Apple-style **vibrancy**: translucent fill + Gaussian backdrop blur. CSS `backdrop-filter: blur()` is the web equivalent of iOS `UIBlurEffect` / Android `RenderEffect.createBlurEffect` — that *is* Gaussian blur. Do not add a JS/canvas Gaussian library.
 
-Behind text should read as color wash, not sharp letters. If overlay copy is hard to read, raise `--ui-frost-fill-bar` first, then blur.
+Behind text should read as color wash, not sharp letters. If overlay copy is hard to read, raise `--ui-frost-fill-sheet` (sheets) or `--ui-frost-fill-bar` (chrome) first, then blur.
+
+Do **not** put `transform` / enter animation on the same element (or an ancestor) as `backdrop-filter`. A leftover `transform: none` from `animation-fill-mode: both` still disables blur, so the page shows through as sharp letters. Sheets: frost on `.ui-sheet-frost`, slide the `.ui-sheet-panel-body` sibling.
 
 ### Tokens
 
@@ -139,6 +141,7 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 | `--ui-frost-saturate` | `1.4` | `1.4` |
 | `--ui-frost-fill` (panels / glass cards) | elevated **78%** | elevated **88%** |
 | `--ui-frost-fill-bar` (app header / bottom chrome only) | surface **88%** | elevated **90%** |
+| `--ui-frost-fill-sheet` (bottom sheets) | elevated **94%** | elevated **96%** |
 | `--ui-frost-fill-control` (pills / overlay buttons) | elevated **55%** | elevated **68%** |
 | `--ui-frost-ring` | white **14%** | muted **50%** |
 
@@ -146,12 +149,13 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 
 | Class | Use |
 |-------|-----|
-| `.ui-frost` | Overlay panels: `BottomSheet` (title + body, one layer), toasts |
+| `.ui-frost` | Toasts and other overlay chips (not sheets) |
+| `.ui-sheet-frost` | Bottom sheet glass — title + body, one layer; sibling of animated content |
 | `.ui-frost-bar` | Sticky app header and bottom chrome only — **do not nest** inside `.ui-frost` |
 | `.ui-frost-control` | Workspace chip, other floating pills |
 | `.ui-floating-pager-btn` | Side page arrows (frost control + layout) |
 | `.ui-glass-card` | Profile / chart heroes — same blur tokens |
-| `.ui-sheet-backdrop` | Dim **40%** black + **20px** blur behind sheets |
+| `.ui-sheet-backdrop` | Dim **50%** black + **20px** blur behind sheets |
 
 `prefers-reduced-transparency: reduce` turns frost into solid `surface-elevated`.
 
@@ -159,7 +163,7 @@ Behind text should read as color wash, not sharp letters. If overlay copy is har
 
 - App header (sticky over page scroll)
 - Bottom chrome (assignment drawer + nav) — drawer itself is transparent; chrome frosts
-- Bottom sheets (workspace, filters, profile panels): **one** `.ui-frost` on the panel; title row is transparent (not a second frost-bar)
+- Bottom sheets (workspace, filters, profile panels): **one** `.ui-sheet-frost` layer (94% fill); title row is transparent; slide animation is on the content sibling
 - Toasts
 - Floating page arrows
 - Workspace chip
@@ -412,6 +416,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.11.2: denser sheet frost (94%) on a non-transformed layer so blur works and copy stays readable |
 | 2026-08-26 | V5.5.11.1: sheet title shares panel frost (no nested frost-bar); overlay pager `--next` + list inset |
 | 2026-08-26 | V5.5.11: frost blur 56px Gaussian + denser fills for overlay readability |
 | 2026-08-26 | V5.5.9.x: canonical 4px desktop scrollbar; overlay `FloatingSidePager`; profile/match decisions (0W-0L, player-left, blue 1st, 3+10 paging); Apple Music/App Store palettes restated |

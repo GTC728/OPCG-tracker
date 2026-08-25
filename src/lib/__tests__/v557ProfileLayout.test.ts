@@ -46,6 +46,14 @@ describe('pagination', () => {
     expect(css).toMatch(/\.ui-floating-pager-btn--prev\s*\{[^}]*left:\s*0\.25rem/)
     expect(css).toMatch(/\.ui-floating-pager-btn--next\s*\{[^}]*right:\s*0\.25rem/)
   })
+
+  it('keeps sheet frost off the transformed enter animation', () => {
+    const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf8')
+    expect(css).toContain('--ui-frost-fill-sheet: color-mix(in srgb, var(--color-surface-elevated) 94%')
+    expect(css).toContain('.ui-sheet-frost {')
+    expect(css).toMatch(/\.ui-sheet-panel-body\s*\{[^}]*ui-sheet-panel-in/)
+    expect(css).not.toMatch(/\.ui-sheet-panel\s*\{[^}]*ui-sheet-panel-in/)
+  })
 })
 
 describe('i18n keys', () => {

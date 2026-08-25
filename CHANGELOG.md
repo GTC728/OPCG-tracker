@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.11.2 - 2026-08-26
+
+### Changed
+
+- **Sheet readability**: Bottom sheets use a denser frost fill (dark 94% / light 96%) on a dedicated layer that is not transformed, so Gaussian blur actually applies and page text becomes a wash instead of sharp bleed-through. Backdrop dim is 50%.
+
 ## V5.5.11.1 - 2026-08-26
 
 ### Fixed

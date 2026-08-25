@@ -39,33 +39,36 @@ export function BottomSheet({ open, title, onClose, children, manageScroll = fal
       />
       <div
         className={[
-          'ui-sheet-panel ui-frost safe-bottom relative flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl',
+          'ui-sheet-panel safe-bottom relative flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl',
           'max-h-[min(calc(100dvh-var(--bottom-chrome-height,4.5rem)-0.5rem),88dvh)] sm:max-h-[min(88dvh,720px)]',
         ].join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bottom-sheet-title"
       >
-        <div className="relative z-[1] flex shrink-0 items-center justify-between border-b border-[var(--ui-border)] bg-transparent px-5 py-3.5">
-          <h2 id="bottom-sheet-title" className="text-lg font-semibold">
-            {title}
-          </h2>
-          <button
-            type="button"
-            className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-muted"
-            onClick={onClose}
+        <div className="ui-sheet-frost" aria-hidden />
+        <div className="ui-sheet-panel-body flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--ui-border)] bg-transparent px-5 py-3.5">
+            <h2 id="bottom-sheet-title" className="text-lg font-semibold">
+              {title}
+            </h2>
+            <button
+              type="button"
+              className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-muted"
+              onClick={onClose}
+            >
+              取消
+            </button>
+          </div>
+          <div
+            className={
+              manageScroll
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4'
+                : 'scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-5 py-4'
+            }
           >
-            取消
-          </button>
-        </div>
-        <div
-          className={
-            manageScroll
-              ? 'flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4'
-              : 'scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-5 py-4'
-          }
-        >
-          {children}
+            {children}
+          </div>
         </div>
       </div>
     </div>,
