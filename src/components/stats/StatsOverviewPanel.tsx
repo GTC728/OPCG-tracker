@@ -42,7 +42,7 @@ function RankPager({
 
   return (
     <div className="relative">
-      <div className="space-y-2 px-11">{children}</div>
+      <div className="space-y-2">{children}</div>
       <FloatingSidePager
         canPrev={page > 0}
         canNext={page < totalPages - 1}

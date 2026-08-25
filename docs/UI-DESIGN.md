@@ -111,7 +111,7 @@ Used by `PagedList` and Stats player ranking. Parent must be `position: relative
 | Size | `2.25rem` (36px) square |
 | Shape | circle (`border-radius: 9999px`) |
 | Left / right inset | `0.25rem` (4px) — `--prev` uses `left`, `--next` uses `right` (both required) |
-| List inset | Parent list uses `px-11` when arrows are shown so card text is not under the 36px pills |
+| List width | Full width of the parent. **Do not** pad/inset the list for arrows — that compresses cards. Arrows overlay content. |
 | Fill | `--ui-frost-fill-control` (elevated **55%** dark / **68%** light) |
 | Glyph | white **80%** (dark) / black **70%** (light), `1rem`, semibold, `‹` / `›` |
 | Ring | `--ui-frost-ring` (white **14%** dark) |
@@ -203,8 +203,8 @@ Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped setti
 
 ### Pagination
 
-- Reuse `PagedList` (`DEFAULT_PAGE_SIZE = 10`) for any long list that needs paging.
-- Side arrows: `FloatingSidePager` only. Bottom: page chips + number input +「前往」.
+- Reuse `PagedList` (`DEFAULT_PAGE_SIZE = 10`) for any long list that needs paging, including **History** completed matches.
+- Side arrows: `FloatingSidePager` only — overlay, never layout columns or list padding. Bottom: page chips + number input +「前往」。
 
 ---
 
@@ -416,6 +416,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.12: overlay pager does not inset lists; History uses PagedList 10/page |
 | 2026-08-26 | V5.5.11.2: denser sheet frost (94%) on a non-transformed layer so blur works and copy stays readable |
 | 2026-08-26 | V5.5.11.1: sheet title shares panel frost (no nested frost-bar); overlay pager `--next` + list inset |
 | 2026-08-26 | V5.5.11: frost blur 56px Gaussian + denser fills for overlay readability |

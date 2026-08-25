@@ -5,6 +5,7 @@ import { RematchConfirmSheet } from '@/components/record/RematchConfirmSheet'
 import { PermanentDeletePrompt } from '@/components/ui/PermanentDeletePrompt'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
+import { PagedList } from '@/components/ui/PagedList'
 import {
   OptionPickerSheet,
   useFilterSheet,
@@ -386,10 +387,11 @@ export function HistoryPage() {
           meta={`${filteredMatches.length} ${t('stats.matchesUnit')}`}
         />
 
-        {filteredMatches.length ? (
-          filteredMatches.map((match) => (
+        <PagedList
+          key={[sessionFilter, playerFilter, deckFilter, datePreset, dateFrom, dateTo].join('|')}
+          items={filteredMatches}
+          renderItem={(match) => (
             <HistoryMatchCard
-              key={match.id}
               match={match}
               players={allPlayers}
               decks={decks}
@@ -398,12 +400,14 @@ export function HistoryPage() {
               onCopy={() => setRematchMatch(match)}
               onDelete={() => setDeleteTarget(match)}
             />
-          ))
-        ) : (
-          <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
-            暫時沒有符合篩選的完成對局。
-          </div>
-        )}
+          )}
+          getItemKey={(match) => match.id}
+          empty={
+            <div className="rounded-2xl border border-dashed border-surface-muted p-4 text-center text-sm text-text-secondary">
+              暫時沒有符合篩選的完成對局。
+            </div>
+          }
+        />
       </section>
 
       <RematchConfirmSheet

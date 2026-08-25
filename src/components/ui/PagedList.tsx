@@ -95,10 +95,7 @@ export function PagedList<T>({
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           ref={listRef}
-          className={[
-            'scrollbar-subtle min-h-[12rem] min-w-0 flex-1 space-y-2 overflow-y-auto',
-            totalPages > 1 ? 'px-11' : '',
-          ].join(' ')}
+          className="scrollbar-subtle min-h-[12rem] min-w-0 flex-1 space-y-2 overflow-y-auto"
           onWheel={onWheel}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}

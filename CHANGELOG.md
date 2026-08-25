@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.12 - 2026-08-26
+
+### Changed
+
+- **Overlay pager**: Side arrows float over full-width lists again (no `px-11` inset). Cards and rank rows keep their layout; arrows do not compress content.
+- **History**: Completed matches use `PagedList` at **10 per page** (overlay arrows, page chips, jump), same format as profile match view-all.
+
 ## V5.5.11.2 - 2026-08-26
 
 ### Changed

@@ -47,6 +47,13 @@ describe('pagination', () => {
     expect(css).toMatch(/\.ui-floating-pager-btn--next\s*\{[^}]*right:\s*0\.25rem/)
   })
 
+  it('does not inset lists to make room for overlay arrows', () => {
+    const paged = readFileSync(resolve(__dirname, '../../components/ui/PagedList.tsx'), 'utf8')
+    const ranks = readFileSync(resolve(__dirname, '../../components/stats/StatsOverviewPanel.tsx'), 'utf8')
+    expect(paged).not.toContain('px-11')
+    expect(ranks).not.toContain('px-11')
+  })
+
   it('keeps sheet frost off the transformed enter animation', () => {
     const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf8')
     expect(css).toContain('--ui-frost-fill-sheet: color-mix(in srgb, var(--color-surface-elevated) 94%')
