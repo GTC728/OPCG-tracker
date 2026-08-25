@@ -9,6 +9,18 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.3 - 2026-08-25
+
+### Changed
+
+- **Stats overview**: Removed inline Top 5 lists; navigate to Players / Decks tabs via grouped rows.
+- **Profile decks**: Unified horizontal `DeckPreviewCard` rail for all personal deck usage.
+
+### Fixed
+
+- **Record tables**: Embedded table cards now include deck slots so matches can be assigned and started.
+- **Color meta**: Percentages display correctly (ratio × 100); pie chart restored on stats overview.
+
 ## V5.5.2 - 2026-08-25
 
 ### Changed

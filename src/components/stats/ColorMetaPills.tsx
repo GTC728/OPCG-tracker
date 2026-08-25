@@ -32,7 +32,9 @@ export function ColorMetaPills({
           >
             <ChartLegendSwatch fill={getOpcgColorFill(item.color)} />
             <span>{colorLabel(item.color, t)}</span>
-            <span className="tabular-nums text-text-secondary">{item.pct}%</span>
+            <span className="tabular-nums text-text-secondary">
+              {(item.pct * 100).toFixed(item.pct * 100 >= 10 ? 0 : 1)}%
+            </span>
           </span>
         ))}
       </div>

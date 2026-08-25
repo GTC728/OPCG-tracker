@@ -9,7 +9,7 @@ import { RecentMatchWinStrip } from '@/components/profile/RecentMatchWinStrip'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { RecentFormBars } from '@/components/profile/RecentFormBars'
 import { BottomSheet } from '@/components/ui/BottomSheet'
-import { DeckUsagePieChart, buildDeckUsageFillMap } from '@/components/stats/DeckUsagePieChart'
+import { buildDeckUsageFillMap } from '@/components/stats/DeckUsagePieChart'
 import { WeeklyWinRateChart, WinStreakSummary } from '@/components/stats/PlayerTrendCharts'
 import type { AchievementPeerContext } from '@/components/achievements/AchievementsWall'
 import {
@@ -21,7 +21,7 @@ import {
 import { useI18n } from '@/lib/i18n'
 import { formatPercent, type RecordStat } from '@/lib/stats'
 import { getDisplayWinRate, getSampleLabel } from '@/lib/winRateDisplay'
-import { uiCard, uiGlassCard } from '@/lib/uiSurface'
+import { uiCard } from '@/lib/uiSurface'
 import { HorizontalRail } from '@/components/ui/HorizontalRail'
 import type { AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 import { useAppStore } from '@/stores/appStore'
@@ -63,7 +63,7 @@ export function PlayerProfileHub({
   onOpenDeck,
   renderFirstSecond,
   renderMatchups,
-  renderDeckRow,
+  renderDeckRow: _renderDeckRow,
   renderHeadToHeadRow,
 }: {
   player: Player
@@ -88,6 +88,7 @@ export function PlayerProfileHub({
 
   void allMatches
   void achievementUnlocks
+  void _renderDeckRow
 
   const {
     playerMatches,
@@ -146,61 +147,27 @@ export function PlayerProfileHub({
 
       <section className="space-y-2">
         <SectionHeader title={t('profile.panel.decks')} action={t('achievements.viewAll')} onAction={() => setPanel('decks')} />
-        {deckUsage.length ? (
-          <div className={[uiGlassCard, 'space-y-3 p-3 sm:p-4'].join(' ')}>
-            <div className="flex items-start gap-3">
-              <div className="flex shrink-0 justify-center">
-                <DeckUsagePieChart slices={deckUsage} title="" inline />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                {deckStats.slice(0, 3).map((item, index) => {
-                  const deck = decks.find((d) => d.id === item.deckId)
-                  if (!deck) return null
-                  const usage = deckUsageById.get(item.deckId)
-                  return (
-                    <button
-                      key={item.deckId}
-                      type="button"
-                      className="flex w-full items-center justify-between gap-2 text-left"
-                      onClick={() => onOpenDeck(item.deckId)}
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="w-4 shrink-0 text-xs font-bold text-text-secondary">{index + 1}</span>
-                        <span className="truncate text-sm font-medium">
-                          {deck.setCode} {deck.leaderName}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-xs text-text-secondary">
-                        {usage ? `${Math.round(usage.percentage * 100)}%` : '—'}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            {deckStats.length > 3 ? (
-              <HorizontalRail>
-                {deckStats.slice(3, PREVIEW_LIMIT).map((item) => {
-                  const deck = decks.find((d) => d.id === item.deckId)
-                  if (!deck) return null
-                  const usage = deckUsageById.get(item.deckId)
-                  return (
-                    <DeckPreviewCard
-                      key={item.deckId}
-                      deck={deck}
-                      language={language}
-                      layout="rail"
-                      usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
-                      winRate={item.winRate}
-                      record={`${item.wins}W-${item.losses}L`}
-                      accentFill={deckUsageFillMap.get(item.deckId)}
-                      onClick={() => onOpenDeck(item.deckId)}
-                    />
-                  )
-                })}
-              </HorizontalRail>
-            ) : null}
-          </div>
+        {deckStats.length ? (
+          <HorizontalRail>
+            {deckStats.slice(0, PREVIEW_LIMIT).map((item) => {
+              const deck = decks.find((d) => d.id === item.deckId)
+              if (!deck) return null
+              const usage = deckUsageById.get(item.deckId)
+              return (
+                <DeckPreviewCard
+                  key={item.deckId}
+                  deck={deck}
+                  language={language}
+                  layout="rail"
+                  usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
+                  winRate={item.winRate}
+                  record={`${item.wins}W-${item.losses}L`}
+                  accentFill={deckUsageFillMap.get(item.deckId)}
+                  onClick={() => onOpenDeck(item.deckId)}
+                />
+              )
+            })}
+          </HorizontalRail>
         ) : (
           <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
         )}
@@ -299,12 +266,27 @@ export function PlayerProfileHub({
       </PanelSheet>
 
       <PanelSheet open={panel === 'decks'} title={t('profile.panel.decks')} onClose={close}>
-        <DeckUsagePieChart slices={deckUsage} title={t('profile.panel.decks')} />
         {deckStats.length ? (
-          deckStats.map((item) => {
-            const deck = decks.find((d) => d.id === item.deckId)
-            return renderDeckRow(item, deck)
-          })
+          <HorizontalRail>
+            {deckStats.map((item) => {
+              const deck = decks.find((d) => d.id === item.deckId)
+              if (!deck) return null
+              const usage = deckUsageById.get(item.deckId)
+              return (
+                <DeckPreviewCard
+                  key={item.deckId}
+                  deck={deck}
+                  language={language}
+                  layout="rail"
+                  usagePercent={usage ? Math.round(usage.percentage * 1000) / 10 : 0}
+                  winRate={item.winRate}
+                  record={`${item.wins}W-${item.losses}L`}
+                  accentFill={deckUsageFillMap.get(item.deckId)}
+                  onClick={() => onOpenDeck(item.deckId)}
+                />
+              )
+            })}
+          </HorizontalRail>
         ) : (
           <p className="text-sm text-text-secondary">{t('stats.noDeckData')}</p>
         )}

@@ -502,6 +502,11 @@ function TableSlotPanel({
   }
 
   if (embedded) {
+    const sides = [
+      { side: 'left' as const, playerId: match?.player1Id ?? '', deckId: match?.deck1Id ?? '' },
+      { side: 'right' as const, playerId: match?.player2Id ?? '', deckId: match?.deck2Id ?? '' },
+    ]
+
     return (
       <article className={[uiRecordCard, 'flex min-h-[5.75rem] flex-col p-3.5'].join(' ')}>
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -516,26 +521,30 @@ function TableSlotPanel({
           </button>
         </div>
         <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-          <AssignFieldCell
-            field="player"
-            playerId={match?.player1Id ?? ''}
-            deckId={match?.deck1Id ?? ''}
-            players={players}
-            decks={decks}
-            highlight={fieldHighlight('left', 'player')}
-            onDrop={(payload) => onAssign('left', payload)}
-            onTap={() => onTapField('left', 'player')}
-          />
-          <AssignFieldCell
-            field="player"
-            playerId={match?.player2Id ?? ''}
-            deckId={match?.deck2Id ?? ''}
-            players={players}
-            decks={decks}
-            highlight={fieldHighlight('right', 'player')}
-            onDrop={(payload) => onAssign('right', payload)}
-            onTap={() => onTapField('right', 'player')}
-          />
+          {sides.map(({ side, playerId, deckId }) => (
+            <div key={side} className="space-y-1">
+              <AssignFieldCell
+                field="player"
+                playerId={playerId}
+                deckId={deckId}
+                players={players}
+                decks={decks}
+                highlight={fieldHighlight(side, 'player')}
+                onDrop={(payload) => onAssign(side, payload)}
+                onTap={() => onTapField(side, 'player')}
+              />
+              <AssignFieldCell
+                field="deck"
+                playerId={playerId}
+                deckId={deckId}
+                players={players}
+                decks={decks}
+                highlight={fieldHighlight(side, 'deck')}
+                onDrop={(payload) => onAssign(side, payload)}
+                onTap={() => onTapField(side, 'deck')}
+              />
+            </div>
+          ))}
         </div>
       </article>
     )
