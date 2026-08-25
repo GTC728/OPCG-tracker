@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.5.13 - 2026-08-26
+
+### Changed
+
+- **Page-snap carousel**: `PagedList` horizontal paging follows the finger (peek the adjacent page while dragging, snap on release). Vertical list scrolling no longer turns the page. Arrow / chip / jump still slide with the same 280ms animation.
+
 ## V5.5.12 - 2026-08-26
 
 ### Changed

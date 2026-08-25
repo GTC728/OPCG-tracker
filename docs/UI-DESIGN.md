@@ -205,6 +205,7 @@ Record table rows, `MatchRecordCard`, heatmaps, player rank lists, grouped setti
 
 - Reuse `PagedList` (`DEFAULT_PAGE_SIZE = 10`) for any long list that needs paging, including **History** completed matches.
 - Side arrows: `FloatingSidePager` only — overlay, never layout columns or list padding. Bottom: page chips + number input +「前往」。
+- **Page-snap carousel** (跟手分頁輪播; iOS paging `UIScrollView` / Android `ViewPager`): drag horizontally to peek the next/previous page; release past **28%** width or a flick to snap. Vertical pan only scrolls the list. Arrow/chip/jump use the same slide. Math in `src/lib/pageCarousel.ts`.
 
 ---
 
@@ -416,6 +417,7 @@ TypeScript drawer height caps: `src/lib/layout.ts` (`ASSIGNMENT_DRAWER_HEADER`, 
 
 | Date | Notes |
 |------|--------|
+| 2026-08-26 | V5.5.13: PagedList page-snap carousel (follow-finger peek + snap); vertical scroll does not change page |
 | 2026-08-26 | V5.5.12: overlay pager does not inset lists; History uses PagedList 10/page |
 | 2026-08-26 | V5.5.11.2: denser sheet frost (94%) on a non-transformed layer so blur works and copy stays readable |
 | 2026-08-26 | V5.5.11.1: sheet title shares panel frost (no nested frost-bar); overlay pager `--next` + list inset |

@@ -247,6 +247,29 @@ textarea:focus-visible {
   right: 0.25rem;
 }
 
+/* Follow-finger page-snap carousel (PagedList). Side panes are overlayed;
+   do not set transform: none here on reduced-motion — only kill the transition. */
+.ui-page-snap {
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
+
+.ui-page-snap-pane {
+  backface-visibility: hidden;
+}
+
+.ui-page-snap-pane--side {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-page-snap-pane {
+    transition: none !important;
+  }
+}
+
 [data-theme='light'] .ui-floating-pager-btn {
   color: rgb(0 0 0 / 70%);
 }

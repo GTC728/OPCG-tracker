@@ -1,6 +1,20 @@
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent, type WheelEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+  type TransitionEvent,
+} from 'react'
 import { FloatingSidePager } from '@/components/ui/FloatingSidePager'
 import { useI18n } from '@/lib/i18n'
+import {
+  lockPageDragAxis,
+  PAGE_SETTLE_MS,
+  rubberBandPageOffset,
+  settlePageDrag,
+} from '@/lib/pageCarousel'
 import {
   clampPage,
   DEFAULT_PAGE_SIZE,
@@ -9,7 +23,7 @@ import {
   visiblePageWindow,
 } from '@/lib/pagination'
 
-const SWIPE_THRESHOLD = 48
+type AxisLock = 'undecided' | 'h' | 'v'
 
 export function PagedList<T>({
   items,
@@ -29,61 +43,203 @@ export function PagedList<T>({
   const { t } = useI18n()
   const [page, setPage] = useState(1)
   const [draft, setDraft] = useState('1')
-  const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const [shift, setShift] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const [instant, setInstant] = useState(false)
+  const [incomingPage, setIncomingPage] = useState<number | null>(null)
+
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const currentPaneRef = useRef<HTMLDivElement>(null)
+  const axisRef = useRef<AxisLock>('undecided')
+  const startRef = useRef<{ x: number; y: number; t: number } | null>(null)
+  const lastMoveRef = useRef<{ x: number; t: number } | null>(null)
+  const pendingRef = useRef<{ page: number } | null>(null)
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suppressClickRef = useRef(false)
 
   const totalPages = getPageCount(items.length, pageSize)
   const safePage = clampPage(page, totalPages)
-  const pageItems = slicePage(items, safePage, pageSize)
-  const offset = (safePage - 1) * Math.max(1, pageSize)
+  const canPrev = safePage > 1
+  const canNext = safePage < totalPages
+  const prevPage = incomingPage != null && incomingPage < safePage ? incomingPage : safePage - 1
+  const nextPage = incomingPage != null && incomingPage > safePage ? incomingPage : safePage + 1
 
   useEffect(() => {
     setPage((current) => clampPage(current, getPageCount(items.length, pageSize)))
+    setShift(0)
+    setIncomingPage(null)
   }, [items.length, pageSize])
 
   useEffect(() => {
     setDraft(String(safePage))
-    listRef.current?.scrollTo({ top: 0 })
+    currentPaneRef.current?.scrollTo({ top: 0 })
   }, [safePage])
 
-  const goTo = (next: number) => {
-    setPage(clampPage(next, totalPages))
-  }
+  useLayoutEffect(() => {
+    if (!instant) return
+    setInstant(false)
+  }, [instant, page])
 
-  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const el = event.currentTarget
-    const atTop = el.scrollTop <= 0
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
-    if (event.deltaY > 24 && atBottom && safePage < totalPages) {
-      goTo(safePage + 1)
-    } else if (event.deltaY < -24 && atTop && safePage > 1) {
-      goTo(safePage - 1)
+  useEffect(() => {
+    const node = viewportRef.current
+    if (!node) return
+    const onTouchMove = (event: TouchEvent) => {
+      if (axisRef.current === 'h') event.preventDefault()
     }
+    node.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => node.removeEventListener('touchmove', onTouchMove)
+  }, [totalPages])
+
+  useEffect(() => {
+    const onClickCapture = (event: MouseEvent) => {
+      if (!suppressClickRef.current) return
+      event.preventDefault()
+      event.stopPropagation()
+      suppressClickRef.current = false
+    }
+    document.addEventListener('click', onClickCapture, true)
+    return () => document.removeEventListener('click', onClickCapture, true)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current)
+    }
+  }, [])
+
+  const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const paneTransition = dragging || instant ? 'none' : `transform ${PAGE_SETTLE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+
+  const renderPage = (pageNumber: number) => {
+    const rows = slicePage(items, pageNumber, pageSize)
+    const offset = (pageNumber - 1) * Math.max(1, pageSize)
+    return rows.map((item, index) => (
+      <div key={getItemKey(item, offset + index)}>{renderItem(item, offset + index)}</div>
+    ))
   }
 
-  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.touches[0]
-    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+  const commitPage = (target: number) => {
+    pendingRef.current = null
+    if (settleTimerRef.current) {
+      window.clearTimeout(settleTimerRef.current)
+      settleTimerRef.current = null
+    }
+    setIncomingPage(null)
+    setInstant(true)
+    setDragging(false)
+    setPage(clampPage(target, totalPages))
+    setShift(0)
   }
 
-  const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
-    const start = touchStart.current
-    touchStart.current = null
-    if (!start) return
-    const end = event.changedTouches[0]
-    if (!end) return
-    const deltaX = start.x - end.clientX
-    const deltaY = start.y - end.clientY
-    const el = listRef.current
-    const atTop = !el || el.scrollTop <= 0
-    const atBottom = !el || el.scrollTop + el.clientHeight >= el.scrollHeight - 1
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > SWIPE_THRESHOLD) {
-      if (deltaX > 0) goTo(safePage + 1)
-      else goTo(safePage - 1)
+  const armCommit = (target: number, toShift: number) => {
+    pendingRef.current = { page: target }
+    setIncomingPage(target)
+    setDragging(false)
+    setInstant(false)
+    setShift(toShift)
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current)
+    settleTimerRef.current = window.setTimeout(() => {
+      if (pendingRef.current?.page === target) commitPage(target)
+    }, PAGE_SETTLE_MS + 60)
+  }
+
+  const goTo = (next: number) => {
+    const target = clampPage(next, totalPages)
+    if (target === safePage) return
+    if (pendingRef.current) return
+    if (prefersReducedMotion()) {
+      commitPage(target)
       return
     }
-    if (deltaY > SWIPE_THRESHOLD && atBottom) goTo(safePage + 1)
-    if (deltaY < -SWIPE_THRESHOLD && atTop) goTo(safePage - 1)
+    const width = viewportRef.current?.getBoundingClientRect().width ?? 0
+    if (width < 8) {
+      commitPage(target)
+      return
+    }
+    const dir = target > safePage ? 1 : -1
+    armCommit(target, -dir * width)
+  }
+
+  const onPaneTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+    if (event.propertyName !== 'transform') return
+    if (event.target !== event.currentTarget) return
+    const pending = pendingRef.current
+    if (!pending) return
+    commitPage(pending.page)
+  }
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if (pendingRef.current) return
+    axisRef.current = 'undecided'
+    startRef.current = { x: event.clientX, y: event.clientY, t: event.timeStamp }
+    lastMoveRef.current = { x: event.clientX, t: event.timeStamp }
+  }
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const start = startRef.current
+    if (!start) return
+    const dx = event.clientX - start.x
+    const dy = event.clientY - start.y
+    if (axisRef.current === 'undecided') {
+      const locked = lockPageDragAxis(dx, dy)
+      if (!locked) return
+      axisRef.current = locked
+      if (locked === 'v') return
+      event.currentTarget.setPointerCapture(event.pointerId)
+      setDragging(true)
+    }
+    if (axisRef.current !== 'h') return
+    const previous = lastMoveRef.current
+    lastMoveRef.current = { x: event.clientX, t: event.timeStamp }
+    if (previous && event.timeStamp === previous.t) return
+    setShift(rubberBandPageOffset(dx, canPrev, canNext))
+  }
+
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = startRef.current
+    startRef.current = null
+    if (!start) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    if (axisRef.current !== 'h') {
+      axisRef.current = 'undecided'
+      return
+    }
+    axisRef.current = 'undecided'
+    const width = event.currentTarget.getBoundingClientRect().width
+    const last = lastMoveRef.current
+    const flickDt = last ? event.timeStamp - last.t : 0
+    const velocityX =
+      last && flickDt >= 8
+        ? (event.clientX - last.x) / flickDt
+        : (event.clientX - start.x) / Math.max(1, event.timeStamp - start.t)
+    const offsetX = rubberBandPageOffset(event.clientX - start.x, canPrev, canNext)
+    if (Math.abs(event.clientX - start.x) > 8) suppressClickRef.current = true
+
+    if (prefersReducedMotion()) {
+      const decision = settlePageDrag({ offsetX, velocityX, width, canPrev, canNext })
+      setDragging(false)
+      if (decision === 'next') commitPage(safePage + 1)
+      else if (decision === 'prev') commitPage(safePage - 1)
+      else setShift(0)
+      return
+    }
+
+    const decision = settlePageDrag({ offsetX, velocityX, width, canPrev, canNext })
+    setDragging(false)
+    if (decision === 'next') {
+      armCommit(safePage + 1, -width)
+      return
+    }
+    if (decision === 'prev') {
+      armCommit(safePage - 1, width)
+      return
+    }
+    setShift(0)
   }
 
   if (!items.length) {
@@ -94,20 +250,56 @@ export function PagedList<T>({
     <div className={['flex min-h-0 flex-1 flex-col gap-3', className].filter(Boolean).join(' ')}>
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
-          ref={listRef}
-          className="scrollbar-subtle min-h-[12rem] min-w-0 flex-1 space-y-2 overflow-y-auto"
-          onWheel={onWheel}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
+          ref={viewportRef}
+          className={[
+            'ui-page-snap relative flex min-h-0 min-h-[12rem] min-w-0 flex-1 flex-col overflow-hidden',
+            dragging ? 'select-none' : '',
+          ].join(' ')}
+          onPointerDown={totalPages > 1 ? onPointerDown : undefined}
+          onPointerMove={totalPages > 1 ? onPointerMove : undefined}
+          onPointerUp={totalPages > 1 ? onPointerUp : undefined}
+          onPointerCancel={totalPages > 1 ? onPointerUp : undefined}
         >
-          {pageItems.map((item, index) => (
-            <div key={getItemKey(item, offset + index)}>{renderItem(item, offset + index)}</div>
-          ))}
+          {totalPages > 1 && canPrev ? (
+            <div
+              className="ui-page-snap-pane ui-page-snap-pane--side scrollbar-subtle space-y-2 overflow-y-auto"
+              style={{
+                transform: `translate3d(calc(-100% + ${shift}px), 0, 0)`,
+                transition: paneTransition,
+              }}
+              aria-hidden
+            >
+              {renderPage(prevPage)}
+            </div>
+          ) : null}
+          <div
+            ref={currentPaneRef}
+            className="ui-page-snap-pane scrollbar-subtle relative min-h-0 min-w-0 flex-1 space-y-2 overflow-y-auto"
+            style={{
+              transform: `translate3d(${shift}px, 0, 0)`,
+              transition: paneTransition,
+            }}
+            onTransitionEnd={onPaneTransitionEnd}
+          >
+            {renderPage(safePage)}
+          </div>
+          {totalPages > 1 && canNext ? (
+            <div
+              className="ui-page-snap-pane ui-page-snap-pane--side scrollbar-subtle space-y-2 overflow-y-auto"
+              style={{
+                transform: `translate3d(calc(100% + ${shift}px), 0, 0)`,
+                transition: paneTransition,
+              }}
+              aria-hidden
+            >
+              {renderPage(nextPage)}
+            </div>
+          ) : null}
         </div>
         {totalPages > 1 ? (
           <FloatingSidePager
-            canPrev={safePage > 1}
-            canNext={safePage < totalPages}
+            canPrev={canPrev}
+            canNext={canNext}
             onPrev={() => goTo(safePage - 1)}
             onNext={() => goTo(safePage + 1)}
             prevLabel={t('common.previous')}

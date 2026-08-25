@@ -6,6 +6,11 @@ import { ja } from '@/i18n/ja'
 import { zhHans } from '@/i18n/zh-Hans'
 import { zhHant } from '@/i18n/zh-Hant'
 import { resolveMatchRecordSides } from '@/lib/matchRecordSides'
+import {
+  lockPageDragAxis,
+  rubberBandPageOffset,
+  settlePageDrag,
+} from '@/lib/pageCarousel'
 import { clampPage, getPageCount, slicePage, visiblePageWindow } from '@/lib/pagination'
 import { formatWinLossRecord } from '@/lib/winLossRecord'
 
@@ -60,6 +65,38 @@ describe('pagination', () => {
     expect(css).toContain('.ui-sheet-frost {')
     expect(css).toMatch(/\.ui-sheet-panel-body\s*\{[^}]*ui-sheet-panel-in/)
     expect(css).not.toMatch(/\.ui-sheet-panel\s*\{[^}]*ui-sheet-panel-in/)
+  })
+})
+
+describe('page-snap carousel', () => {
+  it('locks horizontal vs vertical after a short slop', () => {
+    expect(lockPageDragAxis(4, 4)).toBeNull()
+    expect(lockPageDragAxis(24, 6)).toBe('h')
+    expect(lockPageDragAxis(6, 24)).toBe('v')
+  })
+
+  it('rubber-bands at the first and last page', () => {
+    expect(rubberBandPageOffset(-100, true, false)).toBeCloseTo(-32)
+    expect(rubberBandPageOffset(100, false, true)).toBeCloseTo(32)
+    expect(rubberBandPageOffset(-100, true, true)).toBe(-100)
+  })
+
+  it('snaps when dragged far enough or flicked', () => {
+    expect(
+      settlePageDrag({ offsetX: -40, velocityX: 0, width: 400, canPrev: true, canNext: true }),
+    ).toBe('stay')
+    expect(
+      settlePageDrag({ offsetX: -120, velocityX: 0, width: 400, canPrev: true, canNext: true }),
+    ).toBe('next')
+    expect(
+      settlePageDrag({ offsetX: 120, velocityX: 0, width: 400, canPrev: true, canNext: true }),
+    ).toBe('prev')
+    expect(
+      settlePageDrag({ offsetX: -20, velocityX: -0.7, width: 400, canPrev: true, canNext: true }),
+    ).toBe('next')
+    expect(
+      settlePageDrag({ offsetX: -200, velocityX: 0, width: 400, canPrev: true, canNext: false }),
+    ).toBe('stay')
   })
 })
 
