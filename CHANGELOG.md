@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.2 - 2026-08-26
+
+### New
+
+- **Season stats**: Stats can scope win rates and rankings to a set-drop season. Presets are OP16 (2026/05/30–07/10), OP16.5 ST31–36 (2026/07/11–08/21), and OP17 (2026/08/22 onward). Custom from/to dates are also available.
+
 ## V5.6.1.2 - 2026-08-26
 
 ### Changed

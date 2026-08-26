@@ -45,8 +45,10 @@ import {
   getWinRateHeatmapColor,
   isReliableSample,
 } from '@/lib/winRateDisplay'
+import { SeasonRangeBar } from '@/components/stats/SeasonRangeBar'
 import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
+import { currentSeasonId, formatYmdDisplay, resolveSeasonRange, seasonLabelKey } from '@/lib/seasons'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
 
@@ -1012,7 +1014,10 @@ export function StatsPage() {
       : settings.statsDefaultScope === 'all'
         ? 'all'
         : 'session'
-  const [scope, setScope] = useState<'session' | 'all'>(initialScope)
+  const [scope, setScope] = useState<'session' | 'season' | 'all'>(initialScope)
+  const [seasonPresetId, setSeasonPresetId] = useState(() => currentSeasonId())
+  const [seasonCustomFrom, setSeasonCustomFrom] = useState('')
+  const [seasonCustomTo, setSeasonCustomTo] = useState('')
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
   const [profileStack, setProfileStack] = useState<ProfileNavTarget[]>(() =>
     settings.statsDefaultScope === 'profile' && linkedPlayer
@@ -1026,7 +1031,6 @@ export function StatsPage() {
   const sectionScrollY = useRef<Partial<Record<StatsSectionId, number>>>({})
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
-  const allMatches = useAppStore((state) => state.matches)
 
   useEffect(() => {
     const snapshot = useAppStore.getState()
@@ -1043,8 +1047,12 @@ export function StatsPage() {
     if (scope === 'session' && currentSessionId) {
       return { type: 'session', sessionId: currentSessionId }
     }
+    if (scope === 'season') {
+      const range = resolveSeasonRange(seasonPresetId, seasonCustomFrom, seasonCustomTo)
+      return { type: 'season', from: range.from, to: range.to, presetId: seasonPresetId }
+    }
     return { type: 'all' }
-  }, [scope, currentSessionId])
+  }, [scope, currentSessionId, seasonPresetId, seasonCustomFrom, seasonCustomTo])
 
   const {
     scopedMatches,
@@ -1058,6 +1066,29 @@ export function StatsPage() {
     firstSecondStats,
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
+
+  const seasonScopeLabel = useMemo(() => {
+    const range = resolveSeasonRange(seasonPresetId, seasonCustomFrom, seasonCustomTo)
+    const name = t(seasonLabelKey(seasonPresetId))
+    const dates = range.to
+      ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
+      : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
+    return `${name} · ${dates}`
+  }, [seasonCustomFrom, seasonCustomTo, seasonPresetId, t])
+
+  const statsHeroSubtitle =
+    scope === 'session' && currentSession
+      ? currentSession.name
+      : scope === 'season'
+        ? seasonScopeLabel
+        : t('stats.allData')
+
+  const overviewScopeLabel =
+    scope === 'session' && currentSession
+      ? `${currentSession.name} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
+      : scope === 'season'
+        ? `${seasonScopeLabel} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
+        : t('stats.allData')
 
   const weeklyDeckMetaStats = useMemo(
     () => buildWeeklyDeckMetaStats(decks, scopedMatches, language),
@@ -1112,7 +1143,7 @@ export function StatsPage() {
       <PushStage onBack={handleProfileBack}>
         <PlayerProfileView
           player={selectedPlayer}
-          allMatches={allMatches}
+          allMatches={scopedMatches}
           players={players}
           decks={decks}
           language={language}
@@ -1148,7 +1179,7 @@ export function StatsPage() {
     <div className="space-y-5">
       <PageHero
         title={t('page.stats.title')}
-        subtitle={scope === 'session' && currentSession ? currentSession.name : t('stats.allData')}
+        subtitle={statsHeroSubtitle}
       />
 
       {linkedPlayer ? (
@@ -1180,9 +1211,21 @@ export function StatsPage() {
         }}
         options={[
           { value: 'session', label: t('stats.currentSession') },
+          { value: 'season', label: t('stats.season') },
           { value: 'all', label: t('stats.allData') },
         ]}
       />
+
+      {scope === 'season' ? (
+        <SeasonRangeBar
+          presetId={seasonPresetId}
+          customFrom={seasonCustomFrom}
+          customTo={seasonCustomTo}
+          onPresetChange={setSeasonPresetId}
+          onCustomFromChange={setSeasonCustomFrom}
+          onCustomToChange={setSeasonCustomTo}
+        />
+      ) : null}
 
       <SectionTabs activeSection={activeSection} onChange={changeSection} />
 
@@ -1196,11 +1239,7 @@ export function StatsPage() {
             decks={decks}
             deckUsageSlices={environmentDeckUsage}
             language={language}
-            scopeLabel={
-              scope === 'session' && currentSession
-                ? `${currentSession.name} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
-                : t('stats.allData')
-            }
+            scopeLabel={overviewScopeLabel}
             onOpenPlayer={(playerId) => openProfile({ type: 'player', id: playerId })}
             onOpenDeck={(deckId) => openProfile({ type: 'deck', id: deckId })}
             onViewAllPlayers={() => changeSection('players')}

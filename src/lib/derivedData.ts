@@ -21,8 +21,16 @@ import {
 } from '@/lib/materializedStats'
 import {
   buildDeckUsageDistribution,
+  buildDashboardStats,
+  buildDeckStats,
+  buildFirstSecondStats,
   buildHeadToHeadStats,
   buildInsightMessages,
+  buildMatchupStats,
+  buildMetaSummaryStats,
+  buildPlayerDeckStats,
+  buildPlayerMatchupStats,
+  buildPlayerStats,
   buildRecentForm,
   buildWeeklyWinRateStats,
   buildWinStreakStats,
@@ -38,6 +46,7 @@ import {
   type RecentFormStat,
   type RecordStat,
 } from '@/lib/stats'
+import { matchInSeasonRange } from '@/lib/seasons'
 import type { AppState, AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 /** Slice of app state that affects derived analytics & achievements. */
@@ -125,15 +134,21 @@ export function getMatchIndex(slice: AppDataSlice): MatchIndex {
   return index
 }
 
-export type StatsScope = { type: 'all' } | { type: 'session'; sessionId: string }
+export type StatsScope =
+  | { type: 'all' }
+  | { type: 'session'; sessionId: string }
+  | { type: 'season'; from: string; to: string | null; presetId: string }
 
 function scopeKey(scope: StatsScope): string {
-  return scope.type === 'all' ? 'all' : `session:${scope.sessionId}`
+  if (scope.type === 'all') return 'all'
+  if (scope.type === 'session') return `session:${scope.sessionId}`
+  return `season:${scope.presetId}:${scope.from}:${scope.to ?? 'open'}`
 }
 
 function resolveScopedMatches(index: MatchIndex, scope: StatsScope): Match[] {
   if (scope.type === 'all') return index.completed
-  return index.bySessionId.get(scope.sessionId) ?? []
+  if (scope.type === 'session') return index.bySessionId.get(scope.sessionId) ?? []
+  return index.completed.filter((match) => matchInSeasonRange(match.finishedAt, scope.from, scope.to))
 }
 
 export interface ScopedStatsBundle {
@@ -163,18 +178,32 @@ export function getScopedStatsBundle(
   const index = getMatchIndex(slice)
   syncMaterializedStats(index.completed)
   const scopedMatches = resolveScopedMatches(index, scope)
-  const bundle: ScopedStatsBundle = {
-    scopedMatches,
-    dashboard: materializedDashboardStats(slice.players, slice.decks, scope, language),
-    playerStats: materializedPlayerStats(slice.players, scope),
-    deckStats: materializedDeckStats(slice.decks, scope, language),
-    playerDeckStats: materializedPlayerDeckStats(slice.players, slice.decks, scope, language),
-    matchupStats: materializedMatchupStats(slice.decks, scope, language),
-    playerMatchupStats: materializedPlayerMatchupStats(slice.players, scope),
-    metaSummary: materializedMetaSummary(scope),
-    firstSecondStats: materializedFirstSecondStats(scope),
-    globalRecentForm: buildRecentForm(scopedMatches),
-  }
+  const bundle: ScopedStatsBundle =
+    scope.type === 'season'
+      ? {
+          scopedMatches,
+          dashboard: buildDashboardStats(slice.players, slice.decks, scopedMatches, language),
+          playerStats: buildPlayerStats(slice.players, scopedMatches),
+          deckStats: buildDeckStats(slice.decks, scopedMatches, language),
+          playerDeckStats: buildPlayerDeckStats(slice.players, slice.decks, scopedMatches, language),
+          matchupStats: buildMatchupStats(slice.decks, scopedMatches, language),
+          playerMatchupStats: buildPlayerMatchupStats(slice.players, scopedMatches),
+          metaSummary: buildMetaSummaryStats(scopedMatches),
+          firstSecondStats: buildFirstSecondStats(scopedMatches),
+          globalRecentForm: buildRecentForm(scopedMatches),
+        }
+      : {
+          scopedMatches,
+          dashboard: materializedDashboardStats(slice.players, slice.decks, scope, language),
+          playerStats: materializedPlayerStats(slice.players, scope),
+          deckStats: materializedDeckStats(slice.decks, scope, language),
+          playerDeckStats: materializedPlayerDeckStats(slice.players, slice.decks, scope, language),
+          matchupStats: materializedMatchupStats(slice.decks, scope, language),
+          playerMatchupStats: materializedPlayerMatchupStats(slice.players, scope),
+          metaSummary: materializedMetaSummary(scope),
+          firstSecondStats: materializedFirstSecondStats(scope),
+          globalRecentForm: buildRecentForm(scopedMatches),
+        }
   statsBundleCache.set(key, bundle)
   if (statsBundleCache.size > 8) {
     const oldest = statsBundleCache.keys().next().value
