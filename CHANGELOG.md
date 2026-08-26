@@ -9,6 +9,23 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.4 - 2026-08-26
+
+### New
+
+- **Landing page**: Public intro at `/about`, `/welcome`, and `/docs` with feature overview, PWA install hint, and link to open the app.
+- **Google sign-in**: One-tap Google login (enable Google provider in Supabase Authentication).
+
+### Changed
+
+- **Login UI**: Redesigned cloud sign-in card with glass styling, segmented 8-digit OTP input, and Google button.
+- **Email OTP**: Login codes are now 8 digits (update your Supabase email template to say 8-digit and use `{{ .Token }}`).
+- **Site URL**: `homepage` and live app URL set to `https://opcg-tracker.com`.
+
+### Changed (deploy notes)
+
+- Add `https://opcg-tracker.com/auth/callback` to Supabase Redirect URLs. For Google OAuth, set the Google Cloud redirect URI to `https://<project-ref>.supabase.co/auth/v1/callback`.
+
 ## V5.6.3 - 2026-08-26
 
 ### Fixed

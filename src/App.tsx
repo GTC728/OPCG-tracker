@@ -20,6 +20,7 @@ import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import { AuthCallbackScreen } from '@/components/auth/AuthCallbackScreen'
 import { isAuthCallbackLocation, subscribeCloudAuth } from '@/lib/cloudSync'
+import { LandingPage, isLandingPath } from '@/pages/LandingPage'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
@@ -222,6 +223,14 @@ export default function App() {
       <div className="flex h-full items-center justify-center bg-surface text-text-secondary">
         {t('app.loading')}
       </div>
+    )
+  }
+
+  if (isLandingPath()) {
+    return (
+      <ToastProvider>
+        <LandingPage />
+      </ToastProvider>
     )
   }
 

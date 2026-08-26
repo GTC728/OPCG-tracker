@@ -185,6 +185,18 @@ export async function verifyEmailOtp(email: string, token: string): Promise<void
   if (error) throw error
 }
 
+export async function signInWithOAuth(provider: 'google'): Promise<void> {
+  const supabase = await requireClient()
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: getAuthRedirectTo(),
+      skipBrowserRedirect: false,
+    },
+  })
+  if (error) throw error
+}
+
 export async function completeAuthFromUrl(): Promise<{ email: string | null }> {
   const supabase = await requireClient()
   const existing = await getCloudSession()

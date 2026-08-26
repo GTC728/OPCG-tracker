@@ -14,10 +14,10 @@ import {
 import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
 import { backupAgeDays, needsBackupReminder, runAutoCloudBackup, shouldAutoBackupOnLogin } from '@/lib/autoBackup'
 import { syncAchievementLedger } from '@/lib/achievementLedgerSync'
-import { uiCalloutWarning } from '@/lib/uiSurface'
 import { prepareRestoredAppState } from '@/lib/restoreState'
 import { formatDateTime } from '@/lib/utils'
 import { getAppState, useAppStore } from '@/stores/appStore'
+import { CloudLoginCard } from '@/components/auth/CloudLoginCard'
 import { BackupVersionList } from '@/components/settings/BackupVersionList'
 import { Switch } from '@/components/motion/Switch'
 
@@ -270,81 +270,52 @@ export function AccountBackupPanel() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-3">
-          <p className={[uiCalloutWarning, 'p-3 text-sm'].join(' ')}>{t('cloud.emailLimitNote')}</p>
-          <input
-            className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <Button
-            fullWidth
-            disabled={busy || !email.trim() || loginCooldownSeconds > 0}
-            loading={busy}
-            onClick={async () => {
-              setBusy(true)
-              setMessage(null)
-              try {
-                await signInWithEmail(email)
-                const sentAt = new Date().toISOString()
-                updateSettings({ lastLoginLinkSentAt: sentAt })
-                setNow(Date.now())
-                setAwaitingCode(true)
-                setMessage(t('cloud.checkEmail'))
-                toast.success(t('cloud.checkEmail'))
-              } catch (caught) {
-                const nextMessage = getFriendlyCloudError(caught, t('cloud.loginFailed'))
-                setMessage(nextMessage)
-                toast.error(nextMessage)
-              } finally {
-                setBusy(false)
-              }
-            }}
-          >
-            {loginCooldownSeconds > 0
-              ? `${t('cloud.resendIn')} ${loginCooldownSeconds}s`
-              : t('cloud.sendLogin')}
-          </Button>
-          {awaitingCode ? (
-            <div className="space-y-2">
-              <p className="text-xs text-text-secondary">{t('cloud.enterCodeHint')}</p>
-              <input
-                className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 font-mono tracking-[0.3em]"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder={t('cloud.enterCode')}
-                value={otpCode}
-                onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
-              />
-              <Button
-                fullWidth
-                disabled={busy || otpCode.trim().length < 6}
-                loading={busy}
-                onClick={async () => {
-                  setBusy(true)
-                  setMessage(null)
-                  try {
-                    await verifyEmailOtp(email, otpCode)
-                    setAwaitingCode(false)
-                    setOtpCode('')
-                    await refreshCloudStatus()
-                    toast.success(t('cloud.loggedIn'))
-                  } catch (caught) {
-                    const nextMessage = getFriendlyCloudError(caught, t('cloud.loginFailed'))
-                    setMessage(nextMessage)
-                    toast.error(nextMessage)
-                  } finally {
-                    setBusy(false)
-                  }
-                }}
-              >
-                {t('cloud.verifyCode')}
-              </Button>
-            </div>
-          ) : null}
-        </div>
+        <CloudLoginCard
+          email={email}
+          onEmailChange={setEmail}
+          awaitingCode={awaitingCode}
+          otpCode={otpCode}
+          onOtpChange={setOtpCode}
+          busy={busy}
+          loginCooldownSeconds={loginCooldownSeconds}
+          getFriendlyCloudError={getFriendlyCloudError}
+          onSendCode={async () => {
+            setBusy(true)
+            setMessage(null)
+            try {
+              await signInWithEmail(email)
+              const sentAt = new Date().toISOString()
+              updateSettings({ lastLoginLinkSentAt: sentAt })
+              setNow(Date.now())
+              setAwaitingCode(true)
+              setMessage(t('cloud.checkEmail'))
+              toast.success(t('cloud.checkEmail'))
+            } catch (caught) {
+              const nextMessage = getFriendlyCloudError(caught, t('cloud.loginFailed'))
+              setMessage(nextMessage)
+              toast.error(nextMessage)
+            } finally {
+              setBusy(false)
+            }
+          }}
+          onVerify={async () => {
+            setBusy(true)
+            setMessage(null)
+            try {
+              await verifyEmailOtp(email, otpCode)
+              setAwaitingCode(false)
+              setOtpCode('')
+              await refreshCloudStatus()
+              toast.success(t('cloud.loggedIn'))
+            } catch (caught) {
+              const nextMessage = getFriendlyCloudError(caught, t('cloud.loginFailed'))
+              setMessage(nextMessage)
+              toast.error(nextMessage)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        />
       )}
 
       {message ? <p className="mt-3 text-sm text-text-secondary">{message}</p> : null}
