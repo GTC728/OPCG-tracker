@@ -46,7 +46,7 @@ import {
   type RecentFormStat,
   type RecordStat,
 } from '@/lib/stats'
-import { matchInSeasonRange } from '@/lib/seasons'
+import { matchInSeasonRange, type PeriodMode } from '@/lib/seasons'
 import type { AppState, AchievementUnlock, Deck, Language, Match, Player } from '@/types'
 
 /** Slice of app state that affects derived analytics & achievements. */
@@ -137,12 +137,12 @@ export function getMatchIndex(slice: AppDataSlice): MatchIndex {
 export type StatsScope =
   | { type: 'all' }
   | { type: 'session'; sessionId: string }
-  | { type: 'season'; from: string; to: string | null; presetId: string }
+  | { type: 'period'; mode: PeriodMode; from: string; to: string | null; presetId: string }
 
 function scopeKey(scope: StatsScope): string {
   if (scope.type === 'all') return 'all'
   if (scope.type === 'session') return `session:${scope.sessionId}`
-  return `season:${scope.presetId}:${scope.from}:${scope.to ?? 'open'}`
+  return `period:${scope.mode}:${scope.presetId}:${scope.from}:${scope.to ?? 'open'}`
 }
 
 function resolveScopedMatches(index: MatchIndex, scope: StatsScope): Match[] {
@@ -179,7 +179,7 @@ export function getScopedStatsBundle(
   syncMaterializedStats(index.completed)
   const scopedMatches = resolveScopedMatches(index, scope)
   const bundle: ScopedStatsBundle =
-    scope.type === 'season'
+    scope.type === 'period'
       ? {
           scopedMatches,
           dashboard: buildDashboardStats(slice.players, slice.decks, scopedMatches, language),

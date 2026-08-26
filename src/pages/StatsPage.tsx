@@ -44,10 +44,16 @@ import {
   getWinRateHeatmapColor,
   isReliableSample,
 } from '@/lib/winRateDisplay'
-import { SeasonRangeBar } from '@/components/stats/SeasonRangeBar'
+import { PeriodRangeBar } from '@/components/stats/PeriodRangeBar'
 import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
-import { currentSeasonId, formatYmdDisplay, resolveSeasonRange, seasonLabelKey } from '@/lib/seasons'
+import {
+  currentPeriodPresetId,
+  formatYmdDisplay,
+  periodLabelKey,
+  resolvePeriodRange,
+  type PeriodMode,
+} from '@/lib/seasons'
 import { useAppStore } from '@/stores/appStore'
 import type { Deck, Language, Match, Player } from '@/types'
 
@@ -1013,10 +1019,11 @@ export function StatsPage() {
       : settings.statsDefaultScope === 'all'
         ? 'all'
         : 'session'
-  const [scope, setScope] = useState<'session' | 'season' | 'all'>(initialScope)
-  const [seasonPresetId, setSeasonPresetId] = useState(() => currentSeasonId())
-  const [seasonCustomFrom, setSeasonCustomFrom] = useState('')
-  const [seasonCustomTo, setSeasonCustomTo] = useState('')
+  const [scope, setScope] = useState<'session' | 'period' | 'all'>(initialScope)
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('op')
+  const [periodPresetId, setPeriodPresetId] = useState(() => currentPeriodPresetId('op'))
+  const [periodCustomFrom, setPeriodCustomFrom] = useState('')
+  const [periodCustomTo, setPeriodCustomTo] = useState('')
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
   const [profileStack, setProfileStack] = useState<ProfileNavTarget[]>(() =>
     settings.statsDefaultScope === 'profile' && linkedPlayer
@@ -1035,12 +1042,12 @@ export function StatsPage() {
     if (scope === 'session' && currentSessionId) {
       return { type: 'session', sessionId: currentSessionId }
     }
-    if (scope === 'season') {
-      const range = resolveSeasonRange(seasonPresetId, seasonCustomFrom, seasonCustomTo)
-      return { type: 'season', from: range.from, to: range.to, presetId: seasonPresetId }
+    if (scope === 'period') {
+      const range = resolvePeriodRange(periodMode, periodPresetId, periodCustomFrom, periodCustomTo)
+      return { type: 'period', mode: periodMode, from: range.from, to: range.to, presetId: periodPresetId }
     }
     return { type: 'all' }
-  }, [scope, currentSessionId, seasonPresetId, seasonCustomFrom, seasonCustomTo])
+  }, [scope, currentSessionId, periodMode, periodPresetId, periodCustomFrom, periodCustomTo])
 
   const {
     scopedMatches,
@@ -1055,27 +1062,33 @@ export function StatsPage() {
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
-  const seasonScopeLabel = useMemo(() => {
-    const range = resolveSeasonRange(seasonPresetId, seasonCustomFrom, seasonCustomTo)
-    const name = t(seasonLabelKey(seasonPresetId))
+  const periodScopeLabel = useMemo(() => {
+    const range = resolvePeriodRange(periodMode, periodPresetId, periodCustomFrom, periodCustomTo)
+    const modeLabel = t(`stats.periodMode.${periodMode}` as 'stats.periodMode.half')
+    const presetLabel =
+      periodMode === 'year' && /^\d{4}$/.test(periodPresetId)
+        ? periodPresetId
+        : periodMode === 'quarter' && /^\d{4}-q[1-4]$/.test(periodPresetId)
+          ? periodPresetId.replace('-q', ' Q')
+          : t(periodLabelKey(periodMode, periodPresetId))
     const dates = range.to
       ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
       : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
-    return `${name} · ${dates}`
-  }, [seasonCustomFrom, seasonCustomTo, seasonPresetId, t])
+    return `${modeLabel} · ${presetLabel} · ${dates}`
+  }, [periodCustomFrom, periodCustomTo, periodMode, periodPresetId, t])
 
   const statsHeroSubtitle =
     scope === 'session' && currentSession
       ? currentSession.name
-      : scope === 'season'
-        ? seasonScopeLabel
+      : scope === 'period'
+        ? periodScopeLabel
         : t('stats.allData')
 
   const overviewScopeLabel =
     scope === 'session' && currentSession
       ? `${currentSession.name} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
-      : scope === 'season'
-        ? `${seasonScopeLabel} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
+      : scope === 'period'
+        ? `${periodScopeLabel} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
         : t('stats.allData')
 
   const weeklyDeckMetaStats = useMemo(
@@ -1204,19 +1217,24 @@ export function StatsPage() {
         }}
         options={[
           { value: 'session', label: t('stats.currentSession') },
-          { value: 'season', label: t('stats.season') },
+          { value: 'period', label: t('stats.periodTab') },
           { value: 'all', label: t('stats.allData') },
         ]}
       />
 
-      {scope === 'season' ? (
-        <SeasonRangeBar
-          presetId={seasonPresetId}
-          customFrom={seasonCustomFrom}
-          customTo={seasonCustomTo}
-          onPresetChange={setSeasonPresetId}
-          onCustomFromChange={setSeasonCustomFrom}
-          onCustomToChange={setSeasonCustomTo}
+      {scope === 'period' ? (
+        <PeriodRangeBar
+          mode={periodMode}
+          presetId={periodPresetId}
+          customFrom={periodCustomFrom}
+          customTo={periodCustomTo}
+          onModeChange={(nextMode) => {
+            setPeriodMode(nextMode)
+            setPeriodPresetId(currentPeriodPresetId(nextMode))
+          }}
+          onPresetChange={setPeriodPresetId}
+          onCustomFromChange={setPeriodCustomFrom}
+          onCustomToChange={setPeriodCustomTo}
         />
       ) : null}
 

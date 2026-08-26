@@ -9,6 +9,16 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.5 - 2026-08-26
+
+### New
+
+- **Stats period scopes**: The period tab now supports four grouping modes — **Half sets (點五制)** for ST supplement windows, **OP season (賽季)** for main OP releases, **Quarter** (Jan–Mar, Apr–Jun, …), and **Year**.
+
+### Changed
+
+- OP16 season now spans the full OP16 meta through the day before OP17 (includes the OP16.5 window). Half-set mode tracks OP16.5 / ST31–36 separately.
+
 ## V5.6.4.2 - 2026-08-26
 
 ### Changed
