@@ -8,7 +8,6 @@ import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
 import { getListedPlayers } from '@/lib/entityVisibility'
 import { getSortedPlayersForSession } from '@/lib/selectors'
-import { uiCalloutWarning } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
 import type { ActiveMatch, Deck, Player } from '@/types'
 
@@ -89,7 +88,6 @@ export function MatchRecorder() {
   const currentSessionId = useAppStore((state) => state.currentSessionId)
   const setActiveMatchFirstPlayer = useAppStore((state) => state.setActiveMatchFirstPlayer)
   const completeActiveMatch = useAppStore((state) => state.completeActiveMatch)
-  const setActiveTab = useAppStore((state) => state.setActiveTab)
   const [pendingCompletion, setPendingCompletion] = useState<PendingCompletion | null>(null)
 
   const rosterPlayers = useMemo(() => {
@@ -98,7 +96,6 @@ export function MatchRecorder() {
   }, [appState, currentSessionId])
 
   const activeDecks = decks.filter((deck) => !deck.archived)
-  const canAssign = rosterPlayers.length >= 2 && activeDecks.length >= 1
 
   const pendingActiveMatch = pendingCompletion
     ? (activeMatches.find((match) => match.id === pendingCompletion.matchId) ?? null)
@@ -110,15 +107,6 @@ export function MatchRecorder() {
 
   return (
     <>
-      {!canAssign ? (
-        <section className={[uiCalloutWarning, 'p-2 text-xs'].join(' ')}>
-          {rosterPlayers.length < 2 ? t('record.needPlayers') : t('record.needDecks')}
-          <button type="button" className="ml-2 font-semibold underline" onClick={() => setActiveTab('settings')}>
-            {t('record.goSettings')}
-          </button>
-        </section>
-      ) : null}
-
       {currentSessionId ? (
         <TableBoard
           embedded

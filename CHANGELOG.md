@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.4.2 - 2026-08-26
+
+### Changed
+
+- **Record page**: Removed the yellow “need 2 players” banner with the Settings shortcut.
+
 ## V5.6.4.1 - 2026-08-26
 
 ### Fixed
