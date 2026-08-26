@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.5.1 - 2026-08-26
+
+### Changed
+
+- **Historical seasons UI**: Renamed the stats tab to **歷史賽季**. Season modes (賽季 / 點五制 / 季度 / 年度) sit in one scrollable row; year, quarter, and OP season use compact dropdowns instead of long pill lists. Date ranges show only in the summary line below.
+- **OP season subdivide**: In **賽季** mode, toggle **細分點五制** to switch between full OP windows and split OP / half-set windows.
+- **Half-set mode**: **點五制** now tracks every split window (OP16 → OP16.5 → OP17 …), same timeline as seasons with an extra slice between main sets.
+
 ## V5.6.5 - 2026-08-26
 
 ### New

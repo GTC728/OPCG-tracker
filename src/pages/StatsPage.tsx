@@ -44,12 +44,13 @@ import {
   getWinRateHeatmapColor,
   isReliableSample,
 } from '@/lib/winRateDisplay'
-import { PeriodRangeBar } from '@/components/stats/PeriodRangeBar'
+import { HistoricalSeasonBar } from '@/components/stats/HistoricalSeasonBar'
 import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
 import {
   currentPeriodPresetId,
   formatYmdDisplay,
+  mapPresetAcrossOpSubdivide,
   periodLabelKey,
   resolvePeriodRange,
   type PeriodMode,
@@ -1022,8 +1023,19 @@ export function StatsPage() {
   const [scope, setScope] = useState<'session' | 'period' | 'all'>(initialScope)
   const [periodMode, setPeriodMode] = useState<PeriodMode>('op')
   const [periodPresetId, setPeriodPresetId] = useState(() => currentPeriodPresetId('op'))
+  const [opSubdivide, setOpSubdivide] = useState(false)
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear())
+  const [selectedQuarter, setSelectedQuarter] = useState<1 | 2 | 3 | 4>(
+    () => (Math.floor(new Date().getMonth() / 3) + 1) as 1 | 2 | 3 | 4,
+  )
   const [periodCustomFrom, setPeriodCustomFrom] = useState('')
   const [periodCustomTo, setPeriodCustomTo] = useState('')
+
+  const effectivePeriodPresetId = useMemo(() => {
+    if (periodMode === 'year') return String(selectedYear)
+    if (periodMode === 'quarter') return `${selectedYear}-q${selectedQuarter}`
+    return periodPresetId
+  }, [periodMode, periodPresetId, selectedQuarter, selectedYear])
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
   const [profileStack, setProfileStack] = useState<ProfileNavTarget[]>(() =>
     settings.statsDefaultScope === 'profile' && linkedPlayer
@@ -1043,11 +1055,31 @@ export function StatsPage() {
       return { type: 'session', sessionId: currentSessionId }
     }
     if (scope === 'period') {
-      const range = resolvePeriodRange(periodMode, periodPresetId, periodCustomFrom, periodCustomTo)
-      return { type: 'period', mode: periodMode, from: range.from, to: range.to, presetId: periodPresetId }
+      const range = resolvePeriodRange(
+        periodMode,
+        effectivePeriodPresetId,
+        periodCustomFrom,
+        periodCustomTo,
+        { opSubdivide },
+      )
+      return {
+        type: 'period',
+        mode: periodMode,
+        from: range.from,
+        to: range.to,
+        presetId: effectivePeriodPresetId,
+      }
     }
     return { type: 'all' }
-  }, [scope, currentSessionId, periodMode, periodPresetId, periodCustomFrom, periodCustomTo])
+  }, [
+    scope,
+    currentSessionId,
+    periodMode,
+    effectivePeriodPresetId,
+    periodCustomFrom,
+    periodCustomTo,
+    opSubdivide,
+  ])
 
   const {
     scopedMatches,
@@ -1063,19 +1095,35 @@ export function StatsPage() {
   const insights = useScopedInsights(statsScope)
 
   const periodScopeLabel = useMemo(() => {
-    const range = resolvePeriodRange(periodMode, periodPresetId, periodCustomFrom, periodCustomTo)
+    const range = resolvePeriodRange(
+      periodMode,
+      effectivePeriodPresetId,
+      periodCustomFrom,
+      periodCustomTo,
+      { opSubdivide },
+    )
     const modeLabel = t(`stats.periodMode.${periodMode}` as 'stats.periodMode.half')
     const presetLabel =
-      periodMode === 'year' && /^\d{4}$/.test(periodPresetId)
-        ? periodPresetId
-        : periodMode === 'quarter' && /^\d{4}-q[1-4]$/.test(periodPresetId)
-          ? periodPresetId.replace('-q', ' Q')
-          : t(periodLabelKey(periodMode, periodPresetId))
+      periodMode === 'year'
+        ? String(selectedYear)
+        : periodMode === 'quarter'
+          ? `${selectedYear} ${t(`stats.period.quarter.q${selectedQuarter}` as 'stats.period.quarter.q1')}`
+          : t(periodLabelKey(periodMode, effectivePeriodPresetId))
     const dates = range.to
       ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
       : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
-    return `${modeLabel} · ${presetLabel} · ${dates}`
-  }, [periodCustomFrom, periodCustomTo, periodMode, periodPresetId, t])
+    const subdivideNote = periodMode === 'op' && opSubdivide ? ` · ${t('stats.period.opSubdivide')}` : ''
+    return `${modeLabel} · ${presetLabel}${subdivideNote} · ${dates}`
+  }, [
+    effectivePeriodPresetId,
+    opSubdivide,
+    periodCustomFrom,
+    periodCustomTo,
+    periodMode,
+    selectedQuarter,
+    selectedYear,
+    t,
+  ])
 
   const statsHeroSubtitle =
     scope === 'session' && currentSession
@@ -1217,22 +1265,37 @@ export function StatsPage() {
         }}
         options={[
           { value: 'session', label: t('stats.currentSession') },
-          { value: 'period', label: t('stats.periodTab') },
+          { value: 'period', label: t('stats.historySeasonTab') },
           { value: 'all', label: t('stats.allData') },
         ]}
       />
 
       {scope === 'period' ? (
-        <PeriodRangeBar
+        <HistoricalSeasonBar
           mode={periodMode}
-          presetId={periodPresetId}
+          seasonPresetId={periodPresetId}
+          opSubdivide={opSubdivide}
+          selectedYear={selectedYear}
+          selectedQuarter={selectedQuarter}
           customFrom={periodCustomFrom}
           customTo={periodCustomTo}
           onModeChange={(nextMode) => {
             setPeriodMode(nextMode)
-            setPeriodPresetId(currentPeriodPresetId(nextMode))
+            if (nextMode === 'op' || nextMode === 'half') {
+              setPeriodPresetId(currentPeriodPresetId(nextMode))
+            }
+            if (nextMode === 'quarter' || nextMode === 'year') {
+              setSelectedYear(new Date().getFullYear())
+              setSelectedQuarter((Math.floor(new Date().getMonth() / 3) + 1) as 1 | 2 | 3 | 4)
+            }
           }}
-          onPresetChange={setPeriodPresetId}
+          onSeasonPresetChange={setPeriodPresetId}
+          onOpSubdivideChange={(next) => {
+            setOpSubdivide(next)
+            setPeriodPresetId((current) => mapPresetAcrossOpSubdivide(current, next))
+          }}
+          onYearChange={setSelectedYear}
+          onQuarterChange={setSelectedQuarter}
           onCustomFromChange={setPeriodCustomFrom}
           onCustomToChange={setPeriodCustomTo}
         />

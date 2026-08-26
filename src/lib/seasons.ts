@@ -10,17 +10,18 @@ export const OP_SEASON_PRESETS: SetSeasonPreset[] = [
   { id: 'op17', startDate: '2026-08-22' },
 ]
 
-/** Half-point / ST supplement windows (between main OP drops). */
-export const HALF_POINT_PRESETS: SetSeasonPreset[] = [
-  { id: 'op16-5', startDate: '2026-07-11' },
-]
-
-/** @deprecated Use OP_SEASON_PRESETS or HALF_POINT_PRESETS */
-export const SET_SEASON_PRESETS: SetSeasonPreset[] = [
+/** Split windows: main OP block, half set, next OP block, … */
+export const SPLIT_SEASON_PRESETS: SetSeasonPreset[] = [
   { id: 'op16', startDate: '2026-05-30' },
   { id: 'op16-5', startDate: '2026-07-11' },
   { id: 'op17', startDate: '2026-08-22' },
 ]
+
+/** @deprecated Use SPLIT_SEASON_PRESETS */
+export const SET_SEASON_PRESETS = SPLIT_SEASON_PRESETS
+
+/** @deprecated Half mode now uses SPLIT_SEASON_PRESETS */
+export const HALF_POINT_PRESETS: SetSeasonPreset[] = SPLIT_SEASON_PRESETS
 
 export const CUSTOM_SEASON_ID = 'custom'
 
@@ -65,7 +66,7 @@ export function formatYmdDisplay(ymd: string): string {
   return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`
 }
 
-export function buildSeasonWindows(presets: SetSeasonPreset[] = SET_SEASON_PRESETS): SeasonWindow[] {
+export function buildSeasonWindows(presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS): SeasonWindow[] {
   return presets.map((preset, index) => {
     const next = presets[index + 1]
     return {
@@ -118,21 +119,42 @@ export function yearPresets(count = 4, now = new Date()): SetSeasonPreset[] {
   })
 }
 
+export function yearOptions(count = 10, now = new Date()): number[] {
+  const currentYear = now.getFullYear()
+  return Array.from({ length: count }, (_, index) => currentYear - index)
+}
+
+export function seasonPresetsForOpMode(subdivide: boolean): SetSeasonPreset[] {
+  return subdivide ? SPLIT_SEASON_PRESETS : OP_SEASON_PRESETS
+}
+
+export function mapPresetAcrossOpSubdivide(presetId: string, subdivide: boolean): string {
+  if (subdivide) {
+    if (presetId === 'op16') return 'op16'
+    if (presetId === 'op17') return 'op17'
+    return presetId
+  }
+  if (presetId === 'op16-5' || presetId === 'op16') return 'op16'
+  if (presetId.startsWith('op') && presetId.includes('-5')) {
+    return presetId.replace('-5', '')
+  }
+  return presetId
+}
+
 export function presetsForMode(mode: PeriodMode, now = new Date()): SetSeasonPreset[] {
-  const year = now.getFullYear()
   switch (mode) {
     case 'op':
       return OP_SEASON_PRESETS
     case 'half':
-      return HALF_POINT_PRESETS
+      return SPLIT_SEASON_PRESETS
     case 'quarter':
-      return [...quarterPresetsForYear(year), ...quarterPresetsForYear(year - 1)]
+      return quarterPresetsForYear(now.getFullYear())
     case 'year':
       return yearPresets(4, now)
   }
 }
 
-export function currentSeasonId(now = new Date(), presets: SetSeasonPreset[] = SET_SEASON_PRESETS): string {
+export function currentSeasonId(now = new Date(), presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS): string {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const todayStamp = ymdStamp(today)
   let current = presets[0]?.id ?? CUSTOM_SEASON_ID
@@ -156,17 +178,22 @@ export function currentPeriodPresetId(mode: PeriodMode, now = new Date()): strin
 
 export function seasonWindowById(
   id: string,
-  presets: SetSeasonPreset[] = SET_SEASON_PRESETS,
+  presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS,
 ): SeasonWindow | null {
   return buildSeasonWindows(presets).find((window) => window.id === id) ?? null
 }
 
-export function periodWindowById(mode: PeriodMode, id: string): SeasonWindow | null {
+export function periodWindowById(
+  mode: PeriodMode,
+  id: string,
+  options?: { opSubdivide?: boolean },
+): SeasonWindow | null {
   if (mode === 'op') {
-    return seasonWindowById(id, OP_SEASON_PRESETS)
+    const presets = seasonPresetsForOpMode(Boolean(options?.opSubdivide))
+    return seasonWindowById(id, presets)
   }
   if (mode === 'half') {
-    return buildHalfPointWindows().find((window) => window.id === id) ?? null
+    return seasonWindowById(id, SPLIT_SEASON_PRESETS)
   }
   if (mode === 'quarter') {
     const match = id.match(/^(\d{4})-q([1-4])$/)
@@ -183,7 +210,7 @@ export function resolveSeasonRange(
   presetId: string,
   customFrom: string,
   customTo: string,
-  presets: SetSeasonPreset[] = SET_SEASON_PRESETS,
+  presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS,
 ): { from: string; to: string | null } {
   if (presetId === CUSTOM_SEASON_ID) {
     const from = customFrom.trim() || (presets[0]?.startDate ?? isoToLocalYmd(new Date().toISOString()))
@@ -204,15 +231,19 @@ export function resolvePeriodRange(
   presetId: string,
   customFrom: string,
   customTo: string,
+  options?: { opSubdivide?: boolean },
 ): { from: string; to: string | null } {
   if (presetId === CUSTOM_SEASON_ID) {
-    const presets = presetsForMode(mode)
+    const presets =
+      mode === 'op'
+        ? seasonPresetsForOpMode(Boolean(options?.opSubdivide))
+        : presetsForMode(mode)
     return resolveSeasonRange(CUSTOM_SEASON_ID, customFrom, customTo, presets)
   }
-  const window = periodWindowById(mode, presetId)
+  const window = periodWindowById(mode, presetId, options)
   if (!window) {
     const fallbackId = currentPeriodPresetId(mode)
-    const fallback = periodWindowById(mode, fallbackId)
+    const fallback = periodWindowById(mode, fallbackId, options)
     return { from: fallback?.from ?? '2026-01-01', to: fallback?.to ?? null }
   }
   return { from: window.from, to: window.to }
