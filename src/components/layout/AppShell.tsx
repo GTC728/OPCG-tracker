@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react'
+import { PwaInstallBanner } from '@/components/layout/PwaInstallBanner'
 import { SyncStatusBanner } from '@/components/layout/SyncStatusBanner'
 import { AppBrandCredit } from '@/components/layout/AppCredit'
 import { BottomChromeShell } from '@/components/layout/BottomChrome'
@@ -119,6 +120,10 @@ export function AppShell({
         </header>
 
         <div className="px-[var(--ui-page-px)] pt-1">
+          <PwaInstallBanner
+            hidden={activeTab === 'settings'}
+            onOpenGuide={() => onTabChange('settings')}
+          />
           <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
         </div>
 

@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.1.1 - 2026-08-26
+
+### New
+
+- **PWA install guide**: Settings install card always lists Android and iPhone (Safari) steps. A dismissible top banner recommends installing the app; it snoozes for 21 days and stays hidden once running in standalone.
+
 ## V5.6.1 - 2026-08-26
 
 ### Fixed

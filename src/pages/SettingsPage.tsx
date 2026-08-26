@@ -7,6 +7,7 @@ import { DataTools } from '@/components/settings/DataTools'
 import { GroupMembershipPanel } from '@/components/settings/GroupMembershipPanel'
 import { GroupSyncSection } from '@/components/settings/GroupSyncSection'
 import { ProfileSettings } from '@/components/settings/ProfileSettings'
+import { PwaInstallPanel } from '@/components/settings/PwaInstallPanel'
 import { SystemStatusPanel } from '@/components/settings/SystemStatusPanel'
 import { SessionManager } from '@/components/session/SessionManager'
 import { Button } from '@/components/ui/Button'
@@ -38,6 +39,7 @@ type SettingsSection =
   | 'language'
   | 'leaders'
   | 'data'
+  | 'install-app'
   | 'system'
 
 import { GroupedListRow, GroupedListSection } from '@/components/ui/GroupedList'
@@ -104,6 +106,8 @@ export function SettingsPage() {
         <>
           <PageHero title={t('page.settings.title')} subtitle={t('page.settings.subtitle')} />
 
+          <PwaInstallPanel compact />
+
           <WorkspaceHeroCard
             title={workspaceTitle}
             subtitle={workspaceSubtitle}
@@ -160,6 +164,12 @@ export function SettingsPage() {
               variant="separated"
               title={t('settings.dataTools')}
               onClick={() => setSection('data')}
+            />
+            <GroupedListRow
+              variant="separated"
+              title={t('settings.installApp')}
+              meta={t('settings.installAppDesc')}
+              onClick={() => setSection('install-app')}
             />
             <GroupedListRow
               variant="separated"
@@ -297,6 +307,13 @@ export function SettingsPage() {
         <>
           <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
           <DataTools />
+        </>
+      ) : null}
+
+      {section === 'install-app' ? (
+        <>
+          <BackButton label={t('settings.back')} onClick={() => setSection('home')} />
+          <PwaInstallPanel />
         </>
       ) : null}
 
