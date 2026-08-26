@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PushStage } from '@/components/motion/PushStage'
 import { Zoomable } from '@/components/motion/Zoomable'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
@@ -44,19 +44,28 @@ import {
   getWinRateHeatmapColor,
   isReliableSample,
 } from '@/lib/winRateDisplay'
-import { HistoricalSeasonBar } from '@/components/stats/HistoricalSeasonBar'
+import {
+  buildHistoricalSeasonRangeLabel,
+  HistoricalSeasonBar,
+} from '@/components/stats/HistoricalSeasonBar'
 import { useScopedInsights, useScopedStats } from '@/hooks/useDerivedStats'
 import type { StatsScope } from '@/lib/derivedData'
+import { playInteractionSound, uiPressable } from '@/lib/motion'
 import {
-  currentPeriodPresetId,
+  CUSTOM_SEASON_ID,
   formatYmdDisplay,
-  mapPresetAcrossOpSubdivide,
+  latestOpSeasonId,
   periodLabelKey,
   resolvePeriodRange,
-  type PeriodMode,
 } from '@/lib/seasons'
+import {
+  effectivePeriodFilter,
+  patchStatsPeriodSettings,
+  resolveStatsPeriodSettings,
+  resolveStatsScopeTab,
+} from '@/lib/statsPeriodSettings'
 import { useAppStore } from '@/stores/appStore'
-import type { Deck, Language, Match, Player } from '@/types'
+import type { Deck, Language, Match, Player, StatsScopeTab } from '@/types'
 
 type StatsSectionId = 'overview' | 'players' | 'decks'
 type ProfileNavTarget = { type: 'player' | 'deck'; id: string }
@@ -96,6 +105,99 @@ function EmptyState({ children }: { children: string }) {
   return (
     <div className={[uiCard, 'border border-dashed border-white/[0.08] p-4 text-center text-sm text-text-secondary'].join(' ')}>
       {children}
+    </div>
+  )
+}
+
+function StatsScopeTabRow({
+  value,
+  onChange,
+}: {
+  value: StatsScopeTab
+  onChange: (value: StatsScopeTab) => void
+}) {
+  const { t } = useI18n()
+  const mainTabs: { value: StatsScopeTab; label: string }[] = [
+    { value: 'session', label: t('stats.currentSession') },
+    { value: 'period', label: t('stats.historySeasonTab') },
+    { value: 'all', label: t('stats.allData') },
+  ]
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+        {mainTabs.map((tab) => {
+          const active = value === tab.value
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              className={[active ? 'ui-pill-tab ui-pill-tab--active' : 'ui-pill-tab', uiPressable].join(' ')}
+              onClick={() => {
+                playInteractionSound('tap')
+                onChange(tab.value)
+              }}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+      <button
+        type="button"
+        className={[
+          value === 'custom' ? 'ui-pill-tab ui-pill-tab--active' : 'ui-pill-tab',
+          uiPressable,
+          'shrink-0',
+        ].join(' ')}
+        onClick={() => {
+          playInteractionSound('tap')
+          onChange('custom')
+        }}
+      >
+        {t('stats.period.custom')}
+      </button>
+    </div>
+  )
+}
+
+function CustomPeriodRangeBar({
+  from,
+  to,
+  onFromChange,
+  onToChange,
+  rangeLabel,
+}: {
+  from: string
+  to: string
+  onFromChange: (value: string) => void
+  onToChange: (value: string) => void
+  rangeLabel: string
+}) {
+  const { t } = useI18n()
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-xs text-text-secondary">{t('history.dateFrom')}</span>
+          <input
+            type="date"
+            className="mt-1 min-h-10 w-full rounded-xl border border-surface-muted bg-surface px-3 text-sm"
+            value={from}
+            onChange={(event) => onFromChange(event.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs text-text-secondary">{t('history.dateTo')}</span>
+          <input
+            type="date"
+            className="mt-1 min-h-10 w-full rounded-xl border border-surface-muted bg-surface px-3 text-sm"
+            value={to}
+            onChange={(event) => onToChange(event.target.value)}
+          />
+        </label>
+      </div>
+      <p className="text-xs text-text-secondary">{rangeLabel}</p>
     </div>
   )
 }
@@ -1009,36 +1111,35 @@ function DeckProfileView({
 export function StatsPage() {
   const { language, t } = useI18n()
   const settings = useAppStore((state) => state.settings)
+  const updateSettings = useAppStore((state) => state.updateSettings)
   const linkedPlayer = useAppStore((state) => getLinkedPlayer(state))
   const achievementUnlocks = useAppStore((state) => state.achievementUnlocks)
   const sessions = useAppStore((state) => state.sessions)
   const currentSessionId = useAppStore((state) => state.currentSessionId)
   const currentSession = sessions.find((session) => session.id === currentSessionId) ?? null
-  const initialScope =
+  const defaultScopeTab: StatsScopeTab =
     settings.statsDefaultScope === 'profile' && linkedPlayer
       ? 'all'
       : settings.statsDefaultScope === 'all'
         ? 'all'
         : 'session'
-  const [scope, setScope] = useState<'session' | 'period' | 'all'>(initialScope)
-  const [periodMode, setPeriodMode] = useState<PeriodMode>('op')
-  const [periodPresetId, setPeriodPresetId] = useState(() => currentPeriodPresetId('op'))
-  const [opSubdivide, setOpSubdivide] = useState(false)
-  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear())
-  const [selectedQuarter, setSelectedQuarter] = useState<1 | 2 | 3 | 4>(
-    () => (Math.floor(new Date().getMonth() / 3) + 1) as 1 | 2 | 3 | 4,
-  )
-  const [periodCustomFrom, setPeriodCustomFrom] = useState('')
-  const [periodCustomTo, setPeriodCustomTo] = useState('')
+  const scopeTab = resolveStatsScopeTab(settings, defaultScopeTab)
+  const periodSettings = resolveStatsPeriodSettings(settings)
+  const effectivePeriod = effectivePeriodFilter(periodSettings)
 
-  const effectivePeriodPresetId = useMemo(() => {
-    if (periodMode === 'year') return String(selectedYear)
-    if (periodMode === 'quarter') return `${selectedYear}-q${selectedQuarter}`
-    return periodPresetId
-  }, [periodMode, periodPresetId, selectedQuarter, selectedYear])
+  useEffect(() => {
+    if (settings.statsPeriodPresetId == null) {
+      updateSettings({ statsPeriodPresetId: latestOpSeasonId() })
+    }
+  }, [settings.statsPeriodPresetId, updateSettings])
+
+  const patchPeriod = (patch: Parameters<typeof patchStatsPeriodSettings>[1]) => {
+    updateSettings(patchStatsPeriodSettings(settings, patch))
+  }
+
   const [activeSection, setActiveSection] = useState<StatsSectionId>('overview')
   const [profileStack, setProfileStack] = useState<ProfileNavTarget[]>(() =>
-    settings.statsDefaultScope === 'profile' && linkedPlayer
+    settings.statsScopeTab == null && settings.statsDefaultScope === 'profile' && linkedPlayer
       ? [{ type: 'player', id: linkedPlayer.id }]
       : [],
   )
@@ -1051,34 +1152,50 @@ export function StatsPage() {
   const decks = useAppStore((state) => state.decks)
 
   const statsScope = useMemo((): StatsScope => {
-    if (scope === 'session' && currentSessionId) {
+    if (scopeTab === 'session' && currentSessionId) {
       return { type: 'session', sessionId: currentSessionId }
     }
-    if (scope === 'period') {
+    if (scopeTab === 'custom') {
       const range = resolvePeriodRange(
-        periodMode,
-        effectivePeriodPresetId,
-        periodCustomFrom,
-        periodCustomTo,
-        { opSubdivide },
+        'op',
+        CUSTOM_SEASON_ID,
+        periodSettings.customFrom,
+        periodSettings.customTo,
+        { opSubdivide: periodSettings.opSubdivide },
       )
       return {
         type: 'period',
-        mode: periodMode,
+        mode: 'op',
         from: range.from,
         to: range.to,
-        presetId: effectivePeriodPresetId,
+        presetId: CUSTOM_SEASON_ID,
+      }
+    }
+    if (scopeTab === 'period') {
+      const range = resolvePeriodRange(
+        effectivePeriod.mode,
+        effectivePeriod.presetId,
+        periodSettings.customFrom,
+        periodSettings.customTo,
+        { opSubdivide: periodSettings.opSubdivide },
+      )
+      return {
+        type: 'period',
+        mode: effectivePeriod.mode,
+        from: range.from,
+        to: range.to,
+        presetId: effectivePeriod.presetId,
       }
     }
     return { type: 'all' }
   }, [
-    scope,
+    scopeTab,
     currentSessionId,
-    periodMode,
-    effectivePeriodPresetId,
-    periodCustomFrom,
-    periodCustomTo,
-    opSubdivide,
+    effectivePeriod.mode,
+    effectivePeriod.presetId,
+    periodSettings.customFrom,
+    periodSettings.customTo,
+    periodSettings.opSubdivide,
   ])
 
   const {
@@ -1094,50 +1211,66 @@ export function StatsPage() {
   } = useScopedStats(statsScope)
   const insights = useScopedInsights(statsScope)
 
-  const periodScopeLabel = useMemo(() => {
+  const periodRangeLabel = useMemo(
+    () =>
+      buildHistoricalSeasonRangeLabel(
+        periodSettings.mode,
+        periodSettings.presetId,
+        periodSettings.opSubdivide,
+        periodSettings.selectedYear,
+        periodSettings.selectedQuarter,
+        periodSettings.customFrom,
+        periodSettings.customTo,
+        t,
+      ),
+    [periodSettings, t],
+  )
+
+  const customRangeLabel = useMemo(() => {
     const range = resolvePeriodRange(
-      periodMode,
-      effectivePeriodPresetId,
-      periodCustomFrom,
-      periodCustomTo,
-      { opSubdivide },
+      'op',
+      CUSTOM_SEASON_ID,
+      periodSettings.customFrom,
+      periodSettings.customTo,
+      { opSubdivide: periodSettings.opSubdivide },
     )
-    const modeLabel = t(`stats.periodMode.${periodMode}` as 'stats.periodMode.op')
-    const presetLabel =
-      periodMode === 'year'
-        ? String(selectedYear)
-        : periodMode === 'quarter'
-          ? `${selectedYear} ${t(`stats.period.quarter.q${selectedQuarter}` as 'stats.period.quarter.q1')}`
-          : t(periodLabelKey(periodMode, effectivePeriodPresetId))
-    const dates = range.to
+    return range.to
       ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
       : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
-    const subdivideNote = periodMode === 'op' && opSubdivide ? ` · ${t('stats.period.opSubdivide')}` : ''
-    return `${modeLabel} · ${presetLabel}${subdivideNote} · ${dates}`
-  }, [
-    effectivePeriodPresetId,
-    opSubdivide,
-    periodCustomFrom,
-    periodCustomTo,
-    periodMode,
-    selectedQuarter,
-    selectedYear,
-    t,
-  ])
+  }, [periodSettings.customFrom, periodSettings.customTo, periodSettings.opSubdivide, t])
+
+  const periodScopeLabel = useMemo(() => {
+    const modeLabel = t(`stats.periodMode.${periodSettings.mode}` as 'stats.periodMode.op')
+    const presetLabel =
+      periodSettings.mode === 'year' && periodSettings.selectedYear != null
+        ? String(periodSettings.selectedYear)
+        : periodSettings.mode === 'quarter' && periodSettings.selectedQuarter != null
+          ? t(`stats.period.quarter.q${periodSettings.selectedQuarter}Short` as 'stats.period.quarter.q1Short')
+          : t(periodLabelKey('op', periodSettings.presetId))
+    const subdivideNote =
+      periodSettings.mode === 'op' && periodSettings.opSubdivide
+        ? ` · ${t('stats.period.opSubdivide')}`
+        : ''
+    return `${modeLabel} · ${presetLabel}${subdivideNote} · ${periodRangeLabel}`
+  }, [periodRangeLabel, periodSettings, t])
 
   const statsHeroSubtitle =
-    scope === 'session' && currentSession
+    scopeTab === 'session' && currentSession
       ? currentSession.name
-      : scope === 'period'
+      : scopeTab === 'period'
         ? periodScopeLabel
-        : t('stats.allData')
+        : scopeTab === 'custom'
+          ? `${t('stats.period.custom')} · ${customRangeLabel}`
+          : t('stats.allData')
 
   const overviewScopeLabel =
-    scope === 'session' && currentSession
+    scopeTab === 'session' && currentSession
       ? `${currentSession.name} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
-      : scope === 'period'
+      : scopeTab === 'period'
         ? `${periodScopeLabel} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
-        : t('stats.allData')
+        : scopeTab === 'custom'
+          ? `${t('stats.period.custom')} · ${customRangeLabel} · ${metaSummary.totalMatches}${t('stats.matchesUnit')}`
+          : t('stats.allData')
 
   const weeklyDeckMetaStats = useMemo(
     () => buildWeeklyDeckMetaStats(decks, scopedMatches, language),
@@ -1257,43 +1390,39 @@ export function StatsPage() {
         </section>
       )}
 
-      <PillTabBar
-        value={scope}
+      <StatsScopeTabRow
+        value={scopeTab}
         onChange={(value) => {
-          setScope(value)
+          updateSettings({ statsScopeTab: value })
           setProfileStack([])
         }}
-        options={[
-          { value: 'session', label: t('stats.currentSession') },
-          { value: 'period', label: t('stats.historySeasonTab') },
-          { value: 'all', label: t('stats.allData') },
-        ]}
       />
 
-      {scope === 'period' ? (
+      {scopeTab === 'period' ? (
         <HistoricalSeasonBar
-          mode={periodMode}
-          seasonPresetId={periodPresetId}
-          opSubdivide={opSubdivide}
-          selectedYear={selectedYear}
-          selectedQuarter={selectedQuarter}
-          customFrom={periodCustomFrom}
-          customTo={periodCustomTo}
-          onModeChange={(nextMode) => {
-            setPeriodMode(nextMode)
-            if (nextMode === 'op') {
-              setPeriodPresetId(currentPeriodPresetId('op'))
-            }
-          }}
-          onSeasonPresetChange={setPeriodPresetId}
-          onOpSubdivideChange={(next) => {
-            setOpSubdivide(next)
-            setPeriodPresetId((current) => mapPresetAcrossOpSubdivide(current, next))
-          }}
-          onYearChange={setSelectedYear}
-          onQuarterChange={setSelectedQuarter}
-          onCustomFromChange={setPeriodCustomFrom}
-          onCustomToChange={setPeriodCustomTo}
+          mode={periodSettings.mode}
+          seasonPresetId={periodSettings.presetId}
+          opSubdivide={periodSettings.opSubdivide}
+          selectedYear={periodSettings.selectedYear}
+          selectedQuarter={periodSettings.selectedQuarter}
+          onModeChange={(nextMode) => patchPeriod({ statsPeriodMode: nextMode })}
+          onSeasonPresetChange={(id) => patchPeriod({ statsPeriodPresetId: id })}
+          onOpSubdivideChange={(next) => patchPeriod({ statsPeriodOpSubdivide: next })}
+          onYearChange={(year) => patchPeriod({ statsPeriodYear: year, statsPeriodMode: 'year' })}
+          onQuarterChange={(quarter) =>
+            patchPeriod({ statsPeriodQuarter: quarter, statsPeriodMode: 'quarter' })
+          }
+          rangeLabel={periodRangeLabel}
+        />
+      ) : null}
+
+      {scopeTab === 'custom' ? (
+        <CustomPeriodRangeBar
+          from={periodSettings.customFrom}
+          to={periodSettings.customTo}
+          onFromChange={(value) => patchPeriod({ statsPeriodCustomFrom: value || null })}
+          onToChange={(value) => patchPeriod({ statsPeriodCustomTo: value || null })}
+          rangeLabel={customRangeLabel}
         />
       ) : null}
 

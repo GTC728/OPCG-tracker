@@ -7,19 +7,19 @@ import { useI18n } from '@/lib/i18n'
 import { playInteractionSound } from '@/lib/motion'
 import { selectPickerOptionClass } from '@/lib/selectSurface'
 import {
-  CUSTOM_SEASON_ID,
   type PeriodMode,
   formatYmdDisplay,
+  latestOpSeasonId,
   mapPresetAcrossOpSubdivide,
   periodLabelKey,
+  quarterChipLabelKey,
+  quarterPickerLabelKey,
   resolvePeriodRange,
   seasonPresetsForOpMode,
   yearOptions,
 } from '@/lib/seasons'
-import { uiLabel, uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
-
-const inputClassName =
-  'mt-1 min-h-10 w-full rounded-xl border border-surface-muted bg-surface px-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand-500/30'
+import type { StatsPeriodQuarter } from '@/types'
+import { uiPillFilter, uiPillFilterActive } from '@/lib/uiSurface'
 
 export function HistoricalSeasonBar({
   mode,
@@ -27,61 +27,52 @@ export function HistoricalSeasonBar({
   opSubdivide,
   selectedYear,
   selectedQuarter,
-  customFrom,
-  customTo,
   onModeChange,
   onSeasonPresetChange,
   onOpSubdivideChange,
   onYearChange,
   onQuarterChange,
-  onCustomFromChange,
-  onCustomToChange,
+  rangeLabel,
 }: {
   mode: PeriodMode
   seasonPresetId: string
   opSubdivide: boolean
-  selectedYear: number
-  selectedQuarter: 1 | 2 | 3 | 4
-  customFrom: string
-  customTo: string
+  selectedYear: number | null
+  selectedQuarter: StatsPeriodQuarter | null
   onModeChange: (mode: PeriodMode) => void
   onSeasonPresetChange: (id: string) => void
   onOpSubdivideChange: (value: boolean) => void
   onYearChange: (year: number) => void
-  onQuarterChange: (quarter: 1 | 2 | 3 | 4) => void
-  onCustomFromChange: (value: string) => void
-  onCustomToChange: (value: string) => void
+  onQuarterChange: (quarter: StatsPeriodQuarter) => void
+  rangeLabel: string
 }) {
   const { t } = useI18n()
   const filterSheet = useFilterSheet()
   const [seasonSheetOpen, setSeasonSheetOpen] = useState(false)
 
-  const effectivePresetId =
-    mode === 'year'
-      ? String(selectedYear)
-      : mode === 'quarter'
-        ? `${selectedYear}-q${selectedQuarter}`
-        : seasonPresetId
-  const range = resolvePeriodRange(mode, effectivePresetId, customFrom, customTo, { opSubdivide })
-  const rangeLabel = range.to
-    ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
-    : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
-
   const seasonPresets = seasonPresetsForOpMode(opSubdivide)
+  const activeSeasonId = seasonPresetId || latestOpSeasonId()
   const seasonChipLabel =
-    mode === 'op' && seasonPresetId !== CUSTOM_SEASON_ID
-      ? t(periodLabelKey('op', seasonPresetId))
-      : t('stats.periodMode.op')
+    mode === 'op' ? t(periodLabelKey('op', activeSeasonId)) : t('stats.periodMode.op')
+
+  const yearChipLabel = selectedYear != null ? String(selectedYear) : t('stats.period.yearLabel')
+  const quarterChipLabel =
+    selectedQuarter != null
+      ? t(quarterChipLabelKey(selectedQuarter))
+      : t('stats.period.quarterLabel')
 
   const yearOptionsList = yearOptions().map((year) => ({
     value: String(year),
     label: String(year),
   }))
+  const quarterOptionsList = ([1, 2, 3, 4] as const).map((quarter) => ({
+    value: String(quarter),
+    label: t(quarterPickerLabelKey(quarter)),
+  }))
 
   const openSeasonSheet = () => {
     playInteractionSound('tap')
     onModeChange('op')
-    setSeasonSheetOpen(true)
   }
 
   return (
@@ -90,7 +81,10 @@ export function HistoricalSeasonBar({
         <button
           type="button"
           className={mode === 'op' ? uiPillFilterActive : uiPillFilter}
-          onClick={openSeasonSheet}
+          onClick={() => {
+            openSeasonSheet()
+            setSeasonSheetOpen(true)
+          }}
         >
           {seasonChipLabel}
         </button>
@@ -99,26 +93,23 @@ export function HistoricalSeasonBar({
           className={mode === 'year' ? uiPillFilterActive : uiPillFilter}
           onClick={() => {
             playInteractionSound('tap')
-            if (mode !== 'quarter') onModeChange('year')
+            onModeChange('year')
             filterSheet.open('year')
           }}
         >
-          {String(selectedYear)}
+          {yearChipLabel}
         </button>
-        {([1, 2, 3, 4] as const).map((quarter) => (
-          <button
-            key={quarter}
-            type="button"
-            className={mode === 'quarter' && selectedQuarter === quarter ? uiPillFilterActive : uiPillFilter}
-            onClick={() => {
-              playInteractionSound('toggle')
-              onModeChange('quarter')
-              onQuarterChange(quarter)
-            }}
-          >
-            {t(`stats.period.quarter.q${quarter}` as 'stats.period.quarter.q1')}
-          </button>
-        ))}
+        <button
+          type="button"
+          className={mode === 'quarter' ? uiPillFilterActive : uiPillFilter}
+          onClick={() => {
+            playInteractionSound('tap')
+            onModeChange('quarter')
+            filterSheet.open('quarter')
+          }}
+        >
+          {quarterChipLabel}
+        </button>
       </div>
 
       <p className="text-xs text-text-secondary">{rangeLabel}</p>
@@ -136,7 +127,7 @@ export function HistoricalSeasonBar({
               checked={opSubdivide}
               onChange={(next) => {
                 onOpSubdivideChange(next)
-                onSeasonPresetChange(mapPresetAcrossOpSubdivide(seasonPresetId, next))
+                onSeasonPresetChange(mapPresetAcrossOpSubdivide(activeSeasonId, next))
               }}
               label={t('stats.period.opSubdivide')}
             />
@@ -146,7 +137,7 @@ export function HistoricalSeasonBar({
               <button
                 key={preset.id}
                 type="button"
-                className={selectPickerOptionClass(seasonPresetId === preset.id)}
+                className={selectPickerOptionClass(activeSeasonId === preset.id)}
                 onClick={() => {
                   onSeasonPresetChange(preset.id)
                   setSeasonSheetOpen(false)
@@ -155,52 +146,67 @@ export function HistoricalSeasonBar({
                 {t(periodLabelKey('op', preset.id))}
               </button>
             ))}
-            <button
-              type="button"
-              className={selectPickerOptionClass(seasonPresetId === CUSTOM_SEASON_ID)}
-              onClick={() => onSeasonPresetChange(CUSTOM_SEASON_ID)}
-            >
-              {t('stats.period.custom')}
-            </button>
           </ScrollRegion>
-          {seasonPresetId === CUSTOM_SEASON_ID ? (
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block">
-                <span className={uiLabel}>{t('stats.seasonFrom')}</span>
-                <input
-                  type="date"
-                  className={inputClassName}
-                  value={customFrom}
-                  onChange={(event) => onCustomFromChange(event.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className={uiLabel}>{t('stats.seasonTo')}</span>
-                <input
-                  type="date"
-                  className={inputClassName}
-                  value={customTo}
-                  onChange={(event) => onCustomToChange(event.target.value)}
-                />
-              </label>
-            </div>
-          ) : null}
         </div>
       </BottomSheet>
 
       <OptionPickerSheet
         open={filterSheet.isOpen('year')}
         title={t('stats.period.yearLabel')}
-        value={String(selectedYear)}
+        value={selectedYear != null ? String(selectedYear) : ''}
         options={yearOptionsList}
-        allLabel={t('stats.periodMode.year')}
+        allLabel={t('stats.period.yearLabel')}
         showAllOption={false}
         onChange={(value) => {
           onYearChange(Number(value))
-          if (mode !== 'quarter') onModeChange('year')
+          onModeChange('year')
+        }}
+        onClose={filterSheet.close}
+      />
+
+      <OptionPickerSheet
+        open={filterSheet.isOpen('quarter')}
+        title={t('stats.period.quarterLabel')}
+        value={selectedQuarter != null ? String(selectedQuarter) : ''}
+        options={quarterOptionsList}
+        allLabel={t('stats.period.quarterLabel')}
+        showAllOption={false}
+        onChange={(value) => {
+          onQuarterChange(Number(value) as StatsPeriodQuarter)
+          onModeChange('quarter')
         }}
         onClose={filterSheet.close}
       />
     </div>
   )
+}
+
+export function buildHistoricalSeasonRangeLabel(
+  mode: PeriodMode,
+  presetId: string,
+  opSubdivide: boolean,
+  selectedYear: number | null,
+  selectedQuarter: StatsPeriodQuarter | null,
+  customFrom: string,
+  customTo: string,
+  t: (key: import('@/lib/i18n').TranslationKey) => string,
+): string {
+  const filter = (() => {
+    if (mode === 'year' && selectedYear == null) return { mode: 'op' as const, presetId }
+    if (mode === 'quarter' && (selectedYear == null || selectedQuarter == null)) {
+      return { mode: 'op' as const, presetId }
+    }
+    if (mode === 'year' && selectedYear != null) {
+      return { mode: 'year' as const, presetId: String(selectedYear) }
+    }
+    if (mode === 'quarter' && selectedYear != null && selectedQuarter != null) {
+      return { mode: 'quarter' as const, presetId: `${selectedYear}-q${selectedQuarter}` }
+    }
+    return { mode: 'op' as const, presetId }
+  })()
+
+  const range = resolvePeriodRange(filter.mode, filter.presetId, customFrom, customTo, { opSubdivide })
+  return range.to
+    ? `${formatYmdDisplay(range.from)} – ${formatYmdDisplay(range.to)}`
+    : t('stats.seasonOpen').replace('{from}', formatYmdDisplay(range.from))
 }

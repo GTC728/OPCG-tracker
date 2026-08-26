@@ -9,6 +9,14 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.5.3 - 2026-08-27
+
+### Changed
+
+- **Historical seasons filters**: Quarter opens a picker sheet (`Q1 Jan–Mar`, …) and the chip shows only `QX` after selection. Year and quarter default to placeholder labels until chosen; season defaults to the latest OP set.
+- **Custom date range**: Moved out of the season sheet — **自訂** is now a fourth scope tab on the right of the stats scope row.
+- **Persisted stats filters**: Scope tab, season, year, quarter, subdivide toggle, and custom dates are saved in settings and restored when you return to Stats.
+
 ## V5.6.5.2 - 2026-08-27
 
 ### Changed

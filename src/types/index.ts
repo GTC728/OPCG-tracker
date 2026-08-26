@@ -338,6 +338,9 @@ export interface GroupProfileBookmark {
   linkedAt: string
 }
 
+export type StatsScopeTab = 'session' | 'period' | 'all' | 'custom'
+export type StatsPeriodQuarter = 1 | 2 | 3 | 4
+
 export interface AppSettings {
   lastBackupReminder: string | null
   backupReminderIntervalDays: number
@@ -360,6 +363,14 @@ export interface AppSettings {
   accent: AccentPreset
   density: UiDensity
   statsDefaultScope: StatsDefaultScope
+  statsScopeTab: StatsScopeTab | null
+  statsPeriodMode: 'op' | 'quarter' | 'year' | null
+  statsPeriodPresetId: string | null
+  statsPeriodOpSubdivide: boolean
+  statsPeriodYear: number | null
+  statsPeriodQuarter: StatsPeriodQuarter | null
+  statsPeriodCustomFrom: string | null
+  statsPeriodCustomTo: string | null
   achievementNotifications: boolean
   lastGroupSyncAt: string | null
   lastGroupSyncError: string | null

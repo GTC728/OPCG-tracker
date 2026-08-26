@@ -4,7 +4,7 @@ import { buildDefaultVariantsFromDecks, buildLeadersFromDecks } from '@/lib/data
 import type { AppState, Deck } from '@/types'
 
 export const SCHEMA_VERSION = 20
-export const APP_VERSION = '5.6.5.2'
+export const APP_VERSION = '5.6.5.3'
 export const LIVE_APP_URL = 'https://opcg-tracker.com'
 export const EMAIL_OTP_LENGTH = 8
 export const GITHUB_REPO_URL = 'https://github.com/GTC728/OPCG-tracker'
@@ -75,6 +75,14 @@ export function createDefaultAppState(): AppState {
       accent: 'blue',
       density: 'comfortable',
       statsDefaultScope: 'profile',
+      statsScopeTab: null,
+      statsPeriodMode: null,
+      statsPeriodPresetId: null,
+      statsPeriodOpSubdivide: false,
+      statsPeriodYear: null,
+      statsPeriodQuarter: null,
+      statsPeriodCustomFrom: null,
+      statsPeriodCustomTo: null,
       achievementNotifications: true,
       lastGroupSyncAt: null,
       lastGroupSyncError: null,

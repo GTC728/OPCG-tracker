@@ -146,6 +146,36 @@ export function presetsForMode(mode: PeriodMode, now = new Date()): SetSeasonPre
   return OP_SEASON_PRESETS
 }
 
+export function latestOpSeasonId(now = new Date()): string {
+  return currentSeasonId(now, OP_SEASON_PRESETS)
+}
+
+export function quarterPickerLabelKey(quarter: 1 | 2 | 3 | 4): import('@/lib/i18n').TranslationKey {
+  switch (quarter) {
+    case 1:
+      return 'stats.period.quarter.q1Picker'
+    case 2:
+      return 'stats.period.quarter.q2Picker'
+    case 3:
+      return 'stats.period.quarter.q3Picker'
+    case 4:
+      return 'stats.period.quarter.q4Picker'
+  }
+}
+
+export function quarterChipLabelKey(quarter: 1 | 2 | 3 | 4): import('@/lib/i18n').TranslationKey {
+  switch (quarter) {
+    case 1:
+      return 'stats.period.quarter.q1Short'
+    case 2:
+      return 'stats.period.quarter.q2Short'
+    case 3:
+      return 'stats.period.quarter.q3Short'
+    case 4:
+      return 'stats.period.quarter.q4Short'
+  }
+}
+
 export function currentSeasonId(now = new Date(), presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS): string {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const todayStamp = ymdStamp(today)
