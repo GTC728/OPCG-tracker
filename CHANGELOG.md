@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.5.2 - 2026-08-27
+
+### Changed
+
+- **Historical seasons filters**: Matches the History page chip pattern — **賽季** opens a bottom sheet (with **細分點五制** inside), **年度** opens a year picker, and **Q1–Q4** are direct chips. Quarter uses the year from the year chip; no separate year control under quarter.
+
 ## V5.6.5.1 - 2026-08-26
 
 ### Changed

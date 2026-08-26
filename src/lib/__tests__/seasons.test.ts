@@ -41,7 +41,6 @@ describe('set seasons', () => {
   it('picks current presets per period mode', () => {
     const sep = new Date(2026, 8, 1)
     expect(currentPeriodPresetId('op', sep)).toBe('op17')
-    expect(currentPeriodPresetId('half', new Date(2026, 7, 15))).toBe('op16-5')
     expect(currentPeriodPresetId('quarter', sep)).toBe('2026-q3')
     expect(currentPeriodPresetId('year', sep)).toBe('2026')
   })
@@ -77,7 +76,7 @@ describe('set seasons', () => {
       from: '2026-05-30',
       to: '2026-07-10',
     })
-    expect(resolvePeriodRange('half', 'op16-5', '', '')).toEqual({
+    expect(resolvePeriodRange('op', 'op16-5', '', '', { opSubdivide: true })).toEqual({
       from: '2026-07-11',
       to: '2026-08-21',
     })

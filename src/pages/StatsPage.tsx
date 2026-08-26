@@ -1102,7 +1102,7 @@ export function StatsPage() {
       periodCustomTo,
       { opSubdivide },
     )
-    const modeLabel = t(`stats.periodMode.${periodMode}` as 'stats.periodMode.half')
+    const modeLabel = t(`stats.periodMode.${periodMode}` as 'stats.periodMode.op')
     const presetLabel =
       periodMode === 'year'
         ? String(selectedYear)
@@ -1281,12 +1281,8 @@ export function StatsPage() {
           customTo={periodCustomTo}
           onModeChange={(nextMode) => {
             setPeriodMode(nextMode)
-            if (nextMode === 'op' || nextMode === 'half') {
-              setPeriodPresetId(currentPeriodPresetId(nextMode))
-            }
-            if (nextMode === 'quarter' || nextMode === 'year') {
-              setSelectedYear(new Date().getFullYear())
-              setSelectedQuarter((Math.floor(new Date().getMonth() / 3) + 1) as 1 | 2 | 3 | 4)
+            if (nextMode === 'op') {
+              setPeriodPresetId(currentPeriodPresetId('op'))
             }
           }}
           onSeasonPresetChange={setPeriodPresetId}

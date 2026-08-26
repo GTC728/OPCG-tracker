@@ -25,7 +25,7 @@ export const HALF_POINT_PRESETS: SetSeasonPreset[] = SPLIT_SEASON_PRESETS
 
 export const CUSTOM_SEASON_ID = 'custom'
 
-export type PeriodMode = 'half' | 'op' | 'quarter' | 'year'
+export type PeriodMode = 'op' | 'quarter' | 'year'
 
 export interface SeasonWindow {
   id: string
@@ -142,16 +142,8 @@ export function mapPresetAcrossOpSubdivide(presetId: string, subdivide: boolean)
 }
 
 export function presetsForMode(mode: PeriodMode, now = new Date()): SetSeasonPreset[] {
-  switch (mode) {
-    case 'op':
-      return OP_SEASON_PRESETS
-    case 'half':
-      return SPLIT_SEASON_PRESETS
-    case 'quarter':
-      return quarterPresetsForYear(now.getFullYear())
-    case 'year':
-      return yearPresets(4, now)
-  }
+  if (mode === 'year') return yearPresets(10, now)
+  return OP_SEASON_PRESETS
 }
 
 export function currentSeasonId(now = new Date(), presets: SetSeasonPreset[] = SPLIT_SEASON_PRESETS): string {
@@ -191,9 +183,6 @@ export function periodWindowById(
   if (mode === 'op') {
     const presets = seasonPresetsForOpMode(Boolean(options?.opSubdivide))
     return seasonWindowById(id, presets)
-  }
-  if (mode === 'half') {
-    return seasonWindowById(id, SPLIT_SEASON_PRESETS)
   }
   if (mode === 'quarter') {
     const match = id.match(/^(\d{4})-q([1-4])$/)
