@@ -9,6 +9,17 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.4.1 - 2026-08-26
+
+### Fixed
+
+- **Login persistence**: `www.opcg-tracker.com` and `opcg-tracker-v2.pages.dev` now redirect to `https://opcg-tracker.com` so Supabase auth tokens stay on one origin. OAuth/email callbacks always use the canonical domain.
+- **Session restore on refresh**: Cloud auth state is read from Supabase as soon as the app boots, not only after opening Settings.
+
+### Changed
+
+- **Profile name prompt**: Removed the auto-opening name setup sheet on Stats. New installs skip the forced profile step (name can still be set in Settings).
+
 ## V5.6.4 - 2026-08-26
 
 ### New

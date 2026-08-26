@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { PushStage } from '@/components/motion/PushStage'
 import { Zoomable } from '@/components/motion/Zoomable'
 import { DeckArtCard } from '@/components/deck/DeckArtCard'
@@ -9,7 +9,6 @@ import { ProfileLinkSheet } from '@/components/profile/ProfileLinkSheet'
 import { PlayerProfileHub } from '@/components/profile/PlayerProfileHub'
 import { getDeckArtCoverStyle } from '@/lib/deckArtCover'
 import { getLinkedPlayer } from '@/lib/profileClaim'
-import { hasPersonalProfile } from '@/lib/personalProfile'
 import { PlayerShareCard, SessionDashboardShareCard, ShareExportSheet } from '@/components/share/ShareExportSheet'
 import { PillTabBar } from '@/components/ui/PillTabBar'
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection'
@@ -1031,17 +1030,6 @@ export function StatsPage() {
   const sectionScrollY = useRef<Partial<Record<StatsSectionId, number>>>({})
   const players = useAppStore((state) => state.players)
   const decks = useAppStore((state) => state.decks)
-
-  useEffect(() => {
-    const snapshot = useAppStore.getState()
-    if (!hasPersonalProfile(snapshot)) {
-      setProfileSheetOpen(true)
-      return
-    }
-    if (snapshot.settings.lastGroupCode && !getLinkedPlayer(snapshot)) {
-      setProfileSheetOpen(true)
-    }
-  }, [settings.lastGroupCode, linkedPlayer, settings.profileIdentityId])
 
   const statsScope = useMemo((): StatsScope => {
     if (scope === 'session' && currentSessionId) {

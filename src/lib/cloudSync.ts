@@ -1,4 +1,5 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
+import { getCanonicalOrigin } from '@/lib/canonicalOrigin'
 import { APP_VERSION, SCHEMA_VERSION } from '@/lib/constants'
 import type { AppState, GroupMemberRecord, GroupMemberRole } from '@/types'
 
@@ -135,8 +136,7 @@ export async function probeSupabaseReachable(): Promise<SupabaseReachability> {
 }
 
 export function getAuthRedirectTo(): string {
-  const origin = window.location.origin.replace(/\/+$/, '')
-  return `${origin}/auth/callback`
+  return `${getCanonicalOrigin()}/auth/callback`
 }
 
 export function isAuthCallbackLocation(): boolean {
@@ -235,8 +235,13 @@ export async function completeAuthFromUrl(): Promise<{ email: string | null }> {
 
 export function subscribeCloudAuth(onUserId: (userId: string | null) => void): () => void {
   let unsubscribe: (() => void) | undefined
-  void getSupabaseClient().then((supabase) => {
-    if (!supabase) return
+  void getSupabaseClient().then(async (supabase) => {
+    if (!supabase) {
+      onUserId(null)
+      return
+    }
+    const { data: sessionData } = await supabase.auth.getSession()
+    onUserId(sessionData.session?.user?.id ?? null)
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       onUserId(session?.user?.id ?? null)
     })
