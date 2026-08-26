@@ -402,7 +402,7 @@ export const ja = {
   'pwa.install.iosStep3': '下にスクロールして「ホーム画面に追加」→「追加」。',
   'pwa.install.iosStep4': 'ホーム画面の OPCG アイコンから開く。以後はこのアイコンから起動してください。',
   'pwa.banner.title': 'アプリのインストールをおすすめ',
-  'pwa.banner.body': 'ホーム画面に追加して独立起動すると、対局記録が安定し、ブラウザ操作とぶつかりにくくなります。',
+  'pwa.banner.body': 'ホーム画面から開くと対局記録がスムーズです',
   'pwa.banner.install': 'インストール',
   'pwa.banner.how': '手順',
   'pwa.banner.later': 'あとで',

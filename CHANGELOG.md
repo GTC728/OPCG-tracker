@@ -9,6 +9,12 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.1.2 - 2026-08-26
+
+### Changed
+
+- **PWA install nudge**: A yellow warning strip under the header; tap opens Settings → Install app, and the × dismisses it permanently. Removed the install card from the Settings home. The install page uses title → reason → action → Android / iPhone step lists.
+
 ## V5.6.1.1 - 2026-08-26
 
 ### New

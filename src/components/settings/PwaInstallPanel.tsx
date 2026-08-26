@@ -1,23 +1,22 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { PageHero } from '@/components/ui/PageHero'
 import { PwaInstallSteps } from '@/components/settings/PwaInstallSteps'
 import { useToast } from '@/components/ui/Toast'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useI18n } from '@/lib/i18n'
 
-export function PwaInstallPanel({ compact = false }: { compact?: boolean }) {
+export function PwaInstallPanel() {
   const { t } = useI18n()
   const toast = useToast()
   const { standalone, canPrompt, install } = usePwaInstall()
   const [busy, setBusy] = useState(false)
 
   if (standalone) {
-    if (compact) return null
     return (
-      <section className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
-        <h3 className="text-sm font-semibold">{t('pwa.install.title')}</h3>
-        <p className="mt-2 text-sm text-text-secondary">{t('pwa.install.installed')}</p>
-      </section>
+      <div className="space-y-4">
+        <PageHero title={t('pwa.install.title')} subtitle={t('pwa.install.installed')} />
+      </div>
     )
   }
 
@@ -40,30 +39,21 @@ export function PwaInstallPanel({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <section
-      className={
-        compact
-          ? 'rounded-xl bg-brand-500/10 p-4 ring-1 ring-brand-500/25'
-          : 'space-y-3 rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted'
-      }
-    >
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-400">{t('pwa.install.recommend')}</p>
-        <h3 className="mt-1 text-sm font-semibold">{t('pwa.install.title')}</h3>
-        <p className="mt-1 text-sm text-text-secondary">{t('pwa.install.desc')}</p>
-      </div>
-
-      <Button fullWidth loading={busy} disabled={busy} onClick={() => void handleInstall()}>
-        {canPrompt ? t('pwa.install.button') : t('pwa.install.showSteps')}
-      </Button>
+    <div className="space-y-6">
+      <PageHero title={t('pwa.install.title')} subtitle={t('pwa.install.desc')} />
 
       {canPrompt ? (
-        <p className="text-xs text-text-secondary">{t('pwa.install.promptReady')}</p>
+        <div className="space-y-2">
+          <Button fullWidth loading={busy} disabled={busy} onClick={() => void handleInstall()}>
+            {t('pwa.install.button')}
+          </Button>
+          <p className="text-xs leading-relaxed text-text-secondary">{t('pwa.install.promptReady')}</p>
+        </div>
       ) : (
-        <p className="text-xs text-text-secondary">{t('pwa.install.unavailable')}</p>
+        <p className="text-sm leading-relaxed text-text-secondary">{t('pwa.install.unavailable')}</p>
       )}
 
       <PwaInstallSteps />
-    </section>
+    </div>
   )
 }

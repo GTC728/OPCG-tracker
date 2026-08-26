@@ -402,7 +402,7 @@ export const en = {
   'pwa.install.iosStep3': 'Scroll down, tap Add to Home Screen, then Add.',
   'pwa.install.iosStep4': 'Open OPCG from the home-screen icon from now on.',
   'pwa.banner.title': 'Install the app',
-  'pwa.banner.body': 'Add to home screen for a stabler match recorder with fewer browser gesture clashes.',
+  'pwa.banner.body': 'Open from the home screen for a stabler match recorder',
   'pwa.banner.install': 'Install',
   'pwa.banner.how': 'How to install',
   'pwa.banner.later': 'Later',

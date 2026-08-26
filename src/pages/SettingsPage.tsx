@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GroupLobbyHub, type LobbyNavigateTarget } from '@/components/lobby/GroupLobbyHub'
 import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
@@ -19,6 +19,7 @@ import {
 import { groupRoleLabel } from '@/lib/groupPermissions'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
+import { consumePendingOpenPwaInstallPage, PWA_OPEN_INSTALL_EVENT } from '@/lib/pwaInstall'
 import { useAppStore } from '@/stores/appStore'
 
 type SettingsSection =
@@ -100,13 +101,18 @@ export function SettingsPage() {
     setSection(`lobby-${target}` as SettingsSection)
   }
 
+  useEffect(() => {
+    const openInstall = () => setSection('install-app')
+    if (consumePendingOpenPwaInstallPage()) openInstall()
+    window.addEventListener(PWA_OPEN_INSTALL_EVENT, openInstall)
+    return () => window.removeEventListener(PWA_OPEN_INSTALL_EVENT, openInstall)
+  }, [])
+
   return (
     <div className="space-y-5">
       {section === 'home' ? (
         <>
           <PageHero title={t('page.settings.title')} subtitle={t('page.settings.subtitle')} />
-
-          <PwaInstallPanel compact />
 
           <WorkspaceHeroCard
             title={workspaceTitle}
@@ -168,7 +174,6 @@ export function SettingsPage() {
             <GroupedListRow
               variant="separated"
               title={t('settings.installApp')}
-              meta={t('settings.installAppDesc')}
               onClick={() => setSection('install-app')}
             />
             <GroupedListRow

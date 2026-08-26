@@ -119,11 +119,14 @@ export function AppShell({
           </div>
         </header>
 
+        <PwaInstallBanner
+          onOpenSettings={() => {
+            setWorkspaceOpen(false)
+            onTabChange('settings')
+          }}
+        />
+
         <div className="px-[var(--ui-page-px)] pt-1">
-          <PwaInstallBanner
-            hidden={activeTab === 'settings'}
-            onOpenGuide={() => onTabChange('settings')}
-          />
           <SyncStatusBanner onOpenWorkspace={() => setWorkspaceOpen(true)} />
         </div>
 

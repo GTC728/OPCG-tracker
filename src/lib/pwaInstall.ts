@@ -54,26 +54,36 @@ export function subscribePwaInstallState(listener: () => void): () => void {
 }
 
 export const PWA_INSTALL_DISMISS_KEY = 'opcg-pwa-install-dismissed-at'
-export const PWA_INSTALL_SNOOZE_MS = 21 * 24 * 60 * 60 * 1000
+export const PWA_OPEN_INSTALL_EVENT = 'opcg-open-pwa-install'
 
-export function isPwaInstallNudgeDismissed(now = Date.now()): boolean {
+let pendingOpenInstallPage = false
+
+export function isPwaInstallNudgeDismissed(): boolean {
   if (typeof localStorage === 'undefined') return false
-  const raw = localStorage.getItem(PWA_INSTALL_DISMISS_KEY)
-  if (!raw) return false
-  const dismissedAt = Number(raw)
-  if (!Number.isFinite(dismissedAt)) return false
-  return now - dismissedAt < PWA_INSTALL_SNOOZE_MS
+  return Boolean(localStorage.getItem(PWA_INSTALL_DISMISS_KEY))
 }
 
-export function dismissPwaInstallNudge(now = Date.now()): void {
+export function dismissPwaInstallNudge(): void {
   if (typeof localStorage === 'undefined') return
-  localStorage.setItem(PWA_INSTALL_DISMISS_KEY, String(now))
+  localStorage.setItem(PWA_INSTALL_DISMISS_KEY, '1')
   notifyInstallState()
 }
 
-export function shouldShowPwaInstallNudge(now = Date.now()): boolean {
+export function shouldShowPwaInstallNudge(): boolean {
   if (isPwaStandalone()) return false
-  return !isPwaInstallNudgeDismissed(now)
+  return !isPwaInstallNudgeDismissed()
+}
+
+export function requestOpenPwaInstallPage(): void {
+  pendingOpenInstallPage = true
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(PWA_OPEN_INSTALL_EVENT))
+}
+
+export function consumePendingOpenPwaInstallPage(): boolean {
+  if (!pendingOpenInstallPage) return false
+  pendingOpenInstallPage = false
+  return true
 }
 
 export function canPromptPwaInstall(): boolean {

@@ -402,7 +402,7 @@ export const zhHans = {
   'pwa.install.iosStep3': '向下滚动，选「添加到主屏幕」，再点右上角「添加」。',
   'pwa.install.iosStep4': '回主画面点 OPCG 图标打开。之后请都从这个图标进入。',
   'pwa.banner.title': '建议安装 App',
-  'pwa.banner.body': '加到主画面后独立打开，记录对局更稳、较少被浏览器手势盖住。',
+  'pwa.banner.body': '从主画面打开，记录对局更顺手',
   'pwa.banner.install': '安装',
   'pwa.banner.how': '怎么装',
   'pwa.banner.later': '稍后',

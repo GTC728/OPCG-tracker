@@ -3,7 +3,6 @@ import {
   dismissPwaInstallNudge,
   isPwaInstallNudgeDismissed,
   PWA_INSTALL_DISMISS_KEY,
-  PWA_INSTALL_SNOOZE_MS,
   shouldShowPwaInstallNudge,
 } from '@/lib/pwaInstall'
 
@@ -28,14 +27,14 @@ describe('PWA install nudge dismiss', () => {
   })
 
   it('shows until the user dismisses', () => {
-    expect(store[PWA_INSTALL_DISMISS_KEY]).toBeUndefined()
-    expect(isPwaInstallNudgeDismissed(1_000)).toBe(false)
-    expect(shouldShowPwaInstallNudge(1_000)).toBe(true)
+    expect(isPwaInstallNudgeDismissed()).toBe(false)
+    expect(shouldShowPwaInstallNudge()).toBe(true)
   })
 
-  it('hides for the snooze window after dismiss', () => {
-    dismissPwaInstallNudge(1_000)
-    expect(isPwaInstallNudgeDismissed(1_000 + PWA_INSTALL_SNOOZE_MS - 1)).toBe(true)
-    expect(isPwaInstallNudgeDismissed(1_000 + PWA_INSTALL_SNOOZE_MS + 1)).toBe(false)
+  it('never shows again after dismiss', () => {
+    dismissPwaInstallNudge()
+    expect(store[PWA_INSTALL_DISMISS_KEY]).toBe('1')
+    expect(isPwaInstallNudgeDismissed()).toBe(true)
+    expect(shouldShowPwaInstallNudge()).toBe(false)
   })
 })
