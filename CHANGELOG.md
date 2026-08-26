@@ -9,6 +9,25 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.3 - 2026-08-26
+
+### Fixed
+
+- **Join approval**: Pending requests sit at the top of lobby admin with a red count, notes, and a home-screen banner. Approving now adds the *applicant* (not the admin) and creates their roster player.
+- **Players page refresh**: Group poll no longer rebuilds profile state or player objects when nothing changed.
+- **Character linking**: One account can bind only one roster player. You cannot steal a name already linked to someone else. Linking requires typing the exact name. Admins can unlink. Kick clears the roster link and leftover join rows so the person can apply again.
+- **Nickname**: “My profile” shows the account nickname; the roster character name is secondary.
+- **Unlink display**: Remote `linked_user_id = null` now wins when it is newer, so “連結中” clears after unlink.
+
+### New
+
+- **Email login code**: After sending email, enter the 6-digit code in the same app or tab you want signed in. The email link only signs in the browser that opened it (not the installed app). Callback URL is `/auth/callback`.
+- **Leader names**: Traditional Chinese can use Hong Kong labels (布丁→布琳, 索隆→卓洛, Rocks→洛克斯*). Taiwan labels remain as a setting. Search aliases include both.
+
+### Changed
+
+- After deploying, run `docs/supabase-v5.6.3-lobby-fix.sql`. Add `https://opcg-tracker-v2.pages.dev/auth/callback` to Supabase Redirect URLs. Put `{{ .Token }}` in the magic-link email template.
+
 ## V5.6.2 - 2026-08-26
 
 ### New

@@ -1190,7 +1190,12 @@ export function StatsPage() {
         >
           <div>
             <p className="text-xs text-text-secondary">{t('profile.myProfile')}</p>
-            <p className="text-lg font-bold">{linkedPlayer.name}</p>
+            <p className="text-lg font-bold">{settings.profileDisplayName?.trim() || linkedPlayer.name}</p>
+            {settings.profileDisplayName?.trim() && settings.profileDisplayName.trim() !== linkedPlayer.name ? (
+              <p className="text-xs text-text-secondary">
+                {t('profile.rosterName')}: {linkedPlayer.name}
+              </p>
+            ) : null}
           </div>
           <span className="text-sm font-semibold text-brand-400">{t('profile.openProfile')} ›</span>
         </button>

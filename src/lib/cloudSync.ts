@@ -73,7 +73,14 @@ export async function getSupabaseClient(): Promise<SupabaseClient | null> {
   if (!config) return null
   if (!client) {
     const { createClient } = await import('@supabase/supabase-js')
-    client = createClient(config.url, config.key)
+    client = createClient(config.url, config.key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+      },
+    })
   }
   return client
 }
@@ -127,6 +134,26 @@ export async function probeSupabaseReachable(): Promise<SupabaseReachability> {
   }
 }
 
+export function getAuthRedirectTo(): string {
+  const origin = window.location.origin.replace(/\/+$/, '')
+  return `${origin}/auth/callback`
+}
+
+export function isAuthCallbackLocation(): boolean {
+  const path = window.location.pathname.replace(/\/+$/, '')
+  if (path.endsWith('/auth/callback')) return true
+  const search = new URLSearchParams(window.location.search)
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  return Boolean(
+    search.get('code') ||
+      search.get('token_hash') ||
+      hash.get('access_token') ||
+      hash.get('token_hash') ||
+      hash.get('type') === 'magiclink' ||
+      hash.get('type') === 'email',
+  )
+}
+
 export async function signInWithEmail(email: string): Promise<void> {
   const reachability = await probeSupabaseReachable()
   if (!reachability.ok) {
@@ -141,10 +168,69 @@ export async function signInWithEmail(email: string): Promise<void> {
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: getAuthRedirectTo(),
+      shouldCreateUser: true,
     },
   })
   if (error) throw error
+}
+
+export async function verifyEmailOtp(email: string, token: string): Promise<void> {
+  const supabase = await requireClient()
+  const { error } = await supabase.auth.verifyOtp({
+    email: email.trim(),
+    token: token.trim(),
+    type: 'email',
+  })
+  if (error) throw error
+}
+
+export async function completeAuthFromUrl(): Promise<{ email: string | null }> {
+  const supabase = await requireClient()
+  const existing = await getCloudSession()
+  if (existing.session) {
+    window.history.replaceState({}, '', '/')
+    return { email: existing.user?.email ?? null }
+  }
+
+  const search = new URLSearchParams(window.location.search)
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const tokenHash = search.get('token_hash') || hash.get('token_hash')
+  const type = (search.get('type') || hash.get('type') || 'email') as
+    | 'email'
+    | 'magiclink'
+    | 'signup'
+    | 'invite'
+    | 'recovery'
+  const code = search.get('code')
+
+  if (tokenHash) {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: type === 'magiclink' ? 'email' : type,
+    })
+    if (error) throw error
+  } else if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) throw error
+  }
+
+  const { session, user } = await getCloudSession()
+  window.history.replaceState({}, '', '/')
+  if (!session) throw new Error('AUTH_CALLBACK_FAILED')
+  return { email: user?.email ?? null }
+}
+
+export function subscribeCloudAuth(onUserId: (userId: string | null) => void): () => void {
+  let unsubscribe: (() => void) | undefined
+  void getSupabaseClient().then((supabase) => {
+    if (!supabase) return
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      onUserId(session?.user?.id ?? null)
+    })
+    unsubscribe = () => data.subscription.unsubscribe()
+  })
+  return () => unsubscribe?.()
 }
 
 async function requireUser() {
@@ -370,12 +456,41 @@ export async function removeGroupMember(groupCode: string, userId: string): Prom
   const self = await requireUser()
   if (userId === self.id) throw new Error('無法移除自己')
   const groupKey = await createGroupKey(groupCode)
-  const { error } = await supabase
+  const { error } = await supabase.rpc('kick_group_member', {
+    p_group_key: groupKey,
+    p_user_id: userId,
+  })
+  if (!error) return
+  if (error.code !== '42883' && error.code !== 'PGRST202') throw error
+  const { error: deleteError } = await supabase
     .from('group_members')
     .delete()
     .eq('group_key', groupKey)
     .eq('user_id', userId)
-  if (error) throw error
+  if (deleteError) throw deleteError
+  await supabase
+    .from('sync_players')
+    .update({ linked_user_id: null, updated_at: new Date().toISOString(), updated_by: self.id })
+    .eq('group_key', groupKey)
+    .eq('linked_user_id', userId)
+}
+
+export async function adminUnlinkCloudPlayer(groupCode: string, playerId: string): Promise<void> {
+  const supabase = await requireClient()
+  const groupKey = await createGroupKey(groupCode)
+  const { error } = await supabase.rpc('admin_unlink_player', {
+    p_group_key: groupKey,
+    p_player_id: playerId,
+  })
+  if (!error) return
+  if (error.code !== '42883' && error.code !== 'PGRST202') throw error
+  const user = await requireUser()
+  const { error: updateError } = await supabase
+    .from('sync_players')
+    .update({ linked_user_id: null, updated_at: new Date().toISOString(), updated_by: user.id })
+    .eq('group_key', groupKey)
+    .eq('id', playerId)
+  if (updateError) throw updateError
 }
 
 export async function updateOwnMemberDisplayName(

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { GroupLobbyHub, type LobbyNavigateTarget } from '@/components/lobby/GroupLobbyHub'
+import { GroupClanRoster } from '@/components/lobby/GroupClanRoster'
 import { AccountBackupPanel } from '@/components/settings/AccountBackupPanel'
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings'
 import { DataManagers } from '@/components/settings/DataManagers'
@@ -20,7 +21,7 @@ import { groupRoleLabel } from '@/lib/groupPermissions'
 import { languageLabels, useI18n } from '@/lib/i18n'
 import type { Language } from '@/types'
 import { consumePendingOpenPwaInstallPage, PWA_OPEN_INSTALL_EVENT } from '@/lib/pwaInstall'
-import { useAppStore } from '@/stores/appStore'
+import { getAppState, useAppStore } from '@/stores/appStore'
 
 type SettingsSection =
   | 'home'
@@ -75,13 +76,13 @@ function BackButton({ onClick, label }: { onClick: () => void; label: string }) 
 export function SettingsPage() {
   const { t, language, setLanguage } = useI18n()
   const [section, setSection] = useState<SettingsSection>('home')
-  const appState = useAppStore()
   const lastGroupCode = useAppStore((state) => state.settings.lastGroupCode)
   const groupMemberRole = useAppStore((state) => state.settings.groupMemberRole)
   const profileDisplayName = useAppStore((state) => state.settings.profileDisplayName)
   const lastGroupSyncAt = useAppStore((state) => state.settings.lastGroupSyncAt)
-  const playerCount = countListedPlayers(appState)
-  const deckCount = appState.decks.filter((deck) => !deck.archived).length
+  const decks = useAppStore((state) => state.decks)
+  const playerCount = countListedPlayers(getAppState())
+  const deckCount = decks.filter((deck) => !deck.archived).length
 
   const workspaceMeta = lastGroupCode
     ? `${lastGroupCode}${groupMemberRole ? ` · ${groupRoleLabel(groupMemberRole)}` : ''}`
@@ -213,7 +214,7 @@ export function SettingsPage() {
       {section === 'lobby-players' ? (
         <>
           <BackButton label={t('lobby.title')} onClick={() => setSection('lobby-browse')} />
-          <p className="rounded-xl bg-surface-elevated p-4 text-sm text-text-secondary">{t('lobby.rosterInLobbyHint')}</p>
+          <GroupClanRoster />
         </>
       ) : null}
 

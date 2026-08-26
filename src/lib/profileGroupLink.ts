@@ -4,7 +4,7 @@ import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { invalidateDerivedCache } from '@/lib/derivedData'
 import { scheduleAchievementLedgerSync } from '@/lib/achievementLedgerSync'
 import { ensureProfileIdentityId } from '@/lib/profileIdentity'
-import { applyProfileClaim, isPlayerClaimedByOtherDevice } from '@/lib/profileClaim'
+import { applyProfileClaim, isPlayerClaimedByOtherDevice, isPlayerLinkedToOtherUser } from '@/lib/profileClaim'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
 import type { AppState, GroupProfileBookmark, Player } from '@/types'
@@ -96,21 +96,49 @@ function findPlayerForCloudClaim(state: AppState): Player | null {
 }
 
 /** After group data loads, restore linkedPlayerId for an existing personal profile. */
-export function tryAutoRelinkGroupProfile(state: AppState): AppState {
-  if (state.settings.linkedPlayerId) return state
-  if (!state.settings.profileIdentityId || !state.settings.profileSetupCompleted) return state
-  if (!state.settings.lastGroupCode) return state
-  if (isGroupAutoRelinkSuppressed(state, state.settings.lastGroupCode)) return state
+export function tryAutoRelinkGroupProfile(
+  state: AppState,
+  options?: { allowBookmark?: boolean },
+): AppState {
+  const synced = syncExistingLink(state)
+  if (synced.settings.linkedPlayerId) return synced
+  if (!synced.settings.profileIdentityId || !synced.settings.profileSetupCompleted) return synced
+  if (!synced.settings.lastGroupCode) return synced
+  if (isGroupAutoRelinkSuppressed(synced, synced.settings.lastGroupCode)) return synced
 
-  const bookmark = state.settings.groupProfileLinks?.[groupStorageKey(state.settings.lastGroupCode)]
+  const cloudPlayer = findPlayerForCloudClaim(synced)
+  if (cloudPlayer) return finalizeProfileLink(applyProfileClaim(synced, cloudPlayer.id))
+
+  if (options?.allowBookmark === false) return synced
+
+  const bookmark = synced.settings.groupProfileLinks?.[groupStorageKey(synced.settings.lastGroupCode)]
   if (bookmark) {
-    const player = findPlayerForBookmark(state, bookmark)
-    if (player) return finalizeProfileLink(applyProfileClaim(state, player.id))
+    const player = findPlayerForBookmark(synced, bookmark)
+    if (player && !isPlayerLinkedToOtherUser(player, synced.settings.cloudUserId)) {
+      return finalizeProfileLink(applyProfileClaim(synced, player.id))
+    }
   }
 
-  const cloudPlayer = findPlayerForCloudClaim(state)
-  if (cloudPlayer) return finalizeProfileLink(applyProfileClaim(state, cloudPlayer.id))
+  return synced
+}
 
+function syncExistingLink(state: AppState): AppState {
+  const linkedId = state.settings.linkedPlayerId
+  if (!linkedId) return state
+  const player = state.players.find((item) => item.id === linkedId)
+  if (!player || player.deletedAt) {
+    return {
+      ...state,
+      settings: { ...state.settings, linkedPlayerId: null },
+    }
+  }
+  const userId = state.settings.cloudUserId
+  if (userId && player.linkedUserId && player.linkedUserId !== userId) {
+    return {
+      ...state,
+      settings: { ...state.settings, linkedPlayerId: null },
+    }
+  }
   return state
 }
 
@@ -150,8 +178,12 @@ export function finalizeProfileLink(state: AppState): AppState {
 }
 
 export function finalizeGroupProfileSession(state: AppState): AppState {
+  const relinked = tryAutoRelinkGroupProfile(state, { allowBookmark: false })
+  if (relinked === state) return state
   invalidateDerivedCache()
-  return finalizeProfileLink(tryAutoRelinkGroupProfile(state))
+  return relinked.settings.linkedPlayerId && relinked.settings.linkedPlayerId !== state.settings.linkedPlayerId
+    ? finalizeProfileLink(relinked)
+    : relinked
 }
 
 export function bookmarkCurrentGroupProfile(state: AppState): AppState {

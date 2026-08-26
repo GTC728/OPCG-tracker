@@ -7,6 +7,7 @@ interface IconButtonProps {
   disabled?: boolean
   variant?: 'default' | 'danger' | 'brand'
   className?: string
+  badge?: number
   children: ReactNode
 }
 
@@ -22,6 +23,7 @@ export function IconButton({
   disabled = false,
   variant = 'default',
   className = '',
+  badge,
   children,
 }: IconButtonProps) {
   const [showHint, setShowHint] = useState(false)
@@ -73,6 +75,11 @@ export function IconButton({
       ].join(' ')}
     >
       {children}
+      {badge && badge > 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      ) : null}
       {showHint ? (
         <span className="pointer-events-none absolute -top-9 left-1/2 z-20 max-w-[10rem] -translate-x-1/2 whitespace-nowrap rounded-md bg-surface-elevated px-2 py-1 text-[10px] font-medium text-text-primary shadow-lg ring-1 ring-surface-muted">
           {label}

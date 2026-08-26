@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionDayPrompt } from '@/components/session/SessionDayPrompt'
 import { SessionRosterSheet } from '@/components/session/SessionRosterSheet'
@@ -18,6 +18,8 @@ import { useHotkeys } from '@/components/motion/useHotkeys'
 import { playInteractionSound } from '@/lib/motion'
 import { applyAppearanceSettings } from '@/lib/theme'
 import { languageLabels, useI18n } from '@/lib/i18n'
+import { AuthCallbackScreen } from '@/components/auth/AuthCallbackScreen'
+import { isAuthCallbackLocation, subscribeCloudAuth } from '@/lib/cloudSync'
 import { getAppState, useAppStore } from '@/stores/appStore'
 import type { Language, TabId } from '@/types'
 
@@ -172,6 +174,16 @@ function PeriodicBackupBridge() {
   return null
 }
 
+function CloudAuthBridge() {
+  const updateSettings = useAppStore((state) => state.updateSettings)
+
+  useEffect(() => subscribeCloudAuth((userId) => {
+    updateSettings({ cloudUserId: userId })
+  }), [updateSettings])
+
+  return null
+}
+
 export default function App() {
   const { t } = useI18n()
   const hydrated = useAppStore((s) => s.hydrated)
@@ -179,6 +191,7 @@ export default function App() {
   const onboardingCompleted = useAppStore((s) => s.settings.onboardingCompleted)
   const hydrate = useAppStore((s) => s.hydrate)
   const setActiveTab = useAppStore((s) => s.setActiveTab)
+  const [authCallbackOpen, setAuthCallbackOpen] = useState(() => isAuthCallbackLocation())
 
   useHotkeys([
     { key: '1', handler: () => setActiveTab('record') },
@@ -212,6 +225,14 @@ export default function App() {
     )
   }
 
+  if (authCallbackOpen) {
+    return (
+      <ToastProvider>
+        <AuthCallbackScreen onDone={() => setAuthCallbackOpen(false)} />
+      </ToastProvider>
+    )
+  }
+
   if (!onboardingCompleted) {
     return (
       <ToastProvider>
@@ -223,6 +244,7 @@ export default function App() {
   return (
     <ToastProvider>
       <ThemeBridge />
+      <CloudAuthBridge />
       <PeriodicBackupBridge />
       <AchievementToastBridge />
       <GlobalSessionRosterPrompt />

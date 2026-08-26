@@ -88,7 +88,7 @@ describe('tryAutoRelinkGroupProfile cloud claim', () => {
     expect(next.settings.groupProfileLinks[groupStorageKey('club-a')]?.playerName).toBe('GTC')
   })
 
-  it('prefers bookmark over cloud claim', () => {
+  it('prefers cloud claim over bookmark when both exist', () => {
     const base = createDefaultAppState()
     const state = {
       ...base,
@@ -111,6 +111,6 @@ describe('tryAutoRelinkGroupProfile cloud claim', () => {
     }
 
     const next = tryAutoRelinkGroupProfile(state)
-    expect(next.settings.linkedPlayerId).toBe('p-book')
+    expect(next.settings.linkedPlayerId).toBe('p-cloud')
   })
 })

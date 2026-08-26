@@ -77,6 +77,7 @@ export function useGroupMemberAdmin(onMembersChange?: (members: GroupMemberRecor
       setBusyUserId(member.userId)
       try {
         await removeGroupMember(groupCode, member.userId)
+        useAppStore.getState().clearPlayerLinksForUser(member.userId)
         toast.success(t('members.removed'))
         await reloadMembers()
       } catch (caught) {

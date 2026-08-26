@@ -71,7 +71,7 @@ import { reconcileAchievementUnlocks } from '@/lib/achievements'
 import { rebuildLifetimeFromMatches } from '@/lib/profileLifetime'
 import { getPlayerName } from '@/lib/entities'
 import type { AchievementUnlock } from '@/types'
-import { applyProfileClaim, assertNameConfirmation, ProfileClaimError, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
+import { applyProfileClaim, assertNameConfirmation, bindRosterPlayerToUser, clearRosterLinksForUser, ProfileClaimError, releaseProfileClaim, uniqueRosterName, unlinkProfile as unlinkProfileState } from '@/lib/profileClaim'
 import { finalizeProfileLink, bookmarkCurrentGroupProfile, tryAutoRelinkGroupProfile, suppressGroupAutoRelink } from '@/lib/profileGroupLink'
 import {
   createPersonalProfile as applyCreatePersonalProfile,
@@ -156,6 +156,10 @@ interface AppStore extends AppState {
   linkProfileToPlayer: (playerId: string, nameConfirmation?: string, forceReclaim?: boolean) => void
   unlinkProfile: () => void
   unlinkGroupProfile: () => void
+  adminUnlinkPlayer: (playerId: string) => void
+  bindPlayerToCloudUser: (playerId: string, userId: string) => Player
+  addPlayerLinkedToUser: (name: string, userId: string) => Player
+  clearPlayerLinksForUser: (userId: string) => void
   clearPendingAchievementToasts: () => void
   setSessionRoster: (sessionId: string, playerIds: string[]) => void
   setMatchNotes: (matchId: string, notes: string | null) => void
@@ -1946,9 +1950,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const current = getAppState()
     const player = current.players.find((item) => item.id === playerId)
     if (!player) throw new ProfileClaimError('player_not_found', '找不到玩家。')
-    if (nameConfirmation?.trim()) {
-      assertNameConfirmation(player, nameConfirmation)
+    if (!nameConfirmation?.trim()) {
+      throw new ProfileClaimError('name_mismatch', '請輸入完整玩家名稱以確認身分。')
     }
+    assertNameConfirmation(player, nameConfirmation)
     const claimed = applyProfileClaim(current, playerId, { forceReclaim })
     const finalized = finalizeProfileLink(claimed)
     const persisted = persist(finalized)
@@ -1966,6 +1971,51 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const unlinked = unlinkProfileState(current)
     const suppressed = suppressGroupAutoRelink(unlinked)
     const persisted = persist(suppressed)
+    set({ ...persisted })
+  },
+
+  adminUnlinkPlayer: (playerId) => {
+    const current = getAppState()
+    const persisted = persist(releaseProfileClaim(current, playerId))
+    set({ ...persisted })
+  },
+
+  bindPlayerToCloudUser: (playerId, userId) => {
+    const current = getAppState()
+    const player = current.players.find((item) => item.id === playerId)
+    if (!player) throw new ProfileClaimError('player_not_found', '找不到玩家。')
+    const next = persist(bindRosterPlayerToUser(current, playerId, userId))
+    set({ ...next })
+    return next.players.find((item) => item.id === playerId) ?? player
+  },
+
+  addPlayerLinkedToUser: (name, userId) => {
+    const current = getAppState()
+    const uniqueName = uniqueRosterName(current.players, name)
+    const timestamp = nowIso()
+    const player: Player = {
+      id: createId(),
+      name: uniqueName,
+      aliases: [],
+      archived: false,
+      deletedAt: null,
+      profileClaimDeviceId: null,
+      profileClaimedAt: null,
+      linkedUserId: userId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    const next = persist({
+      ...current,
+      players: [player, ...current.players],
+    })
+    set({ ...next })
+    return player
+  },
+
+  clearPlayerLinksForUser: (userId) => {
+    const current = getAppState()
+    const persisted = persist(clearRosterLinksForUser(current, userId))
     set({ ...persisted })
   },
 

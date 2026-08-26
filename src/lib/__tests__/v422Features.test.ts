@@ -68,10 +68,15 @@ describe('benign profile-link join drift', () => {
     expect(conflicts).toHaveLength(0)
   })
 
-  it('merges linkedUserId from local when benign', () => {
-    const local = player({ linkedUserId: 'user-1' })
-    const remote = player({ linkedUserId: null })
-    const merged = mergeBenignJoinedPlayer(local, remote, ctx)
-    expect(merged.linkedUserId).toBe('user-1')
+  it('keeps local linkedUserId only when local is newer', () => {
+    const local = player({ linkedUserId: 'user-1', updatedAt: '2026-07-03T00:00:00.000Z' })
+    const remote = player({ linkedUserId: null, updatedAt: '2026-07-02T00:00:00.000Z' })
+    expect(mergeBenignJoinedPlayer(local, remote, ctx).linkedUserId).toBe('user-1')
+  })
+
+  it('takes remote unlink when remote is newer', () => {
+    const local = player({ linkedUserId: 'user-1', updatedAt: '2026-07-01T00:00:00.000Z' })
+    const remote = player({ linkedUserId: null, updatedAt: '2026-07-02T00:00:00.000Z' })
+    expect(mergeBenignJoinedPlayer(local, remote, ctx).linkedUserId).toBeNull()
   })
 })

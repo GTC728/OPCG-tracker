@@ -53,6 +53,8 @@ export interface JoinGroupResult {
   role?: GroupMemberRole
   error?: string
   requestId?: string
+  userId?: string
+  displayName?: string
 }
 
 type RawGroupRow = Record<string, unknown>
@@ -427,6 +429,8 @@ export async function reviewJoinRequest(
     joined: Boolean(result.approved),
     storageCode: result.storageCode ? String(result.storageCode) : undefined,
     role: (result.role as GroupMemberRole | undefined) ?? undefined,
+    userId: result.userId ? String(result.userId) : undefined,
+    displayName: result.displayName ? String(result.displayName) : undefined,
   }
 }
 

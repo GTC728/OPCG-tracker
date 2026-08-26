@@ -9,6 +9,7 @@ import {
   probeSupabaseReachable,
   signInWithEmail,
   signOutCloud,
+  verifyEmailOtp,
 } from '@/lib/cloudSync'
 import { ensurePersonalProfileFromLogin } from '@/lib/personalProfile'
 import { backupAgeDays, needsBackupReminder, runAutoCloudBackup, shouldAutoBackupOnLogin } from '@/lib/autoBackup'
@@ -34,6 +35,8 @@ export function AccountBackupPanel() {
   const settings = useAppStore((state) => state.settings)
   const updateSettings = useAppStore((state) => state.updateSettings)
   const [email, setEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [awaitingCode, setAwaitingCode] = useState(false)
   const [deviceLabel, setDeviceLabel] = useState(settings.deviceLabel ?? getDefaultDeviceLabel)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [latestBackup, setLatestBackup] = useState<string | null>(null)
@@ -288,6 +291,7 @@ export function AccountBackupPanel() {
                 const sentAt = new Date().toISOString()
                 updateSettings({ lastLoginLinkSentAt: sentAt })
                 setNow(Date.now())
+                setAwaitingCode(true)
                 setMessage(t('cloud.checkEmail'))
                 toast.success(t('cloud.checkEmail'))
               } catch (caught) {
@@ -303,6 +307,43 @@ export function AccountBackupPanel() {
               ? `${t('cloud.resendIn')} ${loginCooldownSeconds}s`
               : t('cloud.sendLogin')}
           </Button>
+          {awaitingCode ? (
+            <div className="space-y-2">
+              <p className="text-xs text-text-secondary">{t('cloud.enterCodeHint')}</p>
+              <input
+                className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3 font-mono tracking-[0.3em]"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder={t('cloud.enterCode')}
+                value={otpCode}
+                onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+              />
+              <Button
+                fullWidth
+                disabled={busy || otpCode.trim().length < 6}
+                loading={busy}
+                onClick={async () => {
+                  setBusy(true)
+                  setMessage(null)
+                  try {
+                    await verifyEmailOtp(email, otpCode)
+                    setAwaitingCode(false)
+                    setOtpCode('')
+                    await refreshCloudStatus()
+                    toast.success(t('cloud.loggedIn'))
+                  } catch (caught) {
+                    const nextMessage = getFriendlyCloudError(caught, t('cloud.loginFailed'))
+                    setMessage(nextMessage)
+                    toast.error(nextMessage)
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+              >
+                {t('cloud.verifyCode')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
 

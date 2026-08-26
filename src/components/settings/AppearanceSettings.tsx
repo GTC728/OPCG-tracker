@@ -4,7 +4,7 @@ import { Switch } from '@/components/motion/Switch'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
-import type { AccentPreset, StatsDefaultScope, ThemeMode, UiDensity } from '@/types'
+import type { AccentPreset, LeaderNameVariant, StatsDefaultScope, ThemeMode, UiDensity } from '@/types'
 import { useEffect } from 'react'
 
 export function AppearanceSettings() {
@@ -85,6 +85,31 @@ export function AppearanceSettings() {
               }}
             >
               {t(`appearance.density.${density}` as 'appearance.density.compact')}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className={uiSectionTitle}>{t('appearance.leaderNames')}</h2>
+        <p className="text-xs text-text-secondary">{t('appearance.leaderNamesHint')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          {(['hk', 'tw'] as LeaderNameVariant[]).map((variant) => (
+            <button
+              key={variant}
+              type="button"
+              className={[
+                uiCardInset,
+                uiPressable,
+                'p-3 text-sm font-semibold',
+                settings.leaderNameVariant === variant ? 'ring-brand-500/40' : '',
+              ].join(' ')}
+              onClick={() => {
+                playInteractionSound('toggle')
+                updateSettings({ leaderNameVariant: variant })
+              }}
+            >
+              {t(`appearance.leaderNames.${variant}` as 'appearance.leaderNames.hk')}
             </button>
           ))}
         </div>

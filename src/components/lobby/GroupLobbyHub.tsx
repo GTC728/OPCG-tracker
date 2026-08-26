@@ -33,6 +33,7 @@ import { getCompletedMatches } from '@/lib/stats'
 import { getCachedSyncPendingCount, subscribeSyncPendingCount } from '@/lib/syncQueue'
 import { buildWorkspaceList, type WorkspaceDescriptor } from '@/lib/workspace'
 import { formatDateTime } from '@/lib/utils'
+import { usePendingJoinRequests } from '@/hooks/usePendingJoinRequests'
 import { getAppState, useAppStore } from '@/stores/appStore'
 
 type LobbySort = 'active' | 'matches' | 'players'
@@ -66,6 +67,7 @@ function GroupClanInfoCard({
   onOpenSearch,
   onSwitchLocal,
   switchBusy,
+  joinPendingCount = 0,
 }: {
   activeGroup: WorkspaceDescriptor
   onOpenSettings: () => void
@@ -73,6 +75,7 @@ function GroupClanInfoCard({
   onOpenSearch?: () => void
   onSwitchLocal?: () => void
   switchBusy?: boolean
+  joinPendingCount?: number
 }) {
   const { t } = useI18n()
   const settings = useAppStore((state) => state.settings)
@@ -119,7 +122,7 @@ function GroupClanInfoCard({
           pillLabel={activeGroup.role ? groupRoleLabel(activeGroup.role) : t('lobby.title')}
         />
         <div className="absolute right-3 top-3 flex shrink-0 gap-0.5">
-          <IconButton label={t('lobby.settings')} variant="brand" onClick={onOpenSettings}>
+          <IconButton label={t('lobby.settings')} variant="brand" badge={joinPendingCount} onClick={onOpenSettings}>
             <IconSettings />
           </IconButton>
           {onOpenSwitch ? (
@@ -147,6 +150,12 @@ function GroupClanInfoCard({
           { label: t('groupLobby.statSessions'), value: String(stats.sessions) },
         ]}
       />
+
+      {joinPendingCount > 0 ? (
+        <Button variant="secondary" className="min-h-9 w-full text-xs" onClick={onOpenSettings}>
+          {t('lobby.pendingBanner').replace('{n}', String(joinPendingCount))}
+        </Button>
+      ) : null}
 
       {pendingCount > 0 || settings.lastGroupSyncError ? (
         <Button
@@ -329,6 +338,7 @@ export function GroupLobbyHub({ onClose, initialTab }: GroupLobbyHubProps) {
 
   const lastGroupCode = useAppStore((state) => state.settings.lastGroupCode)
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
+  const { pendingCount: joinPendingCount } = usePendingJoinRequests()
 
   const switchWorkspace = useAppStore((state) => state.switchWorkspace)
 
@@ -556,6 +566,7 @@ export function GroupLobbyHub({ onClose, initialTab }: GroupLobbyHubProps) {
               if (local) void handleSwitch(local)
             }}
             switchBusy={switchBusyId !== null}
+            joinPendingCount={joinPendingCount}
           />
         ) : (
           <section className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">

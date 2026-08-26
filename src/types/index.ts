@@ -11,6 +11,7 @@ export interface GroupMemberRecord {
   bannedAt: string | null
 }
 export type Language = 'zh-Hant' | 'zh-Hans' | 'en' | 'ja'
+export type LeaderNameVariant = 'tw' | 'hk'
 
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type AccentPreset = 'blue' | 'red' | 'green' | 'purple' | 'gold'
@@ -341,6 +342,7 @@ export interface AppSettings {
   lastBackupReminder: string | null
   backupReminderIntervalDays: number
   language: Language
+  leaderNameVariant: LeaderNameVariant
   onboardingCompleted: boolean
   lastGroupCode: string | null
   deviceLabel: string | null

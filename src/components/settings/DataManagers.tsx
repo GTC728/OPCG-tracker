@@ -254,6 +254,7 @@ function PlayerCard({
   onTransferOwnership,
   onEdit,
   onDelete,
+  onUnlink,
 }: {
   player: Player
   member?: GroupMemberRecord | null
@@ -268,6 +269,7 @@ function PlayerCard({
   onTransferOwnership?: (member: GroupMemberRecord) => Promise<void>
   onEdit: () => void
   onDelete: () => void
+  onUnlink?: () => void
 }) {
   const { t } = useI18n()
   const [manageOpen, setManageOpen] = useState(false)
@@ -319,6 +321,11 @@ function PlayerCard({
               <IconManage />
             </IconButton>
           ) : null}
+          {canManageRoster && linked && onUnlink ? (
+            <IconButton label={t('members.unlinkPlayer')} onClick={onUnlink}>
+              <IconLinked />
+            </IconButton>
+          ) : null}
           {canManageRoster ? (
             <>
               <IconButton label={t('lobby.edit')} onClick={onEdit}>
@@ -338,6 +345,9 @@ function PlayerCard({
         title={player.name}
         items={[
           { id: 'edit', label: t('lobby.edit'), onSelect: onEdit },
+          ...(linked && onUnlink
+            ? [{ id: 'unlink', label: t('members.unlinkPlayer'), onSelect: onUnlink }]
+            : []),
           { id: 'delete', label: t('lobby.delete'), danger: true, onSelect: onDelete },
         ]}
         onClose={() => setMenuOpen(false)}
@@ -421,6 +431,7 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
   const deletePlayer = useAppStore((state) => state.deletePlayer)
+  const adminUnlinkPlayer = useAppStore((state) => state.adminUnlinkPlayer)
   const permanentlyDeleteDeck = useAppStore((state) => state.permanentlyDeleteDeck)
   const updateDeckAliases = useAppStore((state) => state.updateDeckAliases)
   const setActiveTab = useAppStore((state) => state.setActiveTab)
@@ -536,6 +547,25 @@ export function DataManagers({ mode = 'all' }: { mode?: 'all' | 'players' | 'lea
                 }}
                 onEdit={() => setEditor({ kind: 'player', item: player })}
                 onDelete={() => setPurgePlayer(player)}
+                onUnlink={
+                  canManageRoster && player.linkedUserId
+                    ? () => {
+                        if (!window.confirm(t('members.unlinkPlayerConfirm').replace('{name}', player.name))) return
+                        void (async () => {
+                          try {
+                            if (groupCode) {
+                              const { adminUnlinkCloudPlayer } = await import('@/lib/cloudSync')
+                              await adminUnlinkCloudPlayer(groupCode, player.id)
+                            }
+                            adminUnlinkPlayer(player.id)
+                            toast.success(t('members.unlinked'))
+                          } catch (caught) {
+                            toast.error(caught instanceof Error ? caught.message : t('members.unlinkFailed'))
+                          }
+                        })()
+                      }
+                    : undefined
+                }
               />
             )})
           ) : (

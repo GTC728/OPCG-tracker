@@ -6,8 +6,8 @@ export const LEADER_LOCALE_ALIASES: Record<string, string[]> = {
   'Crocodile': ['沙鱷魚', '沙佬', '克洛克達爾', 'クロコダイル'],
   'Marshall.D.Teach': ['黑鬍子', '黑胡子', 'ティーチ', 'Teach'],
   'Monkey.D.Luffy': ['路飛', '路飞', '魯夫', 'ルフィ', 'Luffy'],
-  'Roronoa Zoro': ['索隆', '佐羅', 'ゾロ', 'Zoro'],
-  'Roronoa Zoro & Sanji': ['索隆 & 山治', '索隆', '山治', 'ゾロ & サンジ'],
+  'Roronoa Zoro': ['索隆', '卓洛', '佐羅', 'ゾロ', 'Zoro'],
+  'Roronoa Zoro & Sanji': ['索隆 & 山治', '卓洛 & 山治', '索隆', '卓洛', '山治', 'ゾロ & サンジ'],
   'Sengoku': ['戰國', '战国', 'センゴク', '佛之战国'],
   'Nami': ['娜美', 'ナミ'],
   'Sanji': ['山治', 'サンジ'],
@@ -70,6 +70,8 @@ export const LEADER_LOCALE_ALIASES: Record<string, string[]> = {
   'Caribou': ['卡里布', 'カリブー'],
   'Corazon': ['柯拉松', 'コラソン', 'Rosinante'],
   'Gol.D.Roger': ['羅傑', '罗杰', 'ロジャー', 'Roger'],
+  'Charlotte Pudding': ['布丁', '布琳', 'プリン', 'Pudding'],
+  'Rocks.D.Xebec': ['洛克斯', 'Rocks', 'Xebec'],
 }
 
 export function getLocaleAliasesForLeader(leaderName: string): string[] {

@@ -7,7 +7,6 @@ import {
 import {
   createGroupInviteLink,
   joinPolicyLabelKey,
-  listGroupJoinRequests,
   publishGroupDiscoverability,
   refreshGroupStatsSnapshot,
   resolveGroupLookup,
@@ -15,13 +14,13 @@ import {
   updateGroupLobbySettings,
   visibilityLabelKey,
   type GroupJoinPolicy,
-  type GroupJoinRequest,
   type GroupVisibility,
 } from '@/lib/groupLobby'
 import { fetchGroupRegistry, isValidInviteSlug, normalizeInviteSlug } from '@/lib/groupRegistry'
 import { getCompletedMatches } from '@/lib/stats'
 import { useI18n } from '@/lib/i18n'
-import { useAppStore } from '@/stores/appStore'
+import { usePendingJoinRequests } from '@/hooks/usePendingJoinRequests'
+import { getAppState, useAppStore } from '@/stores/appStore'
 
 export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boolean }) {
   const { t } = useI18n()
@@ -37,10 +36,12 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState<GroupVisibility>('public')
   const [joinPolicy, setJoinPolicy] = useState<GroupJoinPolicy>('request')
-  const [requests, setRequests] = useState<GroupJoinRequest[]>([])
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const canManage = canManageGroup(role)
+  const addPlayerLinkedToUser = useAppStore((state) => state.addPlayerLinkedToUser)
+  const bindPlayerToCloudUser = useAppStore((state) => state.bindPlayerToCloudUser)
+  const { requests, reload: loadRequests } = usePendingJoinRequests()
 
   const lobbyStats = useMemo(() => {
     const completed = getCompletedMatches(matches)
@@ -85,16 +86,9 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
     void refreshGroupStatsSnapshot(groupCode).catch(() => null)
   }, [groupCode, canManage])
 
-  const loadRequests = useCallback(async () => {
-    if (!groupCode || !canManage) return
-    const rows = await listGroupJoinRequests(groupCode)
-    setRequests(rows)
-  }, [canManage, groupCode])
-
   useEffect(() => {
     void loadProfile()
-    void loadRequests()
-  }, [loadProfile, loadRequests])
+  }, [loadProfile])
 
   if (!groupCode) return null
 
@@ -129,12 +123,30 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
     }
   }
 
-  const handleReview = async (requestId: string, approve: boolean) => {
+  const handleReview = async (requestId: string, approve: boolean, request?: (typeof requests)[number]) => {
     setBusy(true)
     try {
       const result = await reviewJoinRequest(requestId, approve)
       if (!result.ok) throw new Error(result.error ?? 'review_failed')
-      toast.success(approve ? t('lobby.requestApproved') : t('lobby.requestRejected'))
+      if (approve) {
+        const userId = result.userId ?? request?.userId
+        const displayName = result.displayName ?? request?.displayName ?? 'Member'
+        if (userId) {
+          const roster = getAppState().players.filter((player) => !player.deletedAt)
+          const existing = roster.find((player) => player.linkedUserId === userId)
+          if (!existing) {
+            const nameKey = displayName.trim().toLowerCase()
+            const reuse = roster.find(
+              (player) => !player.linkedUserId && player.name.trim().toLowerCase() === nameKey,
+            )
+            if (reuse) bindPlayerToCloudUser(reuse.id, userId)
+            else addPlayerLinkedToUser(displayName, userId)
+          }
+        }
+        toast.success(t('lobby.approvedCreatedPlayer'))
+      } else {
+        toast.success(t('lobby.requestRejected'))
+      }
       await loadRequests()
     } catch (caught) {
       toast.error(caught instanceof Error ? caught.message : t('lobby.reviewFailed'))
@@ -160,6 +172,50 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
 
   return (
     <section className="space-y-4">
+      {canManage ? (
+        <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-danger/30">
+          <h4 className="text-sm font-semibold">
+            {t('lobby.pendingRequests')}
+            {requests.length ? (
+              <span className="ml-2 rounded-full bg-danger px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {requests.length}
+              </span>
+            ) : null}
+          </h4>
+          {requests.length ? (
+            <ul className="mt-2 space-y-2">
+              {requests.map((request) => (
+                <li key={request.id} className="rounded-lg bg-surface p-3 ring-1 ring-surface-muted">
+                  <p className="text-sm font-semibold">{request.displayName}</p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {request.message?.trim() ? request.message : t('lobby.requestNoteEmpty')}
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      className="min-h-8 flex-1 text-xs"
+                      disabled={busy}
+                      onClick={() => void handleReview(request.id, true, request)}
+                    >
+                      {t('lobby.approve')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="min-h-8 flex-1 text-xs"
+                      disabled={busy}
+                      onClick={() => void handleReview(request.id, false, request)}
+                    >
+                      {t('lobby.reject')}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs text-text-secondary">{t('lobby.noPendingRequests')}</p>
+          )}
+        </div>
+      ) : null}
+
       {!settingsOnly ? (
       <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
         <h3 className="text-sm font-semibold">{t('groupLobby.title')}</h3>
@@ -281,37 +337,6 @@ export function GroupLobbyPanel({ settingsOnly = false }: { settingsOnly?: boole
       ) : (
         <p className="text-xs text-text-secondary">{t('groupLobby.ownerOnly')}</p>
       )}
-
-      {canManage && requests.length ? (
-        <div className="rounded-xl bg-surface-elevated p-4 ring-1 ring-surface-muted">
-          <h4 className="text-sm font-semibold">{t('lobby.pendingRequests')}</h4>
-          <ul className="mt-2 space-y-2">
-            {requests.map((request) => (
-              <li key={request.id} className="rounded-lg bg-surface p-3 ring-1 ring-surface-muted">
-                <p className="text-sm font-semibold">{request.displayName}</p>
-                {request.message ? <p className="mt-1 text-xs text-text-secondary">{request.message}</p> : null}
-                <div className="mt-2 flex gap-2">
-                  <Button
-                    className="min-h-8 flex-1 text-xs"
-                    disabled={busy}
-                    onClick={() => void handleReview(request.id, true)}
-                  >
-                    {t('lobby.approve')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="min-h-8 flex-1 text-xs"
-                    disabled={busy}
-                    onClick={() => void handleReview(request.id, false)}
-                  >
-                    {t('lobby.reject')}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </section>
   )
 }

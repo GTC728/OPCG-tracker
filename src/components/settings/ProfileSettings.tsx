@@ -9,7 +9,7 @@ import { getGroupProfileBookmark } from '@/lib/profileGroupLink'
 import { getPersonalProfileName, hasPersonalProfile } from '@/lib/personalProfile'
 import { useI18n } from '@/lib/i18n'
 import { uiCardInset, uiGlassCard, uiSectionTitle } from '@/lib/uiSurface'
-import { useAppStore } from '@/stores/appStore'
+import { getAppState, useAppStore } from '@/stores/appStore'
 import { Link2, Unlink } from 'lucide-react'
 
 function IconLinkGroup() {
@@ -23,18 +23,20 @@ function IconUnlinkGroup() {
 export function ProfileSettings() {
   const { t } = useI18n()
   const toast = useToast()
-  const state = useAppStore()
+  const settings = useAppStore((state) => state.settings)
+  const players = useAppStore((state) => state.players)
   const unlinkGroupProfile = useAppStore((store) => store.unlinkGroupProfile)
   const updatePersonalProfileName = useAppStore((store) => store.updatePersonalProfileName)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
+  const state = { ...getAppState(), settings, players }
   const linkedPlayer = getLinkedPlayer(state)
   const validationIssue = validateProfileLink(state)
   const personalReady = hasPersonalProfile(state)
   const personalName = getPersonalProfileName(state)
   const groupBookmark = getGroupProfileBookmark(state)
-  const inGroup = Boolean(state.settings.lastGroupCode)
+  const inGroup = Boolean(settings.lastGroupCode)
 
   return (
     <div className="space-y-4">
@@ -113,7 +115,14 @@ export function ProfileSettings() {
                   <>
                     <div className="flex items-center gap-2">
                       <IconUsers />
-                      <p className="text-lg font-semibold">{linkedPlayer.name}</p>
+                      <div>
+                        <p className="text-lg font-semibold">{personalName ?? linkedPlayer.name}</p>
+                        {personalName && personalName !== linkedPlayer.name ? (
+                          <p className="text-xs text-text-secondary">
+                            {t('profile.rosterName')}: {linkedPlayer.name}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                     {validationIssue ? (
                       <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning ring-1 ring-warning/25">

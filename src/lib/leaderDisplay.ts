@@ -1,6 +1,7 @@
+import { LEADER_HK_NAMES } from '@/data/leaderHkNames'
 import { LEADER_LOCALE_NAMES } from '@/data/leaderLocaleNames'
 import { LEADER_LOCALE_ALIASES } from '@/data/leaderLocaleAliases'
-import type { Deck, Language } from '@/types'
+import type { Deck, Language, LeaderNameVariant } from '@/types'
 
 function pickChineseAlias(aliases: string[], script: 'Hant' | 'Hans'): string | undefined {
   const traditional = aliases.find((alias) => /[\u4e00-\u9fff]/.test(alias) && /[國學會這裡說對時為與]/u.test(alias))
@@ -18,7 +19,19 @@ function withManualMarker(label: string, manual?: boolean): string {
   return manual ? `${label}*` : label
 }
 
-export function getLeaderDisplayName(leaderName: string, language: Language): string {
+export function getLeaderDisplayName(
+  leaderName: string,
+  language: Language,
+  variant: LeaderNameVariant = 'hk',
+): string {
+  if (language === 'zh-Hant' && variant === 'hk') {
+    const hk = LEADER_HK_NAMES[leaderName]
+    if (hk) {
+      const locale = LEADER_LOCALE_NAMES[leaderName]
+      return withManualMarker(hk, locale?.manual)
+    }
+  }
+
   const locale = LEADER_LOCALE_NAMES[leaderName]
   if (locale) {
     if (language === 'en') return leaderName
@@ -43,7 +56,7 @@ export function getLeaderDisplayName(leaderName: string, language: Language): st
   return leaderName
 }
 
-export function getDeckDisplayName(deck: Deck, language: Language): string {
-  const leaderLabel = getLeaderDisplayName(deck.leaderName, language)
+export function getDeckDisplayName(deck: Deck, language: Language, variant: LeaderNameVariant = 'hk'): string {
+  const leaderLabel = getLeaderDisplayName(deck.leaderName, language, variant)
   return [deck.setCode, leaderLabel].filter(Boolean).join(' ')
 }

@@ -4,6 +4,7 @@ import { Zoomable } from '@/components/motion/Zoomable'
 import { uiPressable } from '@/lib/motion'
 import { uiDeckArtCard } from '@/lib/uiSurface'
 import type { Deck, Language } from '@/types'
+import { useAppStore } from '@/stores/appStore'
 
 export function DeckArtCard({
   deck,
@@ -16,7 +17,8 @@ export function DeckArtCard({
   subtitle: string
   onClick?: () => void
 }) {
-  const leader = getLeaderDisplayName(deck.leaderName, language)
+  const variant = useAppStore((state) => state.settings.leaderNameVariant ?? 'hk')
+  const leader = getLeaderDisplayName(deck.leaderName, language, variant)
 
   const article = (
     <article className={uiDeckArtCard}>

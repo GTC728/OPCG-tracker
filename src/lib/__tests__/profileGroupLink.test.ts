@@ -7,7 +7,6 @@ import { createPersonalProfile, hasPersonalProfile } from '@/lib/personalProfile
 import { unlinkProfile } from '@/lib/profileClaim'
 import {
   finalizeProfileLink,
-  finalizeGroupProfileSession,
   suppressGroupAutoRelink,
   tryAutoRelinkGroupProfile,
 } from '@/lib/profileGroupLink'
@@ -90,7 +89,7 @@ describe('成就誤判修正', () => {
 })
 
 describe('群組同步後成就重算', () => {
-  it('finalizeGroupProfileSession 會依 historical 對局重算成就', () => {
+  it('finalizeProfileLink 會依 historical 對局重算成就', () => {
     let state = baseLinkedState({ lastGroupCode: 'CLUB-A', profileDisplayName: 'GTC' })
     const historical = makeWinStreak(12, PLAYER_A, PLAYER_B).map((match) => ({
       ...match,
@@ -102,7 +101,7 @@ describe('群組同步後成就重算', () => {
       achievementUnlocks: [],
       profileLifetime: null,
     }
-    state = finalizeGroupProfileSession(state)
+    state = finalizeProfileLink(state)
     expect(veteranLevel(state)).toBeGreaterThan(0)
     expect(state.achievementUnlocks.length).toBeGreaterThan(0)
   })

@@ -8,6 +8,7 @@ export type ProfileClaimErrorCode =
   | 'player_not_found'
   | 'player_not_selectable'
   | 'claimed_by_other'
+  | 'claimed_by_other_user'
   | 'duplicate_name'
 
 export class ProfileClaimError extends Error {
@@ -26,6 +27,25 @@ function normalizeName(value: string): string {
 export function isPlayerClaimedByOtherDevice(player: Player): boolean {
   if (!player.profileClaimDeviceId) return false
   return player.profileClaimDeviceId !== getDeviceId()
+}
+
+export function isPlayerLinkedToOtherUser(player: Player, cloudUserId?: string | null): boolean {
+  if (!player.linkedUserId) return false
+  if (!cloudUserId) return true
+  return player.linkedUserId !== cloudUserId
+}
+
+export function uniqueRosterName(players: Player[], base: string): string {
+  const trimmed = base.trim() || 'Member'
+  const taken = new Set(
+    players.filter((player) => !player.deletedAt).map((player) => player.name.trim().toLowerCase()),
+  )
+  if (!taken.has(trimmed.toLowerCase())) return trimmed
+  for (let index = 2; index < 100; index += 1) {
+    const candidate = `${trimmed} ${index}`
+    if (!taken.has(candidate.toLowerCase())) return candidate
+  }
+  return `${trimmed} ${crypto.randomUUID().slice(0, 4)}`
 }
 
 export function getLinkedPlayer(state: AppState): Player | null {
@@ -60,6 +80,12 @@ export function claimPlayerRecord(
   forceReclaim = false,
   linkedUserId?: string | null,
 ): Player {
+  if (isPlayerLinkedToOtherUser(player, linkedUserId ?? null)) {
+    throw new ProfileClaimError(
+      'claimed_by_other_user',
+      '此玩家已連結其他帳號。請選未連結的名字，或請管理員解除連結。',
+    )
+  }
   if (isPlayerClaimedByOtherDevice(player) && !forceReclaim) {
     throw new ProfileClaimError(
       'claimed_by_other',
@@ -94,9 +120,22 @@ export function applyProfileClaim(
   const linkedUserId = options?.linkedUserId ?? state.settings.cloudUserId ?? null
   const claimed = claimPlayerRecord(player, options?.forceReclaim, linkedUserId)
   const profileIdentityId = state.settings.profileIdentityId ?? crypto.randomUUID()
+  const claimedAt = claimed.updatedAt
   return {
     ...state,
-    players: state.players.map((item) => (item.id === playerId ? claimed : item)),
+    players: state.players.map((item) => {
+      if (item.id === playerId) return claimed
+      if (linkedUserId && item.linkedUserId === linkedUserId) {
+        return {
+          ...item,
+          linkedUserId: null,
+          profileClaimDeviceId: null,
+          profileClaimedAt: null,
+          updatedAt: claimedAt,
+        }
+      }
+      return item
+    }),
     settings: {
       ...state.settings,
       linkedPlayerId: playerId,
@@ -127,6 +166,53 @@ export function releaseProfileClaim(state: AppState, playerId: string): AppState
         state.settings.linkedPlayerId === playerId
           ? Boolean(state.settings.profileIdentityId)
           : state.settings.profileSetupCompleted,
+    },
+  }
+}
+
+export function bindRosterPlayerToUser(state: AppState, playerId: string, userId: string): AppState {
+  const timestamp = nowIso()
+  return {
+    ...state,
+    players: state.players.map((player) => {
+      if (player.id === playerId) {
+        return { ...player, linkedUserId: userId, updatedAt: timestamp }
+      }
+      if (player.linkedUserId === userId) {
+        return {
+          ...player,
+          linkedUserId: null,
+          profileClaimDeviceId: null,
+          profileClaimedAt: null,
+          updatedAt: timestamp,
+        }
+      }
+      return player
+    }),
+  }
+}
+
+export function clearRosterLinksForUser(state: AppState, userId: string): AppState {
+  const timestamp = nowIso()
+  const linkedId = state.settings.linkedPlayerId
+  const linkedPlayer = linkedId ? state.players.find((player) => player.id === linkedId) : null
+  const clearsCurrent = Boolean(linkedPlayer?.linkedUserId === userId)
+  return {
+    ...state,
+    players: state.players.map((player) =>
+      player.linkedUserId === userId
+        ? {
+            ...player,
+            linkedUserId: null,
+            profileClaimDeviceId: null,
+            profileClaimedAt: null,
+            updatedAt: timestamp,
+          }
+        : player,
+    ),
+    settings: {
+      ...state.settings,
+      linkedPlayerId: clearsCurrent ? null : state.settings.linkedPlayerId,
     },
   }
 }

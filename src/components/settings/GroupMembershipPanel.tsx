@@ -15,6 +15,7 @@ export function GroupMembershipPanel() {
   const switchWorkspace = useAppStore((state) => state.switchWorkspace)
   const leaveGroupCollab = useAppStore((state) => state.leaveGroupCollab)
   const [groupCode, setGroupCode] = useState('')
+  const [joinMessage, setJoinMessage] = useState('')
   const [groupUpdatedAt, setGroupUpdatedAt] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -70,11 +71,18 @@ export function GroupMembershipPanel() {
       ) : (
         <div className="mt-4 space-y-3">
           <p className="text-xs text-text-secondary">{t('lobby.searchJoinHint')}</p>
+          <p className="text-xs text-warning">{t('lobby.linkGuidance')}</p>
           <input
             className="min-h-11 w-full rounded-xl border border-surface-muted bg-surface px-3"
             placeholder={t('lobby.searchPlaceholder')}
             value={groupCode}
             onChange={(event) => setGroupCode(event.target.value)}
+          />
+          <textarea
+            className="min-h-16 w-full rounded-xl border border-surface-muted bg-surface px-3 py-2 text-sm"
+            placeholder={t('lobby.requestMessagePlaceholder')}
+            value={joinMessage}
+            onChange={(event) => setJoinMessage(event.target.value)}
           />
           <Button
             fullWidth
@@ -89,7 +97,7 @@ export function GroupMembershipPanel() {
                 const lookup = groupCode.trim()
                 if (lookup.length < 3) throw new Error(t('lobby.lookupTooShort'))
 
-                const result = await joinGroupWithPolicy(lookup)
+                const result = await joinGroupWithPolicy(lookup, { message: joinMessage })
                 if (!result.ok) {
                   throw new Error(result.error ?? t('lobby.joinFailed'))
                 }

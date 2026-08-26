@@ -6,6 +6,7 @@ import { formatPercent } from '@/lib/stats'
 import { uiGlassCard } from '@/lib/uiSurface'
 import { useI18n } from '@/lib/i18n'
 import type { Deck, Language } from '@/types'
+import { useAppStore } from '@/stores/appStore'
 
 export function DeckPreviewCard({
   deck,
@@ -29,7 +30,8 @@ export function DeckPreviewCard({
   layout?: 'rail' | 'grid'
 }) {
   const { t } = useI18n()
-  const leaderLabel = getLeaderDisplayName(deck.leaderName, language)
+  const variant = useAppStore((state) => state.settings.leaderNameVariant ?? 'hk')
+  const leaderLabel = getLeaderDisplayName(deck.leaderName, language, variant)
 
   const article = (
     <article

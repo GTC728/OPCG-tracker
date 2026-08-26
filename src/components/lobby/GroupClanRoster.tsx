@@ -46,6 +46,7 @@ function CompactPlayerRow({
   memberBusy,
   onEdit,
   onDelete,
+  onUnlink,
   onMemberRoleChange,
   onMemberBanToggle,
   onMemberRemove,
@@ -59,6 +60,7 @@ function CompactPlayerRow({
   memberBusy?: boolean
   onEdit: () => void
   onDelete: () => void
+  onUnlink?: () => void
   onMemberRoleChange?: (userId: string, role: import('@/lib/groupPermissions').GroupMemberRole) => Promise<void>
   onMemberBanToggle?: (member: GroupMemberRecord) => Promise<void>
   onMemberRemove?: (member: GroupMemberRecord) => Promise<void>
@@ -110,6 +112,11 @@ function CompactPlayerRow({
               onClick={() => setManageOpen(true)}
             >
               <IconManage />
+            </IconButton>
+          ) : null}
+          {canManageRoster && linked && onUnlink ? (
+            <IconButton label={t('members.unlinkPlayer')} onClick={onUnlink}>
+              <IconLinked />
             </IconButton>
           ) : null}
           {canManageRoster ? (
@@ -283,6 +290,7 @@ export function GroupClanRoster() {
   const cloudUserId = useAppStore((state) => state.settings.cloudUserId)
   const addPlayer = useAppStore((state) => state.addPlayer)
   const updatePlayer = useAppStore((state) => state.updatePlayer)
+  const adminUnlinkPlayer = useAppStore((state) => state.adminUnlinkPlayer)
   const deletePlayer = useAppStore((state) => state.deletePlayer)
 
   const [tab, setTab] = useState<RosterTab>('roster')
@@ -421,6 +429,23 @@ export function GroupClanRoster() {
                       memberBusy={member ? busyUserId === member.userId : false}
                       onEdit={() => setEditor(player)}
                       onDelete={() => setDeleteTarget(player)}
+                      onUnlink={
+                        canManage && player.linkedUserId
+                          ? () => {
+                              if (!window.confirm(t('members.unlinkPlayerConfirm').replace('{name}', player.name))) return
+                              void (async () => {
+                                try {
+                                  const { adminUnlinkCloudPlayer } = await import('@/lib/cloudSync')
+                                  if (groupCode) await adminUnlinkCloudPlayer(groupCode, player.id)
+                                  adminUnlinkPlayer(player.id)
+                                  toast.success(t('members.unlinked'))
+                                } catch (caught) {
+                                  toast.error(caught instanceof Error ? caught.message : t('members.unlinkFailed'))
+                                }
+                              })()
+                            }
+                          : undefined
+                      }
                       onMemberRoleChange={handleRoleChange}
                       onMemberBanToggle={handleBanToggle}
                       onMemberRemove={(target) => handleRemove(target, player.name)}

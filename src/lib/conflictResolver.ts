@@ -149,10 +149,14 @@ export function mergeBenignJoinedPlayer(
   ctx: JoinConflictContext | undefined,
 ): Player {
   if (!local || !ctx || !isBenignPlayerJoinDrift(local, remote, ctx)) return remote
+  const remoteTs = Date.parse(remote.updatedAt)
+  const localTs = Date.parse(local.updatedAt)
+  const preferLocal = !Number.isNaN(localTs) && !Number.isNaN(remoteTs) && localTs > remoteTs
   return {
     ...remote,
-    linkedUserId: local.linkedUserId ?? remote.linkedUserId,
+    linkedUserId: preferLocal ? (local.linkedUserId ?? remote.linkedUserId) : (remote.linkedUserId ?? null),
     aliases: local.aliases.length ? local.aliases : remote.aliases,
+    updatedAt: preferLocal ? local.updatedAt : remote.updatedAt,
   }
 }
 

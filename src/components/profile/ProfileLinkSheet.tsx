@@ -3,8 +3,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/Button'
 import { isSelectablePlayer } from '@/lib/entityVisibility'
 import { useI18n } from '@/lib/i18n'
-import { hasPersonalProfile, getPersonalProfileName } from '@/lib/personalProfile'
-import { isPlayerClaimedByOtherDevice } from '@/lib/profileClaim'
+import { isPlayerClaimedByOtherDevice, isPlayerLinkedToOtherUser } from '@/lib/profileClaim'
 import { uiCardInset, uiSectionTitle } from '@/lib/uiSurface'
 import { useAppStore } from '@/stores/appStore'
 
@@ -20,34 +19,40 @@ export function ProfileLinkSheet({
   onComplete?: () => void
 }) {
   const { t } = useI18n()
-  const state = useAppStore()
-  const settings = state.settings
-  const players = state.players
+  const settings = useAppStore((state) => state.settings)
+  const players = useAppStore((state) => state.players)
+  const profileDisplayName = useAppStore((state) => state.settings.profileDisplayName)
+  const profileIdentityId = useAppStore((state) => state.settings.profileIdentityId)
+  const profileSetupCompleted = useAppStore((state) => state.settings.profileSetupCompleted)
   const createPersonalProfile = useAppStore((state) => state.createPersonalProfile)
   const createAndClaimProfile = useAppStore((state) => state.createAndClaimProfile)
   const linkProfileToPlayer = useAppStore((state) => state.linkProfileToPlayer)
   const [mode, setMode] = useState<ProfileLinkMode>('create')
   const [name, setName] = useState('')
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [nameConfirm, setNameConfirm] = useState('')
   const [forceConfirm, setForceConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const personalReady = hasPersonalProfile(state)
+  const personalReady = Boolean(profileIdentityId && profileSetupCompleted)
   const inGroup = Boolean(settings.lastGroupCode)
   const needsGroupLink = personalReady && inGroup && !settings.linkedPlayerId
   const needsPersonal = !personalReady
+  const cloudUserId = settings.cloudUserId
 
   const selectablePlayers = useMemo(
     () => players.filter((player) => isSelectablePlayer(player)).sort((a, b) => a.name.localeCompare(b.name)),
     [players],
   )
   const selectedPlayer = selectablePlayers.find((player) => player.id === selectedPlayerId) ?? null
-  const needsForceConfirm = selectedPlayer ? isPlayerClaimedByOtherDevice(selectedPlayer) : false
+  const linkedToOther = selectedPlayer ? isPlayerLinkedToOtherUser(selectedPlayer, cloudUserId) : false
+  const needsForceConfirm = selectedPlayer ? isPlayerClaimedByOtherDevice(selectedPlayer) && !linkedToOther : false
 
   const reset = () => {
     setError(null)
     setForceConfirm(false)
+    setNameConfirm('')
   }
 
   const handleSubmit = async () => {
@@ -81,11 +86,19 @@ export function ProfileLinkSheet({
             setError(t('profile.selectPlayer'))
             return
           }
+          if (linkedToOther) {
+            setError(t('profile.claimedByOtherAccount'))
+            return
+          }
+          if (!nameConfirm.trim()) {
+            setError(t('profile.confirmNameToLink'))
+            return
+          }
           if (needsForceConfirm && !forceConfirm) {
             setError(t('profile.forceClaimRequired'))
             return
           }
-          linkProfileToPlayer(selectedPlayer.id, undefined, needsForceConfirm && forceConfirm)
+          linkProfileToPlayer(selectedPlayer.id, nameConfirm, needsForceConfirm && forceConfirm)
         }
       }
 
@@ -107,13 +120,14 @@ export function ProfileLinkSheet({
   const description = needsPersonal
     ? t('profile.setupPersonalDesc')
     : needsGroupLink
-      ? t('profile.linkGroupDesc').replace('{name}', getPersonalProfileName(state) ?? '')
+      ? t('profile.linkGroupDesc').replace('{name}', profileDisplayName?.trim() || '')
       : t('profile.setupDesc')
 
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
         <p className="text-sm text-text-secondary">{description}</p>
+        {needsGroupLink ? <p className="text-xs text-warning">{t('profile.linkWarning')}</p> : null}
 
         {needsPersonal ? (
           <label className="block">
@@ -177,14 +191,39 @@ export function ProfileLinkSheet({
                     }}
                   >
                     <option value="">{t('profile.choosePlayerPlaceholder')}</option>
-                    {selectablePlayers.map((player) => (
-                      <option key={player.id} value={player.id}>
-                        {player.name}
-                        {isPlayerClaimedByOtherDevice(player) ? ` · ${t('profile.claimedElsewhere')}` : ''}
-                      </option>
-                    ))}
+                    {selectablePlayers.map((player) => {
+                      const taken = isPlayerLinkedToOtherUser(player, cloudUserId)
+                      return (
+                        <option key={player.id} value={player.id} disabled={taken}>
+                          {player.name}
+                          {taken
+                            ? ` · ${t('profile.claimedByOtherAccount')}`
+                            : isPlayerClaimedByOtherDevice(player)
+                              ? ` · ${t('profile.claimedElsewhere')}`
+                              : ''}
+                        </option>
+                      )
+                    })}
                   </select>
                 </label>
+
+                {selectedPlayer && !linkedToOther ? (
+                  <label className="block">
+                    <span className="text-sm font-medium text-text-secondary">
+                      {t('profile.confirmIdentityPrefix')} {selectedPlayer.name}
+                    </span>
+                    <input
+                      className="mt-2 min-h-11 w-full rounded-lg border border-surface-muted bg-surface px-3 text-text-primary"
+                      value={nameConfirm}
+                      onChange={(event) => setNameConfirm(event.target.value)}
+                      placeholder={t('profile.nameConfirmPlaceholder')}
+                    />
+                  </label>
+                ) : null}
+
+                {selectedPlayer && linkedToOther ? (
+                  <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">{t('profile.alreadyLinkedHint')}</p>
+                ) : null}
 
                 {selectedPlayer && needsForceConfirm ? (
                   <label className="flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-sm ring-1 ring-warning/25">

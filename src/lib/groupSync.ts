@@ -665,13 +665,26 @@ type RemotePlayerRow = {
 }
 
 function mergeRemotePlayer(existing: Player | undefined, remote: RemotePlayerRow): Player {
+  const linkedUserId = resolveMergedLinkedUserId(
+    existing ? { linkedUserId: existing.linkedUserId, updatedAt: existing.updatedAt } : undefined,
+    remote.linked_user_id,
+    remote.updated_at,
+  )
   if (existing) {
+    if (
+      existing.name === remote.name &&
+      existing.archived === remote.archived &&
+      existing.deletedAt === (remote.deleted_at ?? null) &&
+      existing.linkedUserId === linkedUserId
+    ) {
+      return existing
+    }
     return {
       ...existing,
       name: remote.name,
       archived: remote.archived,
       deletedAt: remote.deleted_at ?? null,
-      linkedUserId: remote.linked_user_id ?? existing.linkedUserId ?? null,
+      linkedUserId,
       updatedAt: remote.updated_at,
     }
   }
@@ -684,10 +697,25 @@ function mergeRemotePlayer(existing: Player | undefined, remote: RemotePlayerRow
     deletedAt: remote.deleted_at ?? null,
     profileClaimDeviceId: null,
     profileClaimedAt: null,
-    linkedUserId: remote.linked_user_id ?? null,
+    linkedUserId,
     createdAt: now,
     updatedAt: remote.updated_at,
   }
+}
+
+export function resolveMergedLinkedUserId(
+  local: { linkedUserId: string | null; updatedAt: string } | undefined,
+  remoteLinkedUserId: string | null | undefined,
+  remoteUpdatedAt: string,
+): string | null {
+  if (remoteLinkedUserId === undefined) return local?.linkedUserId ?? null
+  if (!local) return remoteLinkedUserId ?? null
+  const remoteTs = Date.parse(remoteUpdatedAt)
+  const localTs = Date.parse(local.updatedAt)
+  if (!Number.isNaN(localTs) && !Number.isNaN(remoteTs) && localTs > remoteTs) {
+    return local.linkedUserId
+  }
+  return remoteLinkedUserId
 }
 
 export async function deleteRemoteActiveMatch(groupCode: string, matchId: string): Promise<void> {

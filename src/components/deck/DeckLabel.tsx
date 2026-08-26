@@ -2,9 +2,11 @@ import { ColorDots } from '@/components/deck/ColorDots'
 import { getDeckDisplayName, getLeaderDisplayName } from '@/lib/leaderDisplay'
 import { useI18n } from '@/lib/i18n'
 import type { Deck, Language } from '@/types'
+import { useAppStore } from '@/stores/appStore'
 
 export function getCompactDeckName(deck: Deck, language: Language): string {
-  return getDeckDisplayName(deck, language)
+  const variant = useAppStore.getState().settings.leaderNameVariant ?? 'hk'
+  return getDeckDisplayName(deck, language, variant)
 }
 
 export function DeckLabel({
@@ -23,10 +25,11 @@ export function DeckLabel({
   className?: string
 }) {
   const { language } = useI18n()
+  const leaderNameVariant = useAppStore((state) => state.settings.leaderNameVariant ?? 'hk')
 
   if (!deck) return <span className={className}>{fallback}</span>
 
-  const leaderLabel = getLeaderDisplayName(deck.leaderName, language)
+  const leaderLabel = getLeaderDisplayName(deck.leaderName, language, leaderNameVariant)
 
   return (
     <span
