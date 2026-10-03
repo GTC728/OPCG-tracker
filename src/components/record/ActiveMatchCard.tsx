@@ -4,7 +4,7 @@ import { MatchForm } from '@/components/record/MatchForm'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { getDeck, getPlayerName } from '@/lib/entities'
 import { useI18n } from '@/lib/i18n'
-import { getOrderedMatchSides } from '@/lib/matchDisplay'
+import { TableTurnOrderMarker } from '@/components/match/TurnOrderBadge'
 import { useAppStore } from '@/stores/appStore'
 import type { ActiveMatch, Deck, Match, Player } from '@/types'
 
@@ -28,9 +28,8 @@ export function ActiveMatchCard({
   const { t } = useI18n()
   const updateActiveMatch = useAppStore((state) => state.updateActiveMatch)
   const [editing, setEditing] = useState(false)
-  const [left, right] = getOrderedMatchSides(match)
-  const leftDeck = getDeck(decks, left.deckId)
-  const rightDeck = getDeck(decks, right.deckId)
+  const leftDeck = getDeck(decks, match.deck1Id)
+  const rightDeck = getDeck(decks, match.deck2Id)
   const rollFirstPlayer = () => {
     onSetFirstPlayer(Math.random() < 0.5 ? match.player1Id : match.player2Id)
   }
@@ -77,7 +76,10 @@ export function ActiveMatchCard({
           disabled={!isComplete}
           onClick={() => onComplete(match.player1Id)}
         >
-          <p className="truncate text-xs font-semibold">{getPlayerName(players, match.player1Id)}</p>
+          <p className="flex items-center gap-1 truncate text-xs font-semibold">
+            <TableTurnOrderMarker playerId={match.player1Id} firstPlayerId={match.firstPlayerId} compact />
+            {getPlayerName(players, match.player1Id)}
+          </p>
           {leftDeck ? (
             <p className="truncate text-[10px] text-text-secondary">
               <DeckLabel deck={leftDeck} showCode className="inline-flex" />
@@ -91,7 +93,10 @@ export function ActiveMatchCard({
           disabled={!isComplete}
           onClick={() => onComplete(match.player2Id)}
         >
-          <p className="truncate text-xs font-semibold">{getPlayerName(players, match.player2Id)}</p>
+          <p className="flex items-center gap-1 truncate text-xs font-semibold">
+            <TableTurnOrderMarker playerId={match.player2Id} firstPlayerId={match.firstPlayerId} compact />
+            {getPlayerName(players, match.player2Id)}
+          </p>
           {rightDeck ? (
             <p className="truncate text-[10px] text-text-secondary">
               <DeckLabel deck={rightDeck} showCode className="inline-flex" />

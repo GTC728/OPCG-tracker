@@ -240,11 +240,18 @@ export function getSessionRecentDistinctDeckIds(
 
 export function getAssignmentRecentDeckIds(
   matches: Match[],
-  activeMatches: { sessionId: string; deck1Id: string; deck2Id: string }[],
+  activeMatches: {
+    sessionId: string
+    player1Id: string
+    player2Id: string
+    deck1Id: string
+    deck2Id: string
+  }[],
   decks: Deck[],
   sessionId: string,
   playerIds: string[],
   limit = 12,
+  focusPlayerId?: string | null,
 ): string[] {
   const seen = new Set<string>()
   const deckIds: string[] = []
@@ -254,6 +261,24 @@ export function getAssignmentRecentDeckIds(
     if (!decks.some((deck) => deck.id === deckId && !deck.archived)) return
     seen.add(deckId)
     deckIds.push(deckId)
+  }
+
+  if (focusPlayerId) {
+    for (const deckId of getRecentDistinctDeckIdsForPlayer(matches, decks, focusPlayerId, limit)) {
+      pushDeck(deckId)
+    }
+    for (const activeMatch of activeMatches) {
+      if (activeMatch.sessionId !== sessionId) continue
+      const deckId =
+        activeMatch.player1Id === focusPlayerId
+          ? activeMatch.deck1Id
+          : activeMatch.player2Id === focusPlayerId
+            ? activeMatch.deck2Id
+            : ''
+      pushDeck(deckId)
+      if (deckIds.length >= limit) return deckIds
+    }
+    if (deckIds.length >= limit) return deckIds
   }
 
   for (const match of matches) {

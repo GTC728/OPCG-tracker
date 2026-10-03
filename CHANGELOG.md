@@ -9,6 +9,13 @@ Format:
 - `Fixed`: bug fixes and reliability improvements.
 - `Security`: security, privacy, or data-protection changes.
 
+## V5.6.6 - 2026-10-03
+
+### Changed
+
+- **Table turn order**: Left/right seats stay fixed to player A/B; **先** / **後** badges show who goes first instead of swapping layout.
+- **Assignment deck picks**: When a table seat already has a player and you tap its deck slot, the assignment panel prioritizes that player’s recent and past decks.
+
 ## V5.6.5.3 - 2026-08-27
 
 ### Changed

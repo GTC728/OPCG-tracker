@@ -56,3 +56,35 @@ export function FirstPlayerBadge({ label }: { label?: string }) {
     </span>
   )
 }
+
+export function TableTurnOrderMarker({
+  playerId,
+  firstPlayerId,
+  compact = false,
+}: {
+  playerId: string
+  firstPlayerId: string | null
+  compact?: boolean
+}) {
+  const { t } = useI18n()
+
+  if (!firstPlayerId || !playerId) return null
+
+  const isFirst = firstPlayerId === playerId
+  const label = isFirst ? t('table.firstShort') : t('table.secondShort')
+
+  return (
+    <span
+      className={[
+        'inline-flex shrink-0 items-center justify-center rounded font-bold leading-none',
+        compact ? 'h-4 min-w-4 px-0.5 text-[8px]' : 'h-[18px] px-1 text-[9px]',
+        isFirst
+          ? 'border border-[#3b82f6]/50 bg-[#3b82f6]/20 text-[#60a5fa]'
+          : 'border border-white/10 bg-surface-muted/60 text-text-secondary',
+      ].join(' ')}
+      title={isFirst ? t('match.firstTurn') : t('match.secondTurn')}
+    >
+      {label}
+    </span>
+  )
+}

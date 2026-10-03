@@ -158,6 +158,16 @@ function AssignmentPanelBody({
 
   const selectablePlayers = useMemo(() => players.filter(isSelectablePlayer), [players])
 
+  const focusPlayerId = useMemo(() => {
+    if (!pendingTableTarget || pendingTableTarget.field !== 'deck') return null
+    const match = activeMatches.find(
+      (item) => item.sessionId === sessionId && item.tableSlot === pendingTableTarget.slot,
+    )
+    if (!match) return null
+    const playerId = pendingTableTarget.side === 'left' ? match.player1Id : match.player2Id
+    return playerId || null
+  }, [activeMatches, pendingTableTarget, sessionId])
+
   const recentDeckIds = useMemo(
     () =>
       getAssignmentRecentDeckIds(
@@ -167,8 +177,9 @@ function AssignmentPanelBody({
         sessionId,
         selectablePlayers.map((player) => player.id),
         recentDeckLimit,
+        focusPlayerId,
       ),
-    [activeMatches, decks, matches, selectablePlayers, recentDeckLimit, sessionId],
+    [activeMatches, decks, focusPlayerId, matches, selectablePlayers, recentDeckLimit, sessionId],
   )
 
   const recentDecks = useMemo(
@@ -185,6 +196,12 @@ function AssignmentPanelBody({
   }, [deckQuery, decks])
 
   const displayDecks = deckQuery.trim() ? searchDecks : recentDecks
+  const deckHint =
+    focusPlayerId && !deckQuery.trim()
+      ? t('assignment.playerDeckHint').replace('{name}', getPlayerName(players, focusPlayerId))
+      : recentDecks.length && !deckQuery.trim()
+        ? t('deck.recentUsed')
+        : null
 
   const togglePlayer = (playerId: string) => {
     if (pendingAssignment?.kind === 'player' && pendingAssignment.playerId === playerId) {
@@ -253,6 +270,7 @@ function AssignmentPanelBody({
           onChange={(event) => setDeckQuery(event.target.value)}
         />
       </div>
+      {deckHint ? <p className="px-2.5 text-[10px] text-text-secondary">{deckHint}</p> : null}
       <AssignmentChipRail className="px-2.5">
         {displayDecks.length ? (
           displayDecks.map((deck) => (
@@ -280,9 +298,7 @@ function AssignmentPanelBody({
         value={deckQuery}
         onChange={(event) => setDeckQuery(event.target.value)}
       />
-      {recentDecks.length && !deckQuery.trim() ? (
-        <p className="mt-1 text-[10px] text-text-secondary">{t('deck.recentUsed')}</p>
-      ) : null}
+      {deckHint ? <p className="mt-1 text-[10px] text-text-secondary">{deckHint}</p> : null}
       <AssignmentChipRail className="mt-1.5">
         {displayDecks.length ? (
           displayDecks.map((deck) => (

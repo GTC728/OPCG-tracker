@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DeckLabel } from '@/components/deck/DeckLabel'
+import { TableTurnOrderMarker } from '@/components/match/TurnOrderBadge'
 import { LongPress } from '@/components/motion/LongPress'
 import { AssignmentDock } from '@/components/record/AssignmentDock'
 import { MatchForm } from '@/components/record/MatchForm'
@@ -46,12 +47,14 @@ function TableSideInline({
   deckId,
   players,
   decks,
+  firstPlayerId = null,
   align = 'start',
 }: {
   playerId: string
   deckId: string
   players: Player[]
   decks: Deck[]
+  firstPlayerId?: string | null
   align?: 'start' | 'end'
 }) {
   const deck = deckId ? getDeck(decks, deckId) : null
@@ -64,6 +67,7 @@ function TableSideInline({
         align === 'end' ? 'justify-end' : 'justify-start',
       ].join(' ')}
     >
+      <TableTurnOrderMarker playerId={playerId} firstPlayerId={firstPlayerId} compact />
       <span className="shrink-0 font-semibold text-text-primary">{name}</span>
       {deck ? (
         <>
@@ -145,12 +149,14 @@ function EmbeddedPlayerWinBlock({
   deckId,
   players,
   decks,
+  firstPlayerId = null,
   onWin,
 }: {
   playerId: string
   deckId: string
   players: Player[]
   decks: Deck[]
+  firstPlayerId?: string | null
   onWin: () => void
 }) {
   const deck = deckId ? getDeck(decks, deckId) : null
@@ -165,7 +171,10 @@ function EmbeddedPlayerWinBlock({
       onClick={onWin}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 flex-[1] truncate text-sm font-semibold">{getPlayerName(players, playerId)}</span>
+        <span className="flex min-w-0 flex-[1] items-center gap-1 truncate text-sm font-semibold">
+          <TableTurnOrderMarker playerId={playerId} firstPlayerId={firstPlayerId} />
+          {getPlayerName(players, playerId)}
+        </span>
         <WinMark />
       </div>
       <div className="mt-1.5 min-w-0 pl-0">
@@ -364,6 +373,7 @@ function CompactCompleteTable({
               deckId={left.deckId}
               players={players}
               decks={decks}
+              firstPlayerId={match.firstPlayerId}
               onWin={() => onComplete(left.playerId)}
             />
             <EmbeddedPlayerWinBlock
@@ -371,6 +381,7 @@ function CompactCompleteTable({
               deckId={right.deckId}
               players={players}
               decks={decks}
+              firstPlayerId={match.firstPlayerId}
               onWin={() => onComplete(right.playerId)}
             />
           </div>
@@ -426,7 +437,13 @@ function CompactCompleteTable({
           </span>
         ) : null}
         <div className="min-w-0 flex-1 overflow-hidden">
-          <TableSideInline playerId={left.playerId} deckId={left.deckId} players={players} decks={decks} />
+          <TableSideInline
+            playerId={left.playerId}
+            deckId={left.deckId}
+            players={players}
+            decks={decks}
+            firstPlayerId={match.firstPlayerId}
+          />
         </div>
         <div className="flex shrink-0 items-center gap-1 px-0.5">
           <WinButton onClick={() => onComplete(left.playerId)} />
@@ -439,6 +456,7 @@ function CompactCompleteTable({
             deckId={right.deckId}
             players={players}
             decks={decks}
+            firstPlayerId={match.firstPlayerId}
             align="end"
           />
         </div>
